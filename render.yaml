@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: primium-deals
+    runtime: node
+    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: cd backend && node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: JWT_SECRET
+        value: my-super-secret-key-2024
+      - key: EBAY_APP_ID
+        value: davidde-PrimiumD-PRD-26e774d48-9c51a1cc
+      - key: EBAY_DEV_ID
+        value: 062ae1a6-8695-4af1-9b66-9df03d5a1f
+      - key: EBAY_CERT_ID
+        value: davidade-PrimiumD-PRD-26e774d48-9c51a1cc
+      - key: EBAY_CAMPAIGN_ID
+        value: "5339243279"
+      - key: ADMIN_EMAIL
+        value: admin@example.com
+      - key: ADMIN_PASSWORD
+        value: admin123
+
