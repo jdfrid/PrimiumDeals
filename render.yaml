@@ -2,14 +2,15 @@ services:
   - type: web
     name: primium-deals
     runtime: node
-    nodeVersion: "20"
-    buildCommand: npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend
+    buildCommand: cd frontend && npm ci && npm run build && cd ../backend && npm ci
     startCommand: node backend/src/index.js
     envVars:
+      - key: NODE_VERSION
+        value: "18.19.0"
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001
+        value: "3001"
       - key: JWT_SECRET
         value: my-super-secret-key-2024
       - key: EBAY_APP_ID
