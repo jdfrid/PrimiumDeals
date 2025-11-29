@@ -2,8 +2,9 @@ services:
   - type: web
     name: primium-deals
     runtime: node
-    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
-    startCommand: cd backend && node src/index.js
+    nodeVersion: "20"
+    buildCommand: npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend
+    startCommand: node backend/src/index.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,4 +24,3 @@ services:
         value: admin@example.com
       - key: ADMIN_PASSWORD
         value: admin123
-
