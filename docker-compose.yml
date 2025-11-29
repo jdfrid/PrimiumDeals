@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: ebay-deals
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-key}
+      - EBAY_APP_ID=${EBAY_APP_ID}
+      - EBAY_DEV_ID=${EBAY_DEV_ID}
+      - EBAY_CERT_ID=${EBAY_CERT_ID}
+      - EBAY_CAMPAIGN_ID=${EBAY_CAMPAIGN_ID}
+      - EBAY_TOKEN=${EBAY_TOKEN}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    volumes:
+      - deals-data:/app/backend/data
+volumes:
+  deals-data:
+
