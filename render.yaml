@@ -3,8 +3,8 @@ services:
     name: primium-deals
     runtime: node
     plan: free
-    buildCommand: "npm install && npm run build"
-    startCommand: "npm start"
+    buildCommand: "cd backend && npm install"
+    startCommand: "node backend/src/index.js"
     envVars:
       - key: NODE_VERSION
         value: "18.19.0"
