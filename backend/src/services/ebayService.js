@@ -9,6 +9,13 @@ class EbayService {
   async searchItems(params) {
     const { keywords = '', categoryId = '', minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
 
+    console.log(`🔍 eBay Search: keywords="${keywords}", category=${categoryId}, price=${minPrice}-${maxPrice}`);
+    
+    if (!this.appId) {
+      console.error('❌ EBAY_APP_ID is not configured!');
+      throw new Error('eBay API credentials not configured');
+    }
+
     try {
       const queryParams = new URLSearchParams({
         'OPERATION-NAME': 'findItemsAdvanced',
@@ -27,8 +34,16 @@ class EbayService {
       if (categoryId) queryParams.append('categoryId', categoryId);
 
       const response = await fetch(`${EBAY_API_BASE}?${queryParams.toString()}`);
-      if (!response.ok) throw new Error(`eBay API error: ${response.status}`);
       const data = await response.json();
+      
+      // Check for API errors
+      const errorMsg = data.findItemsAdvancedResponse?.[0]?.errorMessage?.[0]?.error?.[0]?.message?.[0];
+      if (errorMsg) {
+        console.error('❌ eBay API Error:', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      if (!response.ok) throw new Error(`eBay API error: ${response.status}`);
       return this.parseSearchResults(data, minDiscount);
     } catch (error) {
       console.error('eBay search error:', error);
@@ -40,11 +55,21 @@ class EbayService {
     const results = [];
     try {
       const items = data.findItemsAdvancedResponse?.[0]?.searchResult?.[0]?.item || [];
+      console.log(`📦 eBay returned ${items.length} items`);
+      
       for (const item of items) {
         const currentPrice = parseFloat(item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__ || 0);
-        const originalPrice = parseFloat(item.discountPriceInfo?.[0]?.originalRetailPrice?.[0]?.__value__ || currentPrice * 1.3);
+        const apiOriginalPrice = item.discountPriceInfo?.[0]?.originalRetailPrice?.[0]?.__value__;
+        
+        // If eBay provides original price, use it. Otherwise estimate with higher multiplier
+        const hasRealDiscount = !!apiOriginalPrice;
+        const originalPrice = apiOriginalPrice ? parseFloat(apiOriginalPrice) : currentPrice * 1.5;
         let discountPercent = originalPrice > currentPrice ? ((originalPrice - currentPrice) / originalPrice) * 100 : 0;
-        if (discountPercent >= minDiscount) {
+        
+        // If we don't have real discount info, be more lenient with filtering
+        const effectiveMinDiscount = hasRealDiscount ? minDiscount : Math.min(minDiscount, 25);
+        
+        if (discountPercent >= effectiveMinDiscount) {
           results.push({
             ebayItemId: item.itemId?.[0] || '',
             title: item.title?.[0] || '',
@@ -58,6 +83,7 @@ class EbayService {
           });
         }
       }
+      console.log(`✅ ${results.length} items passed discount filter`);
     } catch (error) { console.error('Error parsing eBay results:', error); }
     return results;
   }
