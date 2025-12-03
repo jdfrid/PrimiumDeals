@@ -63,4 +63,35 @@ router.get('/stats', authenticateToken, (req, res) => {
   res.json(stats);
 });
 
+// Seed sample deals
+router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) => {
+  const sampleDeals = [
+    { title: 'Rolex Submariner Date 41mm Steel', originalPrice: 14500, currentPrice: 9800, discount: 32, image: 'https://images.unsplash.com/photo-1587836374828-4dbafa94cf0e?w=400', category: 'Watches' },
+    { title: 'Omega Seamaster Professional 300M', originalPrice: 5200, currentPrice: 3400, discount: 35, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', category: 'Watches' },
+    { title: 'Louis Vuitton Neverfull MM Tote', originalPrice: 1960, currentPrice: 1290, discount: 34, image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400', category: 'Handbags' },
+    { title: 'Gucci GG Marmont Shoulder Bag', originalPrice: 2300, currentPrice: 1490, discount: 35, image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400', category: 'Handbags' },
+    { title: 'Cartier Love Bracelet 18K Gold', originalPrice: 6900, currentPrice: 4600, discount: 33, image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400', category: 'Jewelry' },
+    { title: 'Tiffany & Co Diamond Pendant', originalPrice: 3200, currentPrice: 2100, discount: 34, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400', category: 'Jewelry' },
+    { title: 'Ray-Ban Aviator Classic Gold', originalPrice: 180, currentPrice: 115, discount: 36, image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400', category: 'Sunglasses' },
+    { title: 'Prada PR 17WS Sunglasses', originalPrice: 420, currentPrice: 275, discount: 35, image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400', category: 'Sunglasses' },
+    { title: 'Hermès Silk Scarf Carré 90', originalPrice: 450, currentPrice: 295, discount: 34, image: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400', category: 'Accessories' },
+    { title: 'Montblanc Meisterstück Wallet', originalPrice: 530, currentPrice: 350, discount: 34, image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=400', category: 'Accessories' },
+  ];
+
+  let added = 0;
+  for (const deal of sampleDeals) {
+    const cat = prepare('SELECT id FROM categories WHERE name = ?').get(deal.category);
+    const categoryId = cat ? cat.id : null;
+    const ebayItemId = 'sample-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const ebayUrl = 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(deal.title);
+    
+    prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+      ebayItemId, deal.title, deal.image, deal.originalPrice, deal.currentPrice, deal.discount, 'USD', 'New', ebayUrl, categoryId, 1
+    );
+    added++;
+  }
+
+  res.json({ message: `Added ${added} sample deals`, added });
+});
+
 export default router;
