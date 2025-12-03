@@ -32,37 +32,43 @@ class Scheduler {
     let itemsFound = 0, itemsAdded = 0, errorMessage = null;
 
     try {
-      const keywords = rule.keywords ? rule.keywords.split(',').map(k => k.trim()) : [''];
-      const categoryIds = rule.ebay_category_ids ? rule.ebay_category_ids.split(',') : [''];
+      // Use first keyword only to minimize API calls
+      const keywords = rule.keywords ? rule.keywords.split(',').map(k => k.trim()) : ['luxury'];
+      const keyword = keywords[0]; // Just use first keyword to save API calls
+      
+      // Single API call with 100 results
+      const items = await ebayService.searchItems({ 
+        keywords: keyword, 
+        categoryId: '', // Don't filter by category to get more results
+        minPrice: rule.min_price || 0, 
+        maxPrice: rule.max_price || 10000, 
+        minDiscount: rule.min_discount || 30,
+        limit: 100
+      });
+      itemsFound = items.length;
 
-      for (const keyword of keywords) {
-        for (const categoryId of categoryIds) {
-          const items = await ebayService.searchItems({ keywords: keyword, categoryId, minPrice: rule.min_price || 0, maxPrice: rule.max_price || 10000, minDiscount: rule.min_discount || 30 });
-          itemsFound += items.length;
-
-          for (const item of items) {
-            try {
-              let dbCategoryId = null;
-              if (item.categoryName) {
-                const existingCat = prepare('SELECT id FROM categories WHERE ebay_category_id = ?').get(item.categoryId);
-                if (existingCat) dbCategoryId = existingCat.id;
-                else {
-                  const result = prepare('INSERT INTO categories (name, ebay_category_id) VALUES (?, ?)').run(item.categoryName, item.categoryId);
-                  dbCategoryId = result.lastInsertRowid;
-                }
-              }
-              const affiliateUrl = ebayService.getAffiliateUrl(item.ebayUrl);
-              const existingDeal = prepare('SELECT id FROM deals WHERE ebay_item_id = ?').get(item.ebayItemId);
-              if (existingDeal) {
-                prepare('UPDATE deals SET title = ?, image_url = ?, original_price = ?, current_price = ?, discount_percent = ?, currency = ?, condition = ?, ebay_url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId, existingDeal.id);
-              } else {
-                prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(item.ebayItemId, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId);
-                itemsAdded++;
-              }
-            } catch (err) { console.error('Error saving deal:', err); }
+      for (const item of items) {
+        try {
+          let dbCategoryId = null;
+          if (item.categoryName) {
+            const existingCat = prepare('SELECT id FROM categories WHERE ebay_category_id = ?').get(item.categoryId);
+            if (existingCat) dbCategoryId = existingCat.id;
+            else {
+              const result = prepare('INSERT INTO categories (name, ebay_category_id) VALUES (?, ?)').run(item.categoryName, item.categoryId);
+              dbCategoryId = result.lastInsertRowid;
+            }
           }
-        }
+          const affiliateUrl = ebayService.getAffiliateUrl(item.ebayUrl);
+          const existingDeal = prepare('SELECT id FROM deals WHERE ebay_item_id = ?').get(item.ebayItemId);
+          if (existingDeal) {
+            prepare('UPDATE deals SET title = ?, image_url = ?, original_price = ?, current_price = ?, discount_percent = ?, currency = ?, condition = ?, ebay_url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId, existingDeal.id);
+          } else {
+            prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(item.ebayItemId, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId);
+            itemsAdded++;
+          }
+        } catch (err) { console.error('Error saving deal:', err); }
       }
+      
       prepare('UPDATE query_rules SET last_run = CURRENT_TIMESTAMP WHERE id = ?').run(ruleId);
     } catch (error) { console.error(`Error executing rule ${ruleId}:`, error); errorMessage = error.message; }
 
