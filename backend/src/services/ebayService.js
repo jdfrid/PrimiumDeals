@@ -17,36 +17,55 @@ class EbayService {
     }
 
     try {
+      // Use simpler findItemsByKeywords operation
       const queryParams = new URLSearchParams({
-        'OPERATION-NAME': 'findItemsAdvanced',
+        'OPERATION-NAME': 'findItemsByKeywords',
         'SERVICE-VERSION': '1.0.0',
         'SECURITY-APPNAME': this.appId,
         'RESPONSE-DATA-FORMAT': 'JSON',
         'REST-PAYLOAD': 'true',
         'paginationInput.entriesPerPage': limit.toString(),
-        'itemFilter(0).name': 'MinPrice', 'itemFilter(0).value': minPrice.toString(), 'itemFilter(0).paramName': 'Currency', 'itemFilter(0).paramValue': 'USD',
-        'itemFilter(1).name': 'MaxPrice', 'itemFilter(1).value': maxPrice.toString(), 'itemFilter(1).paramName': 'Currency', 'itemFilter(1).paramValue': 'USD',
-        'itemFilter(2).name': 'ListingType', 'itemFilter(2).value': 'FixedPrice',
-        'sortOrder': 'BestMatch'
+        'itemFilter(0).name': 'MinPrice', 
+        'itemFilter(0).value': minPrice.toString(), 
+        'itemFilter(0).paramName': 'Currency', 
+        'itemFilter(0).paramValue': 'USD',
+        'itemFilter(1).name': 'MaxPrice', 
+        'itemFilter(1).value': maxPrice.toString(), 
+        'itemFilter(1).paramName': 'Currency', 
+        'itemFilter(1).paramValue': 'USD',
+        'keywords': keywords || 'watch'
       });
 
-      if (keywords) queryParams.append('keywords', keywords);
-      if (categoryId) queryParams.append('categoryId', categoryId);
+      console.log(`🌐 eBay API URL: ${EBAY_API_BASE}?OPERATION-NAME=findItemsByKeywords&SECURITY-APPNAME=${this.appId.substring(0,10)}...`);
 
       const response = await fetch(`${EBAY_API_BASE}?${queryParams.toString()}`);
-      const data = await response.json();
+      const responseText = await response.text();
       
-      // Check for API errors
-      const errorMsg = data.findItemsAdvancedResponse?.[0]?.errorMessage?.[0]?.error?.[0]?.message?.[0];
+      console.log(`📡 eBay Response Status: ${response.status}`);
+      
+      if (!response.ok) {
+        console.error('❌ eBay API HTTP Error:', response.status, responseText.substring(0, 500));
+        throw new Error(`eBay API error: ${response.status}`);
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('❌ Failed to parse eBay response:', responseText.substring(0, 500));
+        throw new Error('Invalid response from eBay API');
+      }
+      
+      // Check for API errors in response
+      const errorMsg = data.findItemsByKeywordsResponse?.[0]?.errorMessage?.[0]?.error?.[0]?.message?.[0];
       if (errorMsg) {
         console.error('❌ eBay API Error:', errorMsg);
         throw new Error(errorMsg);
       }
       
-      if (!response.ok) throw new Error(`eBay API error: ${response.status}`);
       return this.parseSearchResults(data, minDiscount);
     } catch (error) {
-      console.error('eBay search error:', error);
+      console.error('eBay search error:', error.message);
       throw error;
     }
   }
@@ -54,7 +73,10 @@ class EbayService {
   parseSearchResults(data, minDiscount) {
     const results = [];
     try {
-      const items = data.findItemsAdvancedResponse?.[0]?.searchResult?.[0]?.item || [];
+      // Handle both findItemsByKeywords and findItemsAdvanced responses
+      const items = data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0]?.item 
+                 || data.findItemsAdvancedResponse?.[0]?.searchResult?.[0]?.item 
+                 || [];
       console.log(`📦 eBay returned ${items.length} items`);
       
       for (const item of items) {
