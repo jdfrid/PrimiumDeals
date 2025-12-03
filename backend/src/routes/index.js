@@ -65,6 +65,8 @@ router.get('/stats', authenticateToken, (req, res) => {
 
 // Seed sample deals
 router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) => {
+  const campaignId = process.env.EBAY_CAMPAIGN_ID || '5339122678';
+  
   const sampleDeals = [
     { title: 'Rolex Submariner Date 41mm Steel', originalPrice: 14500, currentPrice: 9800, discount: 32, image: 'https://images.unsplash.com/photo-1587836374828-4dbafa94cf0e?w=400', category: 'Watches' },
     { title: 'Omega Seamaster Professional 300M', originalPrice: 5200, currentPrice: 3400, discount: 35, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', category: 'Watches' },
@@ -78,12 +80,16 @@ router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) =
     { title: 'Montblanc Meisterstück Wallet', originalPrice: 530, currentPrice: 350, discount: 34, image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=400', category: 'Accessories' },
   ];
 
+  // First, delete existing sample deals
+  prepare("DELETE FROM deals WHERE ebay_item_id LIKE 'sample-%'").run();
+
   let added = 0;
   for (const deal of sampleDeals) {
     const cat = prepare('SELECT id FROM categories WHERE name = ?').get(deal.category);
     const categoryId = cat ? cat.id : null;
     const ebayItemId = 'sample-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    const ebayUrl = 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(deal.title);
+    const baseUrl = 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(deal.title);
+    const ebayUrl = `${baseUrl}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`;
     
     prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
       ebayItemId, deal.title, deal.image, deal.originalPrice, deal.currentPrice, deal.discount, 'USD', 'New', ebayUrl, categoryId, 1
@@ -91,7 +97,7 @@ router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) =
     added++;
   }
 
-  res.json({ message: `Added ${added} sample deals`, added });
+  res.json({ message: `Added ${added} sample deals with campaign ID ${campaignId}`, added, campaignId });
 });
 
 export default router;
