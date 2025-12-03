@@ -21,7 +21,7 @@ services:
       - key: EBAY_CERT_ID
         value: davidade-PrimiumD-PRD-26e774d48-9c51a1cc
       - key: EBAY_CAMPAIGN_ID
-        value: "5339243279"
+        value: "5339122678"
       - key: ADMIN_EMAIL
         value: admin@example.com
       - key: ADMIN_PASSWORD
