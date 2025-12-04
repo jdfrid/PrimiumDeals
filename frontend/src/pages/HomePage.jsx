@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
 import api from '../services/api';
 
 function DealCard({ deal }) {
@@ -21,19 +21,19 @@ function DealCard({ deal }) {
           loading="lazy"
         />
         {/* Discount Badge */}
-        <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
-          {deal.discount_percent}%−
+        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
+          -{deal.discount_percent}%
         </div>
         {/* Wishlist Button */}
         <button 
           onClick={(e) => e.preventDefault()}
-          className="absolute top-2 left-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-50"
+          className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-50"
         >
           <Heart size={16} className="text-gray-400 hover:text-red-500" />
         </button>
         {/* Category Tag */}
         {deal.category_name && (
-          <div className="absolute bottom-2 right-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow">
+          <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow">
             {deal.category_icon} {deal.category_name}
           </div>
         )}
@@ -48,15 +48,13 @@ function DealCard({ deal }) {
         {/* Prices */}
         <div className="mt-auto">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-gray-400 text-sm line-through">₪{(deal.original_price * 3.7).toFixed(0)}</span>
-            <span className="text-xs text-gray-400">|</span>
             <span className="text-gray-400 text-sm line-through">${deal.original_price?.toFixed(0)}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold text-gray-900">${deal.current_price?.toFixed(0)}</div>
             <div className="flex items-center gap-1 text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
               <TrendingDown size={14} />
-              <span>חיסכון ${savings?.toFixed(0)}</span>
+              <span>Save ${savings?.toFixed(0)}</span>
             </div>
           </div>
         </div>
@@ -64,7 +62,7 @@ function DealCard({ deal }) {
         {/* CTA Button */}
         <button className="mt-3 w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-lg font-medium text-sm hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
           <ShoppingBag size={16} />
-          לצפייה בדיל
+          View Deal
         </button>
       </div>
     </a>
@@ -132,12 +130,15 @@ export default function HomePage() {
     : deals;
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
       <div className="bg-gray-900 text-white text-xs py-2">
         <div className="container mx-auto px-4 flex items-center justify-between">
-          <span>🔥 דילים חמים מאיביי עם משלוח לישראל</span>
-          <a href="/admin" className="hover:text-orange-400 transition-colors">כניסת מנהלים</a>
+          <div className="flex items-center gap-2">
+            <Flame size={14} className="text-orange-400" />
+            <span>Hot deals from eBay with worldwide shipping</span>
+          </div>
+          <a href="/admin" className="hover:text-orange-400 transition-colors">Admin</a>
         </div>
       </div>
 
@@ -146,25 +147,25 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Percent size={22} className="text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Percent size={24} className="text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">דילים פרימיום</h1>
-                <p className="text-xs text-gray-500">מותגי יוקרה במחירי רצפה</p>
+                <h1 className="text-xl font-bold text-gray-800">Premium Deals</h1>
+                <p className="text-xs text-gray-500">Luxury brands at best prices</p>
               </div>
             </div>
 
             {/* Search Bar */}
-            <div className="flex-1 max-w-xl mx-8">
+            <div className="flex-1 max-w-xl mx-8 hidden md:block">
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="חיפוש דילים..."
+                  placeholder="Search deals..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-right"
+                  className="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                 />
                 <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
@@ -174,20 +175,34 @@ export default function HomePage() {
             <div className="flex items-center gap-6 text-center">
               <div>
                 <div className="text-2xl font-bold text-orange-500">{pagination?.total || '100'}+</div>
-                <div className="text-xs text-gray-500">דילים פעילים</div>
+                <div className="text-xs text-gray-500">Active Deals</div>
               </div>
-              <div className="w-px h-10 bg-gray-200" />
-              <div>
+              <div className="w-px h-10 bg-gray-200 hidden md:block" />
+              <div className="hidden md:block">
                 <div className="text-2xl font-bold text-green-500">50%</div>
-                <div className="text-xs text-gray-500">הנחה מקסימלית</div>
+                <div className="text-xs text-gray-500">Max Discount</div>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile Search */}
+          <div className="md:hidden pb-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search deals..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
 
           {/* Categories Bar */}
           <div className="flex items-center gap-3 py-3 overflow-x-auto scrollbar-hide">
             <CategoryButton 
-              category={{ name: 'הכל', icon: '🏷️' }} 
+              category={{ name: 'All', icon: '🏷️' }} 
               active={!selectedCategory} 
               onClick={() => { setSelectedCategory(null); setPage(1); }}
               count={pagination?.total || 0}
@@ -206,16 +221,20 @@ export default function HomePage() {
       </header>
 
       {/* Hero Banner */}
-      <div className="bg-gradient-to-l from-orange-500 via-red-500 to-pink-500 text-white py-8">
+      <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white py-8">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold mb-2">🎉 דילים בלעדיים ממותגי יוקרה</h2>
-              <p className="text-white/90">שעונים, תיקים, תכשיטים ואקססוריז - הכל עד 50% הנחה!</p>
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="text-yellow-300 fill-yellow-300" size={20} />
+                <span className="text-white/90 text-sm font-medium">Exclusive Luxury Deals</span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">Premium Brands, Unbeatable Prices</h2>
+              <p className="text-white/90">Watches, handbags, jewelry & accessories - all up to 50% off!</p>
             </div>
-            <div className="text-left">
-              <div className="text-5xl font-bold">30-50%</div>
-              <div className="text-white/80">הנחה על כל המוצרים</div>
+            <div className="text-center md:text-right">
+              <div className="text-4xl md:text-5xl font-bold">30-50%</div>
+              <div className="text-white/80">OFF Everything</div>
             </div>
           </div>
         </div>
@@ -224,24 +243,24 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Filter size={18} />
-            <span>נמצאו <strong className="text-gray-900">{filteredDeals.length}</strong> דילים</span>
+            <span>Found <strong className="text-gray-900">{filteredDeals.length}</strong> deals</span>
           </div>
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">מיון:</span>
+              <span className="text-sm text-gray-600">Sort by:</span>
               <select 
                 value={sortBy} 
                 onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-100 bg-white"
               >
-                <option value="discount">אחוז הנחה</option>
-                <option value="price_asc">מחיר: נמוך לגבוה</option>
-                <option value="price_desc">מחיר: גבוה לנמוך</option>
-                <option value="newest">חדש ביותר</option>
+                <option value="discount">Highest Discount</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="newest">Newest First</option>
               </select>
             </div>
           </div>
@@ -263,8 +282,8 @@ export default function HomePage() {
         ) : filteredDeals.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-800">לא נמצאו דילים</h3>
-            <p className="text-gray-500">נסה לשנות את החיפוש או הפילטרים</p>
+            <h3 className="text-xl font-semibold mb-2 text-gray-800">No deals found</h3>
+            <p className="text-gray-500">Try adjusting your search or filters</p>
           </div>
         ) : (
           <>
@@ -280,7 +299,7 @@ export default function HomePage() {
                   disabled={page === 1}
                   className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronRight size={20} />
+                  <ChevronLeft size={20} />
                 </button>
                 
                 {[...Array(Math.min(7, pagination.pages))].map((_, i) => {
@@ -315,7 +334,7 @@ export default function HomePage() {
                   disabled={page === pagination.pages}
                   className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronRight size={20} />
                 </button>
               </div>
             )}
@@ -333,40 +352,41 @@ export default function HomePage() {
                 <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                   <Percent size={16} className="text-white" />
                 </div>
-                <span className="font-bold">דילים פרימיום</span>
+                <span className="font-bold">Premium Deals</span>
               </div>
               <p className="text-gray-400 text-sm leading-relaxed">
-                אנחנו מביאים לכם את הדילים הטובים ביותר ממותגי יוקרה באיביי. 
-                כל המוצרים נבדקו ומגיעים עם משלוח לישראל.
+                We bring you the best deals on luxury brands from eBay. 
+                All products are verified and ship worldwide.
               </p>
             </div>
             
             {/* Quick Links */}
             <div>
-              <h3 className="font-bold mb-4">קישורים מהירים</h3>
+              <h3 className="font-bold mb-4">Categories</h3>
               <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">שעונים</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">תיקים</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">תכשיטים</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">משקפי שמש</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Watches</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Handbags</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Jewelry</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Sunglasses</a></li>
               </ul>
             </div>
             
-            {/* Contact */}
+            {/* Popular Brands */}
             <div>
-              <h3 className="font-bold mb-4">קטגוריות פופולריות</h3>
+              <h3 className="font-bold mb-4">Popular Brands</h3>
               <div className="flex flex-wrap gap-2">
                 <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Rolex</span>
                 <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Louis Vuitton</span>
                 <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Gucci</span>
                 <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Cartier</span>
+                <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Omega</span>
               </div>
             </div>
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} דילים פרימיום. כל הזכויות שמורות.</p>
-            <p className="text-gray-500 text-sm">אנחנו שותפים בתוכנית השותפים של eBay</p>
+            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Premium Deals. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">Participant in the eBay Partner Network affiliate program</p>
           </div>
         </div>
       </footer>
