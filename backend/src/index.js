@@ -9,11 +9,35 @@ import bcrypt from 'bcryptjs';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Use /app/backend/data for Render persistent disk, fallback to local
-const dataDir = process.env.NODE_ENV === 'production' 
-  ? '/app/backend/data' 
-  : path.join(__dirname, '../data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+// Determine data directory - try persistent disk first, then fallback
+function getDataDir() {
+  const persistentPath = '/app/backend/data';
+  const localPath = path.join(__dirname, '../data');
+  
+  // In production, try persistent disk first
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      if (fs.existsSync(persistentPath)) {
+        return persistentPath;
+      }
+      // Try to create it (will work if disk is mounted)
+      fs.mkdirSync(persistentPath, { recursive: true });
+      return persistentPath;
+    } catch (e) {
+      console.log('⚠️ Persistent disk not available, using local storage');
+      // Fall back to project directory
+      const fallbackPath = path.join(__dirname, '../data');
+      if (!fs.existsSync(fallbackPath)) fs.mkdirSync(fallbackPath, { recursive: true });
+      return fallbackPath;
+    }
+  }
+  
+  // Local development
+  if (!fs.existsSync(localPath)) fs.mkdirSync(localPath, { recursive: true });
+  return localPath;
+}
+
+const dataDir = getDataDir();
 console.log(`📂 Data directory: ${dataDir}`);
 
 import { initDatabase, prepare } from './config/database.js';

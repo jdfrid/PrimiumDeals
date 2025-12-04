@@ -4,10 +4,29 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Use /app/backend/data for Render persistent disk, fallback to local
-const dataDir = process.env.NODE_ENV === 'production' 
-  ? '/app/backend/data' 
-  : path.join(__dirname, '../../data');
+
+// Determine data directory - try persistent disk first, then fallback
+function getDataDir() {
+  const persistentPath = '/app/backend/data';
+  const localPath = path.join(__dirname, '../../data');
+  
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      if (fs.existsSync(persistentPath)) return persistentPath;
+      fs.mkdirSync(persistentPath, { recursive: true });
+      return persistentPath;
+    } catch (e) {
+      const fallbackPath = path.join(__dirname, '../../data');
+      if (!fs.existsSync(fallbackPath)) fs.mkdirSync(fallbackPath, { recursive: true });
+      return fallbackPath;
+    }
+  }
+  
+  if (!fs.existsSync(localPath)) fs.mkdirSync(localPath, { recursive: true });
+  return localPath;
+}
+
+const dataDir = getDataDir();
 const dbPath = path.join(dataDir, 'deals.db');
 console.log(`📁 Database path: ${dbPath}`);
 
