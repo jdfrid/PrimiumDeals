@@ -4,7 +4,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '../../data/deals.db');
+// Use /app/backend/data for Render persistent disk, fallback to local
+const dataDir = process.env.NODE_ENV === 'production' 
+  ? '/app/backend/data' 
+  : path.join(__dirname, '../../data');
+const dbPath = path.join(dataDir, 'deals.db');
+console.log(`📁 Database path: ${dbPath}`);
 
 let db = null;
 

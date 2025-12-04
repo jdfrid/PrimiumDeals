@@ -9,8 +9,12 @@ import bcrypt from 'bcryptjs';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '../data');
+// Use /app/backend/data for Render persistent disk, fallback to local
+const dataDir = process.env.NODE_ENV === 'production' 
+  ? '/app/backend/data' 
+  : path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+console.log(`📂 Data directory: ${dataDir}`);
 
 import { initDatabase, prepare } from './config/database.js';
 import routes from './routes/index.js';
