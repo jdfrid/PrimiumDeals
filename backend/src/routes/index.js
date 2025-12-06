@@ -11,6 +11,29 @@ const router = express.Router();
 
 // Public
 router.post('/auth/login', authController.login);
+
+// Reset admin password (temporary - remove in production)
+router.post('/auth/reset-admin', async (req, res) => {
+  try {
+    const bcrypt = await import('bcryptjs');
+    const email = 'jdfrid@gmail.com';
+    const password = '12345678';
+    const hashedPassword = await bcrypt.default.hash(password, 10);
+    
+    // Delete old admin if exists
+    prepare('DELETE FROM users WHERE role = ?').run('admin');
+    
+    // Create new admin
+    prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)').run(
+      email, hashedPassword, 'Administrator', 'admin'
+    );
+    
+    res.json({ message: 'Admin reset successfully', email });
+  } catch (error) {
+    console.error('Reset admin error:', error);
+    res.status(500).json({ error: 'Failed to reset admin' });
+  }
+});
 router.get('/public/deals', dealsController.getPublicDeals);
 router.get('/public/categories', categoriesController.getPublicCategories);
 
