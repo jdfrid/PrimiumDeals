@@ -5,15 +5,28 @@ import { prepare } from '../config/database.js';
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log(`🔑 Login attempt for: ${email}`);
+    
     const user = prepare('SELECT * FROM users WHERE email = ?').get(email);
     
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log(`❌ User not found: ${email}`);
+      return res.status(401).json({ error: 'User not found. Try resetting admin at /api/auth/reset-admin' });
     }
+    
+    console.log(`✅ User found: ${user.email}, role: ${user.role}`);
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log(`❌ Invalid password for: ${email}`);
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+    
+    console.log(`✅ Password valid for: ${email}`);
+
+    if (!process.env.JWT_SECRET) {
+      console.log('❌ JWT_SECRET not configured!');
+      return res.status(500).json({ error: 'Server configuration error: JWT_SECRET missing' });
     }
 
     const token = jwt.sign(
@@ -21,6 +34,8 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+    
+    console.log(`✅ Login successful for: ${email}`);
 
     res.json({
       token,
@@ -28,7 +43,7 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'Login failed: ' + error.message });
   }
 };
 

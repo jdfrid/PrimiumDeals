@@ -20,24 +20,43 @@ router.get('/auth/reset-admin', async (req, res) => {
     const password = '12345678';
     const hashedPassword = await bcrypt.default.hash(password, 10);
     
+    console.log('🔐 Resetting admin...');
+    
     // Delete ALL existing admins
-    prepare('DELETE FROM users WHERE role = ?').run('admin');
+    const deleteResult = prepare('DELETE FROM users WHERE role = ?').run('admin');
+    console.log(`Deleted ${deleteResult.changes} existing admins`);
     
     // Create new admin
-    prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)').run(
+    const insertResult = prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)').run(
       email, hashedPassword, 'Administrator', 'admin'
     );
+    console.log(`Created admin with ID: ${insertResult.lastInsertRowid}`);
+    
+    // Verify it was created
+    const user = prepare('SELECT id, email, role FROM users WHERE email = ?').get(email);
+    console.log('Admin user:', user);
     
     res.json({ 
       success: true,
       message: 'Admin created!', 
       email,
       password,
+      userId: user?.id,
       loginUrl: '/admin'
     });
   } catch (error) {
     console.error('Reset admin error:', error);
     res.status(500).json({ error: 'Failed to reset admin: ' + error.message });
+  }
+});
+
+// Debug: Check users in database
+router.get('/auth/check-users', (req, res) => {
+  try {
+    const users = prepare('SELECT id, email, name, role FROM users').all();
+    res.json({ count: users.length, users });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
