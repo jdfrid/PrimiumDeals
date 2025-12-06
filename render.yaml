@@ -23,6 +23,6 @@ services:
       - key: EBAY_CAMPAIGN_ID
         value: "5339122678"
       - key: ADMIN_EMAIL
-        value: admin@example.com
+        value: jdfrid@gmail.com
       - key: ADMIN_PASSWORD
-        value: admin123
+        value: "12345678"
