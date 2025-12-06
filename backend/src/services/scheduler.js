@@ -58,7 +58,7 @@ class Scheduler {
               dbCategoryId = result.lastInsertRowid;
             }
           }
-          const affiliateUrl = ebayService.getAffiliateUrl(item.ebayUrl);
+          const affiliateUrl = ebayService.getAffiliateUrl(item.ebayItemId);
           const existingDeal = prepare('SELECT id FROM deals WHERE ebay_item_id = ?').get(item.ebayItemId);
           if (existingDeal) {
             prepare('UPDATE deals SET title = ?, image_url = ?, original_price = ?, current_price = ?, discount_percent = ?, currency = ?, condition = ?, ebay_url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId, existingDeal.id);

@@ -110,9 +110,9 @@ class EbayService {
     return results;
   }
 
-  getAffiliateUrl(itemUrl) {
-    const separator = itemUrl.includes('?') ? '&' : '?';
-    return `${itemUrl}${separator}mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
+  getAffiliateUrl(itemId) {
+    // Use direct item URL format: https://www.ebay.com/itm/{itemId}
+    return `https://www.ebay.com/itm/${itemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
   }
 }
 

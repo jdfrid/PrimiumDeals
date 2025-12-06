@@ -12,15 +12,15 @@ const router = express.Router();
 // Public
 router.post('/auth/login', authController.login);
 
-// Reset admin password (temporary - remove in production)
-router.post('/auth/reset-admin', async (req, res) => {
+// Reset admin password (GET for easy access)
+router.get('/auth/reset-admin', async (req, res) => {
   try {
     const bcrypt = await import('bcryptjs');
     const email = 'jdfrid@gmail.com';
     const password = '12345678';
     const hashedPassword = await bcrypt.default.hash(password, 10);
     
-    // Delete old admin if exists
+    // Delete ALL existing admins
     prepare('DELETE FROM users WHERE role = ?').run('admin');
     
     // Create new admin
@@ -28,10 +28,36 @@ router.post('/auth/reset-admin', async (req, res) => {
       email, hashedPassword, 'Administrator', 'admin'
     );
     
-    res.json({ message: 'Admin reset successfully', email });
+    res.json({ 
+      success: true,
+      message: 'Admin created!', 
+      email,
+      password,
+      loginUrl: '/admin'
+    });
   } catch (error) {
     console.error('Reset admin error:', error);
-    res.status(500).json({ error: 'Failed to reset admin' });
+    res.status(500).json({ error: 'Failed to reset admin: ' + error.message });
+  }
+});
+
+// Also support POST
+router.post('/auth/reset-admin', async (req, res) => {
+  try {
+    const bcrypt = await import('bcryptjs');
+    const email = 'jdfrid@gmail.com';
+    const password = '12345678';
+    const hashedPassword = await bcrypt.default.hash(password, 10);
+    
+    prepare('DELETE FROM users WHERE role = ?').run('admin');
+    prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)').run(
+      email, hashedPassword, 'Administrator', 'admin'
+    );
+    
+    res.json({ success: true, message: 'Admin created!', email, password });
+  } catch (error) {
+    console.error('Reset admin error:', error);
+    res.status(500).json({ error: 'Failed to reset admin: ' + error.message });
   }
 });
 router.get('/public/deals', dealsController.getPublicDeals);
@@ -163,9 +189,12 @@ router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) =
     
     const cat = prepare('SELECT id FROM categories WHERE name = ?').get(category);
     const categoryId = cat ? cat.id : null;
-    const ebayItemId = 'sample-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    const baseUrl = 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(title);
-    const ebayUrl = `${baseUrl}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`;
+    
+    // Generate realistic eBay item ID (12-digit number)
+    const ebayItemId = String(280000000000 + Math.floor(Math.random() * 20000000000));
+    
+    // Use proper eBay item URL format: https://www.ebay.com/itm/{itemId}
+    const ebayUrl = `https://www.ebay.com/itm/${ebayItemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`;
     const imageUrl = `https://images.unsplash.com/${image}?w=400`;
     
     prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
