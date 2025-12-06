@@ -108,7 +108,8 @@ export const getPublicDeals = (req, res) => {
     case 'price_asc': sql += ' ORDER BY d.current_price ASC'; break;
     case 'price_desc': sql += ' ORDER BY d.current_price DESC'; break;
     case 'newest': sql += ' ORDER BY d.created_at DESC'; break;
-    default: sql += ' ORDER BY d.discount_percent DESC';
+    case 'random': sql += ' ORDER BY RANDOM()'; break;
+    default: sql += ' ORDER BY RANDOM()'; // Default to random
   }
   sql += ' LIMIT ? OFFSET ?';
   params.push(parseInt(limit), offset);

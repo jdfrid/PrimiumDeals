@@ -120,7 +120,7 @@ function initializeSampleDeals() {
   const categories = Object.keys(brands);
   let added = 0;
   
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1000; i++) {
     const category = categories[i % categories.length];
     const brandList = brands[category];
     const productList = products[category];

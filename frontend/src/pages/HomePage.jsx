@@ -91,7 +91,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [sortBy, setSortBy] = useState('discount');
+  const [sortBy, setSortBy] = useState('random');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,7 +138,10 @@ export default function HomePage() {
             <Flame size={14} className="text-orange-400" />
             <span>Hot deals from eBay with worldwide shipping</span>
           </div>
-          <a href="/admin" className="hover:text-orange-400 transition-colors">Admin</a>
+          <div className="flex items-center gap-4">
+            <a href="/terms" className="hover:text-orange-400 transition-colors">Terms of Service</a>
+            <a href="/contact" className="hover:text-orange-400 transition-colors">Contact</a>
+          </div>
         </div>
       </div>
 
@@ -257,6 +260,7 @@ export default function HomePage() {
                 onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-100 bg-white"
               >
+                <option value="random">Random</option>
                 <option value="discount">Highest Discount</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>
@@ -362,12 +366,11 @@ export default function HomePage() {
             
             {/* Quick Links */}
             <div>
-              <h3 className="font-bold mb-4">Categories</h3>
+              <h3 className="font-bold mb-4">Links</h3>
               <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Watches</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Handbags</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Jewelry</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Sunglasses</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="https://www.ebay.com" target="_blank" rel="noopener" className="hover:text-white transition-colors">Visit eBay</a></li>
               </ul>
             </div>
             

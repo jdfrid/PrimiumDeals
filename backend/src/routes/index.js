@@ -50,6 +50,32 @@ router.post('/rules/:id/execute', authenticateToken, requireRole('admin'), rules
 router.get('/rules/:id/logs', authenticateToken, requireRole('admin'), rulesController.getRuleLogs);
 router.get('/logs', authenticateToken, requireRole('admin'), rulesController.getAllLogs);
 
+// Providers
+router.get('/providers', authenticateToken, requireRole('admin'), (req, res) => {
+  const providers = prepare('SELECT * FROM providers').all();
+  res.json(providers);
+});
+
+router.post('/providers', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { providers } = req.body;
+    for (const provider of providers) {
+      const existing = prepare('SELECT id FROM providers WHERE id = ?').get(provider.id);
+      if (existing) {
+        prepare('UPDATE providers SET name = ?, enabled = ?, settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run(provider.name, provider.enabled ? 1 : 0, JSON.stringify(provider), provider.id);
+      } else {
+        prepare('INSERT INTO providers (id, name, enabled, settings) VALUES (?, ?, ?, ?)')
+          .run(provider.id, provider.name, provider.enabled ? 1 : 0, JSON.stringify(provider));
+      }
+    }
+    res.json({ message: 'Providers saved successfully' });
+  } catch (error) {
+    console.error('Save providers error:', error);
+    res.status(500).json({ error: 'Failed to save providers' });
+  }
+});
+
 // Stats
 router.get('/stats', authenticateToken, (req, res) => {
   const stats = {

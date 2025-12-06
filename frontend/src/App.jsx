@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import HomePage from './pages/HomePage';
+import TermsPage from './pages/TermsPage';
+import ContactPage from './pages/ContactPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -9,6 +11,7 @@ import CategoriesManager from './pages/admin/CategoriesManager';
 import UsersManager from './pages/admin/UsersManager';
 import RulesManager from './pages/admin/RulesManager';
 import LogsViewer from './pages/admin/LogsViewer';
+import ProvidersManager from './pages/admin/ProvidersManager';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -37,6 +40,8 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
@@ -45,6 +50,7 @@ function App() {
           <Route path="users" element={<ProtectedRoute roles={['admin']}><UsersManager /></ProtectedRoute>} />
           <Route path="rules" element={<ProtectedRoute roles={['admin']}><RulesManager /></ProtectedRoute>} />
           <Route path="logs" element={<ProtectedRoute roles={['admin']}><LogsViewer /></ProtectedRoute>} />
+          <Route path="providers" element={<ProtectedRoute roles={['admin']}><ProvidersManager /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
