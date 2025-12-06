@@ -91,10 +91,11 @@ export default function HomePage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [sortBy, setSortBy] = useState('random');
+  const [sortBy, setSortBy] = useState('discount');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [randomSeed, setRandomSeed] = useState(null);
 
   useEffect(() => {
     loadCategories();
@@ -115,13 +116,38 @@ export default function HomePage() {
     try {
       const params = { page, sort: sortBy };
       if (selectedCategory) params.category = selectedCategory;
+      // Use seed for consistent random pagination
+      if (sortBy === 'random' && randomSeed) {
+        params.seed = randomSeed;
+      }
       const data = await api.getPublicDeals(params);
       setDeals(data.deals);
       setPagination(data.pagination);
+      // Store seed for pagination
+      if (data.seed && !randomSeed) {
+        setRandomSeed(data.seed);
+      }
     } catch (error) {
       console.error('Failed to load deals:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Reset seed when changing sort or category
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    setPage(1);
+    if (newSort === 'random') {
+      setRandomSeed(null); // New random seed
+    }
+  };
+  
+  const handleCategoryChange = (catId) => {
+    setSelectedCategory(catId);
+    setPage(1);
+    if (sortBy === 'random') {
+      setRandomSeed(null); // New random seed
     }
   };
 
@@ -207,7 +233,7 @@ export default function HomePage() {
             <CategoryButton 
               category={{ name: 'All', icon: '🏷️' }} 
               active={!selectedCategory} 
-              onClick={() => { setSelectedCategory(null); setPage(1); }}
+              onClick={() => handleCategoryChange(null)}
               count={pagination?.total || 0}
             />
             {categories.map(cat => (
@@ -215,7 +241,7 @@ export default function HomePage() {
                 key={cat.id} 
                 category={cat} 
                 active={selectedCategory === cat.id} 
-                onClick={() => { setSelectedCategory(cat.id); setPage(1); }}
+                onClick={() => handleCategoryChange(cat.id)}
                 count={cat.deal_count}
               />
             ))}
@@ -255,16 +281,16 @@ export default function HomePage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Sort by:</span>
-              <select 
-                value={sortBy} 
-                onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+              <select
+                value={sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-100 bg-white"
               >
-                <option value="random">Random</option>
                 <option value="discount">Highest Discount</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>
                 <option value="newest">Newest First</option>
+                <option value="random">Random</option>
               </select>
             </div>
           </div>

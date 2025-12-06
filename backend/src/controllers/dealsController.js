@@ -93,7 +93,7 @@ export const toggleDealActive = (req, res) => {
 };
 
 export const getPublicDeals = (req, res) => {
-  const { page = 1, limit = 24, category, sort = 'discount' } = req.query;
+  const { page = 1, limit = 24, category, sort = 'discount', seed } = req.query;
   const offset = (page - 1) * limit;
   const minDiscount = 30;
 
@@ -108,12 +108,23 @@ export const getPublicDeals = (req, res) => {
     case 'price_asc': sql += ' ORDER BY d.current_price ASC'; break;
     case 'price_desc': sql += ' ORDER BY d.current_price DESC'; break;
     case 'newest': sql += ' ORDER BY d.created_at DESC'; break;
-    case 'random': sql += ' ORDER BY RANDOM()'; break;
-    default: sql += ' ORDER BY RANDOM()'; // Default to random
+    case 'random': 
+      // Use a seeded random based on deal ID for consistent pagination
+      const randomSeed = seed || Math.floor(Math.random() * 1000000);
+      sql += ` ORDER BY (d.id * ${randomSeed}) % 997`; 
+      break;
+    default: sql += ' ORDER BY d.discount_percent DESC, d.id DESC';
   }
   sql += ' LIMIT ? OFFSET ?';
   params.push(parseInt(limit), offset);
   const deals = prepare(sql).all(...params);
 
-  res.json({ deals, pagination: { page: parseInt(page), limit: parseInt(limit), total: count, pages: Math.ceil(count / limit) } });
+  // Generate a seed for random sorting if not provided
+  const responseSeed = sort === 'random' ? (seed || Math.floor(Math.random() * 1000000)) : undefined;
+
+  res.json({ 
+    deals, 
+    pagination: { page: parseInt(page), limit: parseInt(limit), total: count, pages: Math.ceil(count / limit) },
+    seed: responseSeed
+  });
 };
