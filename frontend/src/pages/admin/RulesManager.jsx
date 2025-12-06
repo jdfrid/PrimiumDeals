@@ -55,7 +55,22 @@ export default function RulesManager() {
   useEffect(() => { loadRules(); }, []);
 
   const loadRules = async () => { try { setRules(await api.getRules()); } catch (e) { console.error(e); } finally { setLoading(false); } };
-  const executeRule = async (id) => { setExecuting(id); try { const r = await api.executeRule(id); alert(`Found: ${r.itemsFound}, Added: ${r.itemsAdded}`); loadRules(); } catch (e) { alert(e.message); } finally { setExecuting(null); } };
+  const executeRule = async (id) => { 
+    setExecuting(id); 
+    try { 
+      const r = await api.executeRule(id); 
+      if (r.error) {
+        alert(`❌ Error: ${r.error}`);
+      } else {
+        alert(`✅ Found: ${r.itemsFound}, Added: ${r.itemsAdded}`); 
+      }
+      loadRules(); 
+    } catch (e) { 
+      alert(`❌ Error: ${e.message}`); 
+    } finally { 
+      setExecuting(null); 
+    } 
+  };
   const deleteRule = async (id) => { if (confirm('Delete this rule?')) { await api.deleteRule(id); loadRules(); } };
   const openModal = (rule = null) => { setEditingRule(rule); setShowModal(true); };
   const closeModal = () => { setEditingRule(null); setShowModal(false); };

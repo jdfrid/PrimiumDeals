@@ -26,15 +26,22 @@ class Scheduler {
 
   async executeRule(ruleId) {
     const rule = prepare('SELECT * FROM query_rules WHERE id = ?').get(ruleId);
-    if (!rule) return { success: false, error: 'Rule not found' };
+    if (!rule) return { success: false, itemsFound: 0, itemsAdded: 0, error: 'Rule not found' };
 
     console.log(`🔍 Executing rule: ${rule.name}`);
     let itemsFound = 0, itemsAdded = 0, errorMessage = null;
 
     try {
+      // Check if eBay API is configured
+      if (!process.env.EBAY_APP_ID) {
+        throw new Error('eBay API credentials not configured. Please set EBAY_APP_ID in environment variables.');
+      }
+
       // Use first keyword only to minimize API calls
-      const keywords = rule.keywords ? rule.keywords.split(',').map(k => k.trim()) : ['luxury'];
+      const keywords = rule.keywords ? rule.keywords.split(',').map(k => k.trim()) : ['luxury watch'];
       const keyword = keywords[0]; // Just use first keyword to save API calls
+      
+      console.log(`🔍 Searching eBay for: "${keyword}"`);
       
       // Single API call with 100 results
       const items = await ebayService.searchItems({ 
@@ -45,6 +52,8 @@ class Scheduler {
         minDiscount: rule.min_discount || 30,
         limit: 100
       });
+      
+      console.log(`📦 eBay returned ${items.length} items`);
       itemsFound = items.length;
 
       for (const item of items) {
@@ -70,11 +79,27 @@ class Scheduler {
       }
       
       prepare('UPDATE query_rules SET last_run = CURRENT_TIMESTAMP WHERE id = ?').run(ruleId);
-    } catch (error) { console.error(`Error executing rule ${ruleId}:`, error); errorMessage = error.message; }
+    } catch (error) { 
+      console.error(`❌ Error executing rule ${ruleId}:`, error.message); 
+      errorMessage = error.message;
+      
+      // Check for common errors
+      if (error.message.includes('500')) {
+        errorMessage = 'eBay API rate limit exceeded. Please try again in a few minutes.';
+      } else if (error.message.includes('credentials')) {
+        errorMessage = 'eBay API credentials not configured. Check EBAY_APP_ID.';
+      }
+    }
 
     prepare('INSERT INTO query_logs (rule_id, status, items_found, items_added, error_message) VALUES (?, ?, ?, ?, ?)').run(ruleId, errorMessage ? 'error' : 'success', itemsFound, itemsAdded, errorMessage);
     saveDatabase();
-    console.log(`✅ Rule "${rule.name}" completed: ${itemsFound} found, ${itemsAdded} added`);
+    
+    if (errorMessage) {
+      console.log(`❌ Rule "${rule.name}" failed: ${errorMessage}`);
+    } else {
+      console.log(`✅ Rule "${rule.name}" completed: ${itemsFound} found, ${itemsAdded} added`);
+    }
+    
     return { success: !errorMessage, itemsFound, itemsAdded, error: errorMessage };
   }
 
