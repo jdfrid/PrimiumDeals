@@ -209,11 +209,12 @@ router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) =
     const cat = prepare('SELECT id FROM categories WHERE name = ?').get(category);
     const categoryId = cat ? cat.id : null;
     
-    // Generate realistic eBay item ID (12-digit number)
-    const ebayItemId = String(280000000000 + Math.floor(Math.random() * 20000000000));
+    // Use sample ID for tracking
+    const ebayItemId = 'sample-' + Date.now() + '-' + i;
     
-    // Use proper eBay item URL format: https://www.ebay.com/itm/{itemId}
-    const ebayUrl = `https://www.ebay.com/itm/${ebayItemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`;
+    // Create search URL that will find real products on eBay
+    const searchQuery = encodeURIComponent(`${brand} ${product}`);
+    const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${searchQuery}&_sacat=0&LH_BIN=1&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`;
     const imageUrl = `https://images.unsplash.com/${image}?w=400`;
     
     prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
