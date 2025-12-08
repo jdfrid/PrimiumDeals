@@ -9,7 +9,10 @@ class EbayService {
   async searchItems(params) {
     const { keywords = '', categoryId = '', minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
 
-    console.log(`🔍 eBay Search: keywords="${keywords}", category=${categoryId}, price=${minPrice}-${maxPrice}`);
+    console.log(`\n${'='.repeat(50)}`);
+    console.log(`🔍 eBay API CALL at ${new Date().toISOString()}`);
+    console.log(`🔍 Keywords: "${keywords}", Price: $${minPrice}-$${maxPrice}`);
+    console.log(`${'='.repeat(50)}`);
     
     if (!this.appId) {
       console.error('❌ EBAY_APP_ID is not configured!');
@@ -44,8 +47,14 @@ class EbayService {
       console.log(`📡 eBay Response Status: ${response.status}`);
       
       if (!response.ok) {
-        console.error('❌ eBay API HTTP Error:', response.status, responseText.substring(0, 500));
-        throw new Error(`eBay API error: ${response.status}`);
+        console.error('❌ eBay API HTTP Error:', response.status);
+        console.error('❌ eBay Response:', responseText.substring(0, 1000));
+        
+        // More specific error messages
+        if (response.status === 500) {
+          throw new Error(`eBay server error (500). This could be: rate limit, invalid API key, or eBay server issue. Response: ${responseText.substring(0, 200)}`);
+        }
+        throw new Error(`eBay API error: ${response.status} - ${responseText.substring(0, 200)}`);
       }
       
       let data;
