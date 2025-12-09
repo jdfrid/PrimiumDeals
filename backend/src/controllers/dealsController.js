@@ -93,9 +93,9 @@ export const toggleDealActive = (req, res) => {
 };
 
 export const getPublicDeals = (req, res) => {
-  const { page = 1, limit = 24, category, sort = 'discount', seed } = req.query;
+  const { page = 1, limit = 48, category, sort = 'discount', seed } = req.query;
   const offset = (page - 1) * limit;
-  const minDiscount = 30;
+  const minDiscount = 10; // Show deals with 10%+ discount
 
   let sql = 'SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent, d.currency, d.condition, d.ebay_url, c.name as category_name, c.icon as category_icon FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?';
   let countSql = 'SELECT COUNT(*) as count FROM deals d WHERE d.is_active = 1 AND d.discount_percent >= ?';
