@@ -82,6 +82,20 @@ router.post('/auth/reset-admin', async (req, res) => {
 router.get('/public/deals', dealsController.getPublicDeals);
 router.get('/public/categories', categoriesController.getPublicCategories);
 
+// Clear all deals to refresh with correct URLs
+router.get('/debug/clear-deals', authenticateToken, (req, res) => {
+  try {
+    const result = prepare('DELETE FROM deals').run();
+    res.json({ 
+      success: true, 
+      message: `Deleted ${result.changes} deals. Now run Query Rule to fetch fresh deals.`,
+      deleted: result.changes
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Click tracking - redirect through this to log clicks
 router.get('/track/click/:dealId', (req, res) => {
   try {

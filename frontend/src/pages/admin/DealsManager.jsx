@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Trash2, Eye, EyeOff, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Trash2, Eye, EyeOff, ExternalLink, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 
 export default function DealsManager() {
@@ -8,6 +8,7 @@ export default function DealsManager() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { loadDeals(); }, [page, search]);
 
@@ -25,11 +26,33 @@ export default function DealsManager() {
 
   const toggleActive = async (id) => { await api.toggleDealActive(id); loadDeals(); };
   const deleteDeal = async (id) => { if (confirm('Delete this deal?')) { await api.deleteDeal(id); loadDeals(); } };
+  
+  const deleteAllDeals = async () => {
+    if (!confirm('⚠️ Are you sure you want to delete ALL deals?\n\nThis cannot be undone!\n\nAfter deleting, go to Query Rules and click "Run" to fetch fresh deals.')) return;
+    setDeleting(true);
+    try {
+      const response = await api.request('/debug/clear-deals');
+      alert(`✅ Deleted ${response.deleted} deals!\n\nNow go to Query Rules → Run to fetch fresh deals.`);
+      loadDeals();
+    } catch (error) {
+      alert('❌ Failed to delete deals: ' + error.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div><h1 className="text-2xl font-bold mb-1">Deals Manager</h1><p className="text-midnight-400">Manage all your eBay deals</p></div>
+        <button 
+          onClick={deleteAllDeals} 
+          disabled={deleting}
+          className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors disabled:opacity-50"
+        >
+          <AlertTriangle size={18} />
+          {deleting ? 'Deleting...' : 'Delete All Deals'}
+        </button>
       </div>
       <div className="mb-6">
         <div className="relative max-w-md">
