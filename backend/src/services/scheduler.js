@@ -37,23 +37,44 @@ class Scheduler {
         throw new Error('eBay API credentials not configured. Please set EBAY_APP_ID in environment variables.');
       }
 
-      // Use first keyword only to minimize API calls
-      const keywords = rule.keywords ? rule.keywords.split(',').map(k => k.trim()) : ['luxury watch'];
-      const keyword = keywords[0]; // Just use first keyword to save API calls
+      // Search for ALL keywords
+      const keywords = rule.keywords ? rule.keywords.split(',').map(k => k.trim()).filter(k => k) : ['luxury watch'];
+      const allItems = [];
+      const seenIds = new Set();
       
-      console.log(`🔍 Searching eBay for: "${keyword}"`);
+      console.log(`🔍 Searching eBay for ${keywords.length} keywords: ${keywords.join(', ')}`);
       
-      // Single API call with 100 results
-      const items = await ebayService.searchItems({ 
-        keywords: keyword, 
-        categoryId: '', // Don't filter by category to get more results
-        minPrice: rule.min_price || 0, 
-        maxPrice: rule.max_price || 10000, 
-        minDiscount: rule.min_discount || 30,
-        limit: 100
-      });
+      // Search each keyword
+      for (const keyword of keywords) {
+        try {
+          console.log(`  → Searching: "${keyword}"`);
+          const items = await ebayService.searchItems({ 
+            keywords: keyword, 
+            categoryId: '', 
+            minPrice: rule.min_price || 0, 
+            maxPrice: rule.max_price || 10000, 
+            minDiscount: rule.min_discount || 10,
+            limit: 50 // 50 per keyword
+          });
+          
+          // Add unique items only
+          for (const item of items) {
+            if (!seenIds.has(item.ebayItemId)) {
+              seenIds.add(item.ebayItemId);
+              allItems.push(item);
+            }
+          }
+          console.log(`  ✓ Found ${items.length} items for "${keyword}"`);
+          
+          // Small delay between API calls
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err) {
+          console.error(`  ✗ Error searching "${keyword}":`, err.message);
+        }
+      }
       
-      console.log(`📦 eBay returned ${items.length} items`);
+      const items = allItems;
+      console.log(`📦 Total unique items: ${items.length}`);
       itemsFound = items.length;
 
       for (const item of items) {
