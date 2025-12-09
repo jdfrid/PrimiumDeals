@@ -15,11 +15,11 @@ services:
       - key: JWT_SECRET
         value: my-super-secret-key-2024
       - key: EBAY_APP_ID
-        value: davidde-PrimiumD-PRD-26e774d48-9c51a1cc
-      - key: EBAY_DEV_ID
-        value: 062ae1a6-8695-4af1-9b66-9df03d5a1f
-      - key: EBAY_CERT_ID
         value: davidade-PrimiumD-PRD-26e774d48-9c51a1cc
+      - key: EBAY_DEV_ID
+        value: 062ae1a6-8695-4af1-9b66-9df03d5a1a5f
+      - key: EBAY_CERT_ID
+        value: PRD-72dab605d287-eb19-4771-b4d0-34dd
       - key: EBAY_CAMPAIGN_ID
         value: "5339122678"
       - key: ADMIN_EMAIL

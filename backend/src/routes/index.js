@@ -157,6 +157,67 @@ router.get('/stats', authenticateToken, (req, res) => {
   res.json(stats);
 });
 
+// Database status check
+router.get('/debug/db-status', (req, res) => {
+  try {
+    const deals = prepare('SELECT COUNT(*) as count FROM deals').get();
+    const activeDeals = prepare('SELECT COUNT(*) as count FROM deals WHERE is_active = 1').get();
+    const categories = prepare('SELECT COUNT(*) as count FROM categories').get();
+    const sampleDeals = prepare('SELECT id, title, ebay_item_id, ebay_url, discount_percent FROM deals LIMIT 5').all();
+    
+    res.json({
+      totalDeals: deals.count,
+      activeDeals: activeDeals.count,
+      categories: categories.count,
+      sampleDeals
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API Debug - see all rules and logs (public for debugging)
+router.get('/debug/api-usage', (req, res) => {
+  try {
+    const rules = prepare('SELECT id, name, schedule_cron, is_active, last_run FROM query_rules').all();
+    const logsToday = prepare("SELECT COUNT(*) as count FROM query_logs WHERE date(created_at) = date('now')").get();
+    const logsTotal = prepare("SELECT COUNT(*) as count FROM query_logs").get();
+    const recentLogs = prepare(`
+      SELECT l.created_at, l.status, l.items_found, l.items_added, l.error_message, r.name as rule_name 
+      FROM query_logs l 
+      LEFT JOIN query_rules r ON l.rule_id = r.id 
+      ORDER BY l.created_at DESC 
+      LIMIT 50
+    `).all();
+    
+    // Calculate expected daily API calls
+    let expectedDailyCalls = 0;
+    for (const rule of rules) {
+      if (rule.is_active) {
+        const cron = rule.schedule_cron;
+        if (cron === '0 * * * *') expectedDailyCalls += 24; // Every hour
+        else if (cron === '0 */6 * * *') expectedDailyCalls += 4; // Every 6 hours
+        else if (cron === '0 */12 * * *') expectedDailyCalls += 2; // Every 12 hours
+        else expectedDailyCalls += 1; // Daily or other
+      }
+    }
+    
+    res.json({
+      summary: {
+        apiCallsToday: logsToday.count,
+        totalApiCallsEver: logsTotal.count,
+        activeRules: rules.filter(r => r.is_active).length,
+        expectedDailyCalls,
+        ebayDailyLimit: 5000
+      },
+      rules,
+      recentLogs
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Seed sample deals
 router.post('/seed-deals', authenticateToken, requireRole('admin'), (req, res) => {
   const campaignId = process.env.EBAY_CAMPAIGN_ID || '5339122678';
