@@ -237,9 +237,23 @@ class EbayService {
     return results;
   }
 
-  getAffiliateUrl(itemId) {
-    // Direct item URL with affiliate parameters
-    return `https://www.ebay.com/itm/${itemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
+  getAffiliateUrl(itemId, originalUrl) {
+    // If we have the original URL from eBay, add affiliate parameters to it
+    if (originalUrl) {
+      const separator = originalUrl.includes('?') ? '&' : '?';
+      return `${originalUrl}${separator}mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
+    }
+    
+    // Fallback: try to extract legacy item ID from Browse API format (v1|123456789|0)
+    let legacyItemId = itemId;
+    if (itemId && itemId.includes('|')) {
+      const parts = itemId.split('|');
+      if (parts.length >= 2) {
+        legacyItemId = parts[1];
+      }
+    }
+    
+    return `https://www.ebay.com/itm/${legacyItemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
   }
 }
 

@@ -12,17 +12,18 @@ services:
         value: production
       - key: PORT
         value: "10000"
+      # Secret values - set these in Render Dashboard, not here!
       - key: JWT_SECRET
-        value: my-super-secret-key-2024
+        sync: false
       - key: EBAY_APP_ID
-        value: davidade-PrimiumD-PRD-26e774d48-9c51a1cc
+        sync: false
       - key: EBAY_DEV_ID
-        value: 062ae1a6-8695-4af1-9b66-9df03d5a1a5f
+        sync: false
       - key: EBAY_CERT_ID
-        value: PRD-72dab605d287-eb19-4771-b4d0-34dd
+        sync: false
       - key: EBAY_CAMPAIGN_ID
-        value: "5339122678"
+        sync: false
       - key: ADMIN_EMAIL
-        value: jdfrid@gmail.com
+        sync: false
       - key: ADMIN_PASSWORD
-        value: "12345678"
+        sync: false
