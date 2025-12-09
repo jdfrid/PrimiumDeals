@@ -215,6 +215,11 @@ class EbayService {
         if (discountPercent >= minDiscount || !originalPriceData) {
           const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl || '';
           
+          // Get category info from categories array (Browse API structure)
+          const category = item.categories?.[0] || {};
+          const categoryId = category.categoryId || item.categoryId || '';
+          const categoryName = category.categoryName || item.categoryPath || '';
+          
           results.push({
             ebayItemId: item.itemId || '',
             title: item.title || '',
@@ -225,8 +230,8 @@ class EbayService {
             currency: item.price?.currency || 'USD',
             condition: item.condition || 'Unknown',
             ebayUrl: item.itemWebUrl || item.itemAffiliateWebUrl || '',
-            categoryId: item.categoryId || '',
-            categoryName: item.categories?.[0]?.categoryName || ''
+            categoryId: categoryId,
+            categoryName: categoryName
           });
         }
       }

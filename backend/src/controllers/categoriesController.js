@@ -50,6 +50,7 @@ export const deleteCategory = (req, res) => {
 };
 
 export const getPublicCategories = (req, res) => {
-  const categories = prepare('SELECT c.id, c.name, c.name_he, c.icon, COUNT(d.id) as deal_count FROM categories c INNER JOIN deals d ON c.id = d.category_id AND d.is_active = 1 AND d.discount_percent >= 30 GROUP BY c.id HAVING deal_count > 0 ORDER BY deal_count DESC').all();
+  // Show categories with deals that have 10%+ discount (matching public deals filter)
+  const categories = prepare('SELECT c.id, c.name, c.name_he, c.icon, COUNT(d.id) as deal_count FROM categories c INNER JOIN deals d ON c.id = d.category_id AND d.is_active = 1 AND d.discount_percent >= 10 GROUP BY c.id HAVING deal_count > 0 ORDER BY deal_count DESC').all();
   res.json(categories);
 };
