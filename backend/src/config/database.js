@@ -131,6 +131,22 @@ export async function initDatabase() {
     )
   `);
 
+  // Click tracking table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS clicks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deal_id INTEGER,
+      ip_address TEXT,
+      user_agent TEXT,
+      referer TEXT,
+      ebay_url TEXT,
+      deal_title TEXT,
+      deal_price REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (deal_id) REFERENCES deals(id)
+    )
+  `);
+
   saveDatabase();
   console.log('✅ Database initialized');
   return db;

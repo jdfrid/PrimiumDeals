@@ -4,10 +4,12 @@ import api from '../services/api';
 
 function DealCard({ deal }) {
   const savings = deal.original_price - deal.current_price;
+  // Use tracking URL to log clicks
+  const trackingUrl = `/api/track/click/${deal.id}`;
   
   return (
     <a
-      href={deal.ebay_url}
+      href={trackingUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col"

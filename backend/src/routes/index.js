@@ -82,6 +82,94 @@ router.post('/auth/reset-admin', async (req, res) => {
 router.get('/public/deals', dealsController.getPublicDeals);
 router.get('/public/categories', categoriesController.getPublicCategories);
 
+// Click tracking - redirect through this to log clicks
+router.get('/track/click/:dealId', (req, res) => {
+  try {
+    const { dealId } = req.params;
+    const deal = prepare('SELECT * FROM deals WHERE id = ?').get(dealId);
+    
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    
+    // Get IP address (handle proxies)
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() 
+            || req.headers['x-real-ip'] 
+            || req.socket?.remoteAddress 
+            || 'unknown';
+    
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const referer = req.headers['referer'] || req.headers['referrer'] || 'direct';
+    
+    // Log the click
+    prepare(`
+      INSERT INTO clicks (deal_id, ip_address, user_agent, referer, ebay_url, deal_title, deal_price)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      deal.id,
+      ip,
+      userAgent.substring(0, 500), // Limit length
+      referer.substring(0, 500),
+      deal.ebay_url,
+      deal.title,
+      deal.current_price
+    );
+    
+    console.log(`📊 Click tracked: Deal #${dealId} from ${ip}`);
+    
+    // Redirect to eBay
+    res.redirect(deal.ebay_url);
+  } catch (error) {
+    console.error('Click tracking error:', error);
+    // Still redirect even if tracking fails
+    const deal = prepare('SELECT ebay_url FROM deals WHERE id = ?').get(req.params.dealId);
+    if (deal?.ebay_url) {
+      res.redirect(deal.ebay_url);
+    } else {
+      res.status(500).json({ error: 'Failed to track click' });
+    }
+  }
+});
+
+// Admin: View click analytics
+router.get('/analytics/clicks', authenticateToken, (req, res) => {
+  try {
+    const { days = 7, limit = 100 } = req.query;
+    
+    const clicks = prepare(`
+      SELECT c.*, d.title as deal_title, d.current_price, d.image_url
+      FROM clicks c
+      LEFT JOIN deals d ON c.deal_id = d.id
+      WHERE c.created_at > datetime('now', '-${parseInt(days)} days')
+      ORDER BY c.created_at DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    const stats = prepare(`
+      SELECT 
+        COUNT(*) as total_clicks,
+        COUNT(DISTINCT ip_address) as unique_visitors,
+        COUNT(DISTINCT deal_id) as deals_clicked
+      FROM clicks
+      WHERE created_at > datetime('now', '-${parseInt(days)} days')
+    `).get();
+    
+    const topDeals = prepare(`
+      SELECT deal_id, deal_title, COUNT(*) as clicks
+      FROM clicks
+      WHERE created_at > datetime('now', '-${parseInt(days)} days')
+      GROUP BY deal_id
+      ORDER BY clicks DESC
+      LIMIT 10
+    `).all();
+    
+    res.json({ clicks, stats, topDeals });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({ error: 'Failed to get analytics' });
+  }
+});
+
 // Protected
 router.get('/auth/profile', authenticateToken, authController.getProfile);
 router.put('/auth/password', authenticateToken, authController.updatePassword);

@@ -12,6 +12,7 @@ import UsersManager from './pages/admin/UsersManager';
 import RulesManager from './pages/admin/RulesManager';
 import LogsViewer from './pages/admin/LogsViewer';
 import ProvidersManager from './pages/admin/ProvidersManager';
+import AnalyticsPage from './pages/admin/AnalyticsPage';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -51,6 +52,7 @@ function App() {
           <Route path="rules" element={<ProtectedRoute roles={['admin']}><RulesManager /></ProtectedRoute>} />
           <Route path="logs" element={<ProtectedRoute roles={['admin']}><LogsViewer /></ProtectedRoute>} />
           <Route path="providers" element={<ProtectedRoute roles={['admin']}><ProvidersManager /></ProtectedRoute>} />
+          <Route path="analytics" element={<ProtectedRoute roles={['admin']}><AnalyticsPage /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
