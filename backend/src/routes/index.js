@@ -214,11 +214,48 @@ router.get('/admin/earnings/status', authenticateToken, async (req, res) => {
     const { default: epnService } = await import('../services/epnService.js');
     res.json({ 
       configured: epnService.isConfigured(),
-      accountSid: process.env.EPN_ACCOUNT_SID ? '✓ Set' : '✗ Missing',
+      accountSid: process.env.EPN_ACCOUNT_SID ? `✓ Set (${process.env.EPN_ACCOUNT_SID.substring(0,8)}...)` : '✗ Missing',
       authToken: process.env.EPN_AUTH_TOKEN ? '✓ Set' : '✗ Missing'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Test EPN API connection
+router.get('/admin/earnings/test', authenticateToken, async (req, res) => {
+  try {
+    const accountSid = process.env.EPN_ACCOUNT_SID;
+    const authToken = process.env.EPN_AUTH_TOKEN;
+    
+    if (!accountSid || !authToken) {
+      return res.json({ error: 'Missing EPN credentials' });
+    }
+
+    // Test the exact URL format from eBay docs
+    const testUrl = `https://api.partner.ebay.com/mediapartners/${accountSid}/reports/ebay_partner_transaction_detail.json`;
+    
+    console.log('🔍 Testing EPN API:', testUrl);
+    console.log('🔑 Using token:', authToken.substring(0, 10) + '...');
+    
+    const response = await fetch(testUrl, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Accept': 'application/json'
+      }
+    });
+    
+    const responseText = await response.text();
+    console.log('📊 EPN Response:', response.status, responseText.substring(0, 500));
+    
+    res.json({
+      status: response.status,
+      statusText: response.statusText,
+      url: testUrl,
+      response: responseText.substring(0, 1000)
+    });
+  } catch (error) {
+    res.json({ error: error.message });
   }
 });
 

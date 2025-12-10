@@ -23,33 +23,47 @@ class EPNService {
     const start = startDate || this.getDateDaysAgo(30);
     const end = endDate || this.getDateDaysAgo(0);
 
-    const url = `${this.baseUrl}/${this.accountSid}/reports/ebay_partner_transaction_detail.json?start_date=${start}&end_date=${end}`;
+    // Try different API endpoints
+    const endpoints = [
+      `${this.baseUrl}/${this.accountSid}/reports/ebay_partner_transaction_detail.json`,
+      `${this.baseUrl}/${this.accountSid}/reports/transaction_detail.json`,
+      `${this.baseUrl}/${this.accountSid}/transactions.json`
+    ];
+
+    let lastError = null;
     
-    console.log(`📊 Fetching EPN transactions from ${start} to ${end}`);
+    for (const baseEndpoint of endpoints) {
+      const url = `${baseEndpoint}?start_date=${start}&end_date=${end}`;
+      console.log(`📊 Trying EPN endpoint: ${url}`);
 
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.authToken}`,
-          'Accept': 'application/json'
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log(`📊 EPN Response status: ${response.status}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`✅ EPN returned data:`, JSON.stringify(data).substring(0, 500));
+          return this.parseTransactions(data);
         }
-      });
-
-      if (!response.ok) {
+        
         const errorText = await response.text();
-        console.error('EPN API error:', response.status, errorText);
-        throw new Error(`EPN API error: ${response.status}`);
+        console.log(`⚠️ Endpoint ${response.status}: ${errorText.substring(0, 200)}`);
+        lastError = `${response.status}: ${errorText.substring(0, 100)}`;
+      } catch (error) {
+        console.error('EPN fetch error:', error.message);
+        lastError = error.message;
       }
-
-      const data = await response.json();
-      console.log(`✅ EPN returned ${data.results?.length || 0} transactions`);
-      
-      return this.parseTransactions(data);
-    } catch (error) {
-      console.error('EPN fetch error:', error.message);
-      throw error;
     }
+
+    throw new Error(`EPN API error: ${lastError}`);
   }
 
   parseTransactions(data) {
