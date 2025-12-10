@@ -132,9 +132,11 @@ export default function EarningsPage() {
       const response = await api.request('/admin/earnings/sync', { method: 'POST' });
       if (response.instructions) {
         alert('⚠️ Setup Required:\n\n' + response.instructions.join('\n'));
-      } else {
-        alert('✅ Synced successfully!');
+      } else if (response.success) {
+        alert(`✅ Synced successfully!\n\n${response.added} new transactions\n${response.updated} updated`);
         loadEarnings();
+      } else {
+        alert('⚠️ ' + (response.message || 'Unknown error'));
       }
     } catch (error) {
       alert('Failed to sync: ' + error.message);

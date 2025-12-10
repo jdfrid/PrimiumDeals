@@ -208,6 +208,20 @@ router.delete('/admin/messages/:id', authenticateToken, (req, res) => {
   }
 });
 
+// Admin: Check EPN API status
+router.get('/admin/earnings/status', authenticateToken, async (req, res) => {
+  try {
+    const { default: epnService } = await import('../services/epnService.js');
+    res.json({ 
+      configured: epnService.isConfigured(),
+      accountSid: process.env.EPN_ACCOUNT_SID ? '✓ Set' : '✗ Missing',
+      authToken: process.env.EPN_AUTH_TOKEN ? '✓ Set' : '✗ Missing'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Admin: Get affiliate transactions/earnings
 router.get('/admin/earnings', authenticateToken, (req, res) => {
   try {
@@ -253,20 +267,60 @@ router.get('/admin/earnings', authenticateToken, (req, res) => {
 // Admin: Sync earnings from eBay Partner Network (manual trigger)
 router.post('/admin/earnings/sync', authenticateToken, async (req, res) => {
   try {
-    // This would connect to eBay Partner Network API
-    // For now, return instructions on how to set it up
+    // Dynamically import the EPN service
+    const { default: epnService } = await import('../services/epnService.js');
+    
+    if (!epnService.isConfigured()) {
+      return res.json({ 
+        success: false, 
+        message: 'eBay Partner Network API not configured',
+        instructions: [
+          '1. Go to https://partner.ebay.com → Tools → API',
+          '2. Get your Account SID and Auth Token',
+          '3. Add EPN_ACCOUNT_SID and EPN_AUTH_TOKEN to Render environment'
+        ]
+      });
+    }
+
+    const { days = 30 } = req.body;
+    const transactions = await epnService.fetchTransactions();
+    
+    let added = 0, updated = 0;
+    
+    for (const tx of transactions) {
+      const existing = prepare('SELECT id FROM affiliate_transactions WHERE transaction_id = ?').get(tx.transaction_id);
+      
+      if (existing) {
+        prepare(`
+          UPDATE affiliate_transactions 
+          SET item_title = ?, item_price = ?, commission_amount = ?, status = ?, is_paid = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(tx.item_title, tx.item_price, tx.commission_amount, tx.status, tx.is_paid ? 1 : 0, existing.id);
+        updated++;
+      } else {
+        prepare(`
+          INSERT INTO affiliate_transactions 
+          (transaction_id, transaction_date, item_id, item_title, item_price, quantity, commission_percent, commission_amount, currency, status, is_paid)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          tx.transaction_id, tx.transaction_date, tx.item_id, tx.item_title, 
+          tx.item_price, tx.quantity, tx.commission_percent, tx.commission_amount,
+          tx.currency, tx.status, tx.is_paid ? 1 : 0
+        );
+        added++;
+      }
+    }
+
+    console.log(`✅ EPN Sync: ${added} added, ${updated} updated`);
     res.json({ 
-      success: false, 
-      message: 'eBay Partner Network API not configured yet',
-      instructions: [
-        '1. Go to https://partner.ebay.com',
-        '2. Navigate to Reports → API Access',
-        '3. Get your API credentials',
-        '4. Add EPN_API_KEY to your environment variables'
-      ]
+      success: true, 
+      message: `Synced ${transactions.length} transactions`,
+      added,
+      updated
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to sync earnings' });
+    console.error('EPN sync error:', error);
+    res.status(500).json({ error: 'Failed to sync: ' + error.message });
   }
 });
 
