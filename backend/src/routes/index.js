@@ -229,20 +229,21 @@ router.get('/admin/earnings/test', authenticateToken, async (req, res) => {
     const authToken = process.env.EPN_AUTH_TOKEN;
     
     if (!accountSid || !authToken) {
-      return res.json({ error: 'Missing EPN credentials' });
+      return res.json({ error: 'Missing EPN credentials', accountSid: !!accountSid, authToken: !!authToken });
     }
 
-    // Test the exact URL format from eBay docs
-    const testUrl = `https://api.partner.ebay.com/mediapartners/${accountSid}/reports/ebay_partner_transaction_detail.json`;
+    // Correct URL format: credentials in URL (not in header)
+    const today = new Date().toISOString().split('T')[0];
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    console.log('🔍 Testing EPN API:', testUrl);
-    console.log('🔑 Using token:', authToken.substring(0, 10) + '...');
+    const testUrl = `https://${accountSid}:${authToken}@api.partner.ebay.com/Mediapartners/${accountSid}/Reports/ebay_partner_transaction_detail.json?STATUS=ALL&START_DATE=${monthAgo}&END_DATE=${today}&date_type=update_date`;
+    
+    // Safe URL for logging (hide credentials)
+    const safeUrl = testUrl.replace(/\/\/[^@]+@/, '//***:***@');
+    console.log('🔍 Testing EPN API:', safeUrl);
     
     const response = await fetch(testUrl, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Accept': 'application/json'
-      }
+      headers: { 'Accept': 'application/json' }
     });
     
     const responseText = await response.text();
@@ -251,8 +252,9 @@ router.get('/admin/earnings/test', authenticateToken, async (req, res) => {
     res.json({
       status: response.status,
       statusText: response.statusText,
-      url: testUrl,
-      response: responseText.substring(0, 1000)
+      url: safeUrl,
+      response: responseText.substring(0, 2000),
+      success: response.ok
     });
   } catch (error) {
     res.json({ error: error.message });

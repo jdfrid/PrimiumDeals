@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Clock, CheckCircle, RefreshCw, Plus, ExternalLink, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, Clock, CheckCircle, RefreshCw, Plus, ExternalLink, AlertCircle, Upload } from 'lucide-react';
 import api from '../../services/api';
 
 function AddTransactionModal({ onClose, onSave }) {
@@ -109,10 +109,72 @@ export default function EarningsPage() {
   const [days, setDays] = useState(30);
   const [showAddModal, setShowAddModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     loadEarnings();
   }, [days]);
+
+  // CSV Import handler
+  const handleCSVImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    setImporting(true);
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const text = e.target.result;
+        const lines = text.split('\n');
+        const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        let imported = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+          if (values.length < 3) continue;
+          
+          const row = {};
+          headers.forEach((h, idx) => row[h] = values[idx]);
+          
+          // Map common CSV column names to our format
+          const transaction = {
+            transaction_id: row['transaction id'] || row['event id'] || row['id'] || `CSV-${Date.now()}-${i}`,
+            transaction_date: row['transaction date'] || row['event date'] || row['date'] || new Date().toISOString(),
+            item_id: row['item id'] || row['product id'] || row['listing id'] || '',
+            item_title: row['item name'] || row['item title'] || row['product name'] || row['title'] || 'Unknown',
+            item_price: parseFloat(row['sale amount'] || row['gmv'] || row['price'] || row['transaction amount'] || 0),
+            quantity: parseInt(row['quantity'] || row['qty'] || 1),
+            commission_percent: parseFloat(row['commission rate'] || row['rate'] || 0) * 100,
+            commission_amount: parseFloat(row['earnings'] || row['payout'] || row['commission'] || row['epc'] || 0),
+            status: 'confirmed',
+            is_paid: (row['payment status'] || '').toLowerCase().includes('paid')
+          };
+          
+          try {
+            await api.request('/admin/earnings/add', {
+              method: 'POST',
+              body: JSON.stringify(transaction)
+            });
+            imported++;
+          } catch (err) {
+            console.log('Skip duplicate:', transaction.transaction_id);
+          }
+        }
+        
+        alert(`✅ Imported ${imported} transactions!`);
+        loadEarnings();
+      } catch (error) {
+        alert('❌ Failed to parse CSV: ' + error.message);
+      } finally {
+        setImporting(false);
+        event.target.value = '';
+      }
+    };
+    
+    reader.readAsText(file);
+  };
 
   const loadEarnings = async () => {
     setLoading(true);
@@ -170,10 +232,17 @@ export default function EarningsPage() {
             <option value={365}>Last year</option>
             <option value={9999}>All time</option>
           </select>
-          <button onClick={syncEarnings} disabled={syncing} className="btn-outline flex items-center gap-2">
-            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-            Sync
-          </button>
+          <label className={`btn-outline flex items-center gap-2 cursor-pointer ${importing ? 'opacity-50' : ''}`}>
+            <Upload size={16} />
+            {importing ? 'Importing...' : 'Import CSV'}
+            <input 
+              type="file" 
+              accept=".csv" 
+              onChange={handleCSVImport} 
+              className="hidden" 
+              disabled={importing}
+            />
+          </label>
           <button onClick={() => setShowAddModal(true)} className="btn-gold flex items-center gap-2">
             <Plus size={16} />
             Add
@@ -230,25 +299,27 @@ export default function EarningsPage() {
           <div className="flex items-start gap-4">
             <AlertCircle className="text-gold-400 flex-shrink-0" size={24} />
             <div>
-              <h3 className="font-semibold mb-2">How to view your eBay earnings</h3>
+              <h3 className="font-semibold mb-2">📥 How to import your eBay earnings</h3>
               <p className="text-midnight-400 text-sm mb-3">
-                To automatically sync your earnings from eBay Partner Network, you need to:
+                Import your transaction data from eBay Partner Network:
               </p>
-              <ol className="text-sm text-midnight-300 space-y-1 list-decimal list-inside mb-4">
+              <ol className="text-sm text-midnight-300 space-y-2 list-decimal list-inside mb-4">
                 <li>Go to <a href="https://partner.ebay.com" target="_blank" rel="noopener" className="text-gold-400 hover:underline">partner.ebay.com</a></li>
-                <li>Navigate to Reports → Transaction Detail Report</li>
-                <li>Export your transactions</li>
-                <li>Or use the "Add" button to manually enter transactions</li>
+                <li>Click <strong>Reports</strong> → <strong>Transaction Detail Report</strong></li>
+                <li>Select date range and click <strong>Download CSV</strong></li>
+                <li>Click <strong>"Import CSV"</strong> button above and select the file</li>
               </ol>
-              <a 
-                href="https://partner.ebay.com/PublisherReportsTxnDetail" 
-                target="_blank" 
-                rel="noopener"
-                className="btn-gold inline-flex items-center gap-2 text-sm"
-              >
-                <ExternalLink size={14} />
-                Open eBay Partner Network
-              </a>
+              <div className="flex gap-3">
+                <a 
+                  href="https://partner.ebay.com" 
+                  target="_blank" 
+                  rel="noopener"
+                  className="btn-gold inline-flex items-center gap-2 text-sm"
+                >
+                  <ExternalLink size={14} />
+                  Open eBay Partner Network
+                </a>
+              </div>
             </div>
           </div>
         </div>
