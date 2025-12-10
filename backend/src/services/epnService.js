@@ -17,14 +17,20 @@ class EPNService {
     return !!(this.accountSid && this.authToken);
   }
 
-  // Build the authenticated URL (credentials in URL as per EPN docs)
+  // Build URL without credentials (credentials go in header)
   buildUrl(reportName, params = {}) {
-    const baseUrl = `https://${this.accountSid}:${this.authToken}@api.partner.ebay.com/Mediapartners/${this.accountSid}/Reports/${reportName}.json`;
+    const baseUrl = `https://api.partner.ebay.com/Mediapartners/${this.accountSid}/Reports/${reportName}.json`;
     const queryString = Object.entries(params)
       .filter(([_, v]) => v !== undefined && v !== null)
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join('&');
     return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  }
+
+  // Get Basic Auth header
+  getAuthHeader() {
+    const credentials = Buffer.from(`${this.accountSid}:${this.authToken}`).toString('base64');
+    return `Basic ${credentials}`;
   }
 
   async fetchTransactions(startDate, endDate) {
@@ -36,7 +42,7 @@ class EPNService {
     const start = startDate || this.getDateDaysAgo(30);
     const end = endDate || this.getDateDaysAgo(0);
 
-    // Transaction Detail Report URL with authentication in URL
+    // Transaction Detail Report URL
     const url = this.buildUrl('ebay_partner_transaction_detail', {
       STATUS: 'ALL',
       START_DATE: start,
@@ -44,14 +50,14 @@ class EPNService {
       date_type: 'update_date'
     });
 
-    // Log URL without credentials
-    const safeUrl = url.replace(/\/\/[^@]+@/, '//***:***@');
-    console.log(`📊 Fetching EPN transactions: ${safeUrl}`);
+    console.log(`📊 Fetching EPN transactions: ${url}`);
+    console.log(`📊 Date range: ${start} to ${end}`);
 
     try {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
+          'Authorization': this.getAuthHeader(),
           'Accept': 'application/json'
         }
       });
@@ -145,17 +151,19 @@ class EPNService {
     const end = endDate || this.getDateDaysAgo(0);
 
     const url = this.buildUrl('ebay_partner_perf_by_campaign', {
-      CHECKOUT_SITE: 0, // 0 = all sites
+      CHECKOUT_SITE: 0,
       START_DATE: start,
       END_DATE: end
     });
 
-    const safeUrl = url.replace(/\/\/[^@]+@/, '//***:***@');
-    console.log(`📊 Fetching EPN campaign performance: ${safeUrl}`);
+    console.log(`📊 Fetching EPN campaign performance: ${url}`);
 
     try {
       const response = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 
+          'Authorization': this.getAuthHeader(),
+          'Accept': 'application/json' 
+        }
       });
 
       if (!response.ok) {
@@ -184,12 +192,14 @@ class EPNService {
       END_DATE: end
     });
 
-    const safeUrl = url.replace(/\/\/[^@]+@/, '//***:***@');
-    console.log(`📊 Fetching EPN daily performance: ${safeUrl}`);
+    console.log(`📊 Fetching EPN daily performance: ${url}`);
 
     try {
       const response = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 
+          'Authorization': this.getAuthHeader(),
+          'Accept': 'application/json' 
+        }
       });
 
       if (!response.ok) {
