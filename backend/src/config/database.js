@@ -147,6 +147,43 @@ export async function initDatabase() {
     )
   `);
 
+  // Site settings table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  // Contact messages table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT,
+      subject TEXT,
+      message TEXT,
+      ip_address TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  // Initialize default settings if not exist
+  const defaultSettings = [
+    ['contact_email', 'jdfrid@gmail.com'],
+    ['site_name', 'Premium Deals'],
+    ['min_discount_display', '10'],
+    ['deals_per_page', '48']
+  ];
+  for (const [key, value] of defaultSettings) {
+    const existing = db.exec(`SELECT key FROM settings WHERE key = '${key}'`);
+    if (existing.length === 0 || existing[0].values.length === 0) {
+      db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('${key}', '${value}')`);
+    }
+  }
+
   saveDatabase();
   console.log('✅ Database initialized');
   return db;

@@ -145,6 +145,100 @@ router.get('/track/click/:dealId', (req, res) => {
   }
 });
 
+// Public: Submit contact form
+router.post('/public/contact', (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+    
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: 'Name, email and message are required' });
+    }
+    
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() 
+            || req.headers['x-real-ip'] 
+            || req.socket?.remoteAddress 
+            || 'unknown';
+    
+    // Save to database
+    prepare(`
+      INSERT INTO contact_messages (name, email, subject, message, ip_address)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(name, email, subject || 'General', message, ip);
+    
+    console.log(`📧 New contact message from ${email}`);
+    
+    res.json({ success: true, message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Contact form error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Admin: Get contact messages
+router.get('/admin/messages', authenticateToken, (req, res) => {
+  try {
+    const messages = prepare(`
+      SELECT * FROM contact_messages 
+      ORDER BY created_at DESC 
+      LIMIT 100
+    `).all();
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get messages' });
+  }
+});
+
+// Admin: Mark message as read
+router.patch('/admin/messages/:id/read', authenticateToken, (req, res) => {
+  try {
+    prepare('UPDATE contact_messages SET is_read = 1 WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update message' });
+  }
+});
+
+// Admin: Delete message
+router.delete('/admin/messages/:id', authenticateToken, (req, res) => {
+  try {
+    prepare('DELETE FROM contact_messages WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
+// Admin: Get settings
+router.get('/admin/settings', authenticateToken, (req, res) => {
+  try {
+    const settingsArray = prepare('SELECT key, value FROM settings').all();
+    const settings = {};
+    for (const s of settingsArray) {
+      settings[s.key] = s.value;
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get settings' });
+  }
+});
+
+// Admin: Update settings
+router.put('/admin/settings', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const settings = req.body;
+    for (const [key, value] of Object.entries(settings)) {
+      prepare(`
+        INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP
+      `).run(key, value, value);
+    }
+    res.json({ success: true, message: 'Settings saved' });
+  } catch (error) {
+    console.error('Settings error:', error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
 // Admin: View click analytics
 router.get('/analytics/clicks', authenticateToken, (req, res) => {
   try {

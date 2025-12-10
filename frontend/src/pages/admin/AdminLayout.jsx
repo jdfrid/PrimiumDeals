@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3, Mail, Cog } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
@@ -11,6 +11,8 @@ const navItems = [
   { path: '/admin/rules', icon: Play, label: 'Query Rules', roles: ['admin'] },
   { path: '/admin/providers', icon: Settings, label: 'Providers', roles: ['admin'] },
   { path: '/admin/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin'] },
+  { path: '/admin/messages', icon: Mail, label: 'Messages', roles: ['admin'] },
+  { path: '/admin/settings', icon: Cog, label: 'Settings', roles: ['admin'] },
   { path: '/admin/logs', icon: FileText, label: 'Logs', roles: ['admin'] },
 ];
 
