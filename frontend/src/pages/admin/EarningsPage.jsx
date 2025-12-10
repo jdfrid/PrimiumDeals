@@ -232,20 +232,13 @@ export default function EarningsPage() {
             <option value={365}>Last year</option>
             <option value={9999}>All time</option>
           </select>
-          <label className={`btn-outline flex items-center gap-2 cursor-pointer ${importing ? 'opacity-50' : ''}`}>
-            <Upload size={16} />
-            {importing ? 'Importing...' : 'Import CSV'}
-            <input 
-              type="file" 
-              accept=".csv" 
-              onChange={handleCSVImport} 
-              className="hidden" 
-              disabled={importing}
-            />
-          </label>
-          <button onClick={() => setShowAddModal(true)} className="btn-gold flex items-center gap-2">
+          <button onClick={syncEarnings} disabled={syncing} className="btn-gold flex items-center gap-2">
+            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Syncing...' : 'Sync from eBay'}
+          </button>
+          <button onClick={() => setShowAddModal(true)} className="btn-outline flex items-center gap-2">
             <Plus size={16} />
-            Add
+            Add Manual
           </button>
         </div>
       </div>
@@ -297,24 +290,25 @@ export default function EarningsPage() {
       {(!data?.transactions || data.transactions.length === 0) && (
         <div className="glass rounded-xl p-6 mb-6 border border-gold-500/30">
           <div className="flex items-start gap-4">
-            <AlertCircle className="text-gold-400 flex-shrink-0" size={24} />
+            <RefreshCw className="text-gold-400 flex-shrink-0" size={24} />
             <div>
-              <h3 className="font-semibold mb-2">📥 How to import your eBay earnings</h3>
+              <h3 className="font-semibold mb-2">🔄 Sync your eBay earnings automatically</h3>
               <p className="text-midnight-400 text-sm mb-3">
-                Import your transaction data from eBay Partner Network:
+                Click the <strong>"Sync from eBay"</strong> button to automatically fetch your transaction data from eBay Partner Network API.
               </p>
-              <ol className="text-sm text-midnight-300 space-y-2 list-decimal list-inside mb-4">
-                <li>Go to <a href="https://partner.ebay.com" target="_blank" rel="noopener" className="text-gold-400 hover:underline">partner.ebay.com</a></li>
-                <li>Click <strong>Reports</strong> → <strong>Transaction Detail Report</strong></li>
-                <li>Select date range and click <strong>Download CSV</strong></li>
-                <li>Click <strong>"Import CSV"</strong> button above and select the file</li>
-              </ol>
+              <p className="text-sm text-midnight-500 mb-4">
+                Make sure EPN_ACCOUNT_SID and EPN_AUTH_TOKEN are configured in your environment variables.
+              </p>
               <div className="flex gap-3">
+                <button onClick={syncEarnings} disabled={syncing} className="btn-gold inline-flex items-center gap-2 text-sm">
+                  <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+                  {syncing ? 'Syncing...' : 'Sync Now'}
+                </button>
                 <a 
                   href="https://partner.ebay.com" 
                   target="_blank" 
                   rel="noopener"
-                  className="btn-gold inline-flex items-center gap-2 text-sm"
+                  className="btn-outline inline-flex items-center gap-2 text-sm"
                 >
                   <ExternalLink size={14} />
                   Open eBay Partner Network
