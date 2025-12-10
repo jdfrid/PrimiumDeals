@@ -208,6 +208,97 @@ router.delete('/admin/messages/:id', authenticateToken, (req, res) => {
   }
 });
 
+// Admin: Get affiliate transactions/earnings
+router.get('/admin/earnings', authenticateToken, (req, res) => {
+  try {
+    const { days = 30, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+    
+    const transactions = prepare(`
+      SELECT * FROM affiliate_transactions 
+      WHERE transaction_date > datetime('now', '-${parseInt(days)} days')
+      ORDER BY transaction_date DESC
+      LIMIT ? OFFSET ?
+    `).all(parseInt(limit), offset);
+    
+    const stats = prepare(`
+      SELECT 
+        COUNT(*) as total_transactions,
+        SUM(commission_amount) as total_earnings,
+        SUM(CASE WHEN is_paid = 1 THEN commission_amount ELSE 0 END) as paid_earnings,
+        SUM(CASE WHEN is_paid = 0 THEN commission_amount ELSE 0 END) as pending_earnings,
+        SUM(item_price * quantity) as total_sales
+      FROM affiliate_transactions
+      WHERE transaction_date > datetime('now', '-${parseInt(days)} days')
+    `).get();
+    
+    const byMonth = prepare(`
+      SELECT 
+        strftime('%Y-%m', transaction_date) as month,
+        COUNT(*) as transactions,
+        SUM(commission_amount) as earnings
+      FROM affiliate_transactions
+      GROUP BY strftime('%Y-%m', transaction_date)
+      ORDER BY month DESC
+      LIMIT 12
+    `).all();
+    
+    res.json({ transactions, stats, byMonth });
+  } catch (error) {
+    console.error('Earnings error:', error);
+    res.status(500).json({ error: 'Failed to get earnings' });
+  }
+});
+
+// Admin: Sync earnings from eBay Partner Network (manual trigger)
+router.post('/admin/earnings/sync', authenticateToken, async (req, res) => {
+  try {
+    // This would connect to eBay Partner Network API
+    // For now, return instructions on how to set it up
+    res.json({ 
+      success: false, 
+      message: 'eBay Partner Network API not configured yet',
+      instructions: [
+        '1. Go to https://partner.ebay.com',
+        '2. Navigate to Reports → API Access',
+        '3. Get your API credentials',
+        '4. Add EPN_API_KEY to your environment variables'
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to sync earnings' });
+  }
+});
+
+// Admin: Manually add transaction (for testing or manual entry)
+router.post('/admin/earnings/add', authenticateToken, (req, res) => {
+  try {
+    const { transaction_id, transaction_date, item_id, item_title, item_price, quantity, commission_percent, commission_amount, status, is_paid } = req.body;
+    
+    prepare(`
+      INSERT INTO affiliate_transactions 
+      (transaction_id, transaction_date, item_id, item_title, item_price, quantity, commission_percent, commission_amount, status, is_paid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      transaction_id || `MANUAL-${Date.now()}`,
+      transaction_date || new Date().toISOString(),
+      item_id,
+      item_title,
+      item_price,
+      quantity || 1,
+      commission_percent,
+      commission_amount,
+      status || 'confirmed',
+      is_paid ? 1 : 0
+    );
+    
+    res.json({ success: true, message: 'Transaction added' });
+  } catch (error) {
+    console.error('Add transaction error:', error);
+    res.status(500).json({ error: 'Failed to add transaction' });
+  }
+});
+
 // Admin: Get settings
 router.get('/admin/settings', authenticateToken, (req, res) => {
   try {

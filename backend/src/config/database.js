@@ -169,6 +169,25 @@ export async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Affiliate earnings/transactions table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS affiliate_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_id TEXT UNIQUE,
+      transaction_date DATETIME,
+      item_id TEXT,
+      item_title TEXT,
+      item_price REAL,
+      quantity INTEGER DEFAULT 1,
+      commission_percent REAL,
+      commission_amount REAL,
+      currency TEXT DEFAULT 'USD',
+      status TEXT DEFAULT 'pending',
+      is_paid INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
   
   // Initialize default settings if not exist
   const defaultSettings = [
