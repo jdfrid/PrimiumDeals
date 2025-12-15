@@ -26,10 +26,10 @@ class Scheduler {
 
   async executeRule(ruleId) {
     const rule = prepare('SELECT * FROM query_rules WHERE id = ?').get(ruleId);
-    if (!rule) return { success: false, itemsFound: 0, itemsAdded: 0, error: 'Rule not found' };
+    if (!rule) return { success: false, itemsFound: 0, itemsAdded: 0, itemsUpdated: 0, itemsRemoved: 0, error: 'Rule not found' };
 
     console.log(`🔍 Executing rule: ${rule.name}`);
-    let itemsFound = 0, itemsAdded = 0, errorMessage = null;
+    let itemsFound = 0, itemsAdded = 0, itemsUpdated = 0, itemsRemoved = 0, errorMessage = null;
 
     try {
       // Check if eBay API is configured
@@ -77,8 +77,13 @@ class Scheduler {
       console.log(`📦 Total unique items: ${items.length}`);
       itemsFound = items.length;
 
+      // Track which eBay item IDs we found in this sync
+      const foundEbayIds = new Set();
+
       for (const item of items) {
         try {
+          foundEbayIds.add(item.ebayItemId);
+          
           let dbCategoryId = null;
           if (item.categoryName) {
             const existingCat = prepare('SELECT id FROM categories WHERE ebay_category_id = ?').get(item.categoryId);
@@ -90,14 +95,56 @@ class Scheduler {
           }
           // Use the URL from eBay API and add affiliate parameters
           const affiliateUrl = ebayService.getAffiliateUrl(item.ebayItemId, item.ebayUrl);
-          const existingDeal = prepare('SELECT id FROM deals WHERE ebay_item_id = ?').get(item.ebayItemId);
+          const existingDeal = prepare('SELECT id, current_price, discount_percent FROM deals WHERE ebay_item_id = ?').get(item.ebayItemId);
+          
           if (existingDeal) {
-            prepare('UPDATE deals SET title = ?, image_url = ?, original_price = ?, current_price = ?, discount_percent = ?, currency = ?, condition = ?, ebay_url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId, existingDeal.id);
+            // Check if item still meets the rules criteria
+            const meetsMinDiscount = item.discountPercent >= (rule.min_discount || 0);
+            const meetsMinPrice = item.currentPrice >= (rule.min_price || 0);
+            const meetsMaxPrice = item.currentPrice <= (rule.max_price || 999999);
+            
+            if (meetsMinDiscount && meetsMinPrice && meetsMaxPrice) {
+              // Update the item with new data
+              prepare('UPDATE deals SET title = ?, image_url = ?, original_price = ?, current_price = ?, discount_percent = ?, currency = ?, condition = ?, ebay_url = ?, category_id = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId, existingDeal.id);
+              
+              // Count as updated if price or discount changed
+              if (existingDeal.current_price !== item.currentPrice || existingDeal.discount_percent !== item.discountPercent) {
+                itemsUpdated++;
+                console.log(`  📝 Updated: "${item.title.substring(0, 40)}..." - Price: $${existingDeal.current_price} → $${item.currentPrice}, Discount: ${existingDeal.discount_percent}% → ${item.discountPercent}%`);
+              }
+            } else {
+              // Item no longer meets criteria - deactivate it
+              prepare('UPDATE deals SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(existingDeal.id);
+              itemsRemoved++;
+              console.log(`  🗑️ Removed (no longer meets criteria): "${item.title.substring(0, 40)}..." - Discount: ${item.discountPercent}%, Price: $${item.currentPrice}`);
+            }
           } else {
-            prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(item.ebayItemId, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId);
-            itemsAdded++;
+            // New item - check if it meets criteria before adding
+            const meetsMinDiscount = item.discountPercent >= (rule.min_discount || 0);
+            const meetsMinPrice = item.currentPrice >= (rule.min_price || 0);
+            const meetsMaxPrice = item.currentPrice <= (rule.max_price || 999999);
+            
+            if (meetsMinDiscount && meetsMinPrice && meetsMaxPrice) {
+              prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(item.ebayItemId, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition, affiliateUrl, dbCategoryId);
+              itemsAdded++;
+            }
           }
         } catch (err) { console.error('Error saving deal:', err); }
+      }
+
+      // Deactivate items that were not found in this sync (ended/sold/removed from eBay)
+      const activeDeals = prepare('SELECT id, ebay_item_id, title FROM deals WHERE is_active = 1').all();
+      for (const deal of activeDeals) {
+        if (!foundEbayIds.has(deal.ebay_item_id)) {
+          // Item not found in current sync - check if it's been missing for a while
+          // For now, we'll mark items older than 24 hours as inactive if not found
+          const staleCheck = prepare("SELECT id FROM deals WHERE id = ? AND updated_at < datetime('now', '-1 day')").get(deal.id);
+          if (staleCheck) {
+            prepare('UPDATE deals SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(deal.id);
+            itemsRemoved++;
+            console.log(`  🗑️ Removed (not found in eBay): "${deal.title.substring(0, 40)}..."`);
+          }
+        }
       }
       
       prepare('UPDATE query_rules SET last_run = CURRENT_TIMESTAMP WHERE id = ?').run(ruleId);
@@ -119,10 +166,10 @@ class Scheduler {
     if (errorMessage) {
       console.log(`❌ Rule "${rule.name}" failed: ${errorMessage}`);
     } else {
-      console.log(`✅ Rule "${rule.name}" completed: ${itemsFound} found, ${itemsAdded} added`);
+      console.log(`✅ Rule "${rule.name}" completed: ${itemsFound} found, ${itemsAdded} added, ${itemsUpdated} updated, ${itemsRemoved} removed`);
     }
     
-    return { success: !errorMessage, itemsFound, itemsAdded, error: errorMessage };
+    return { success: !errorMessage, itemsFound, itemsAdded, itemsUpdated, itemsRemoved, error: errorMessage };
   }
 
   cleanupOldDeals() {

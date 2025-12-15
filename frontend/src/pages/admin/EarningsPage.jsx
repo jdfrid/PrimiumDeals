@@ -232,13 +232,24 @@ export default function EarningsPage() {
             <option value={365}>Last year</option>
             <option value={9999}>All time</option>
           </select>
-          <button onClick={syncEarnings} disabled={syncing} className="btn-gold flex items-center gap-2">
+          <button onClick={syncEarnings} disabled={syncing} className="btn-outline flex items-center gap-2" title="Sync from eBay API">
             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Syncing...' : 'Sync from eBay'}
+            {syncing ? 'Syncing...' : 'Sync API'}
           </button>
+          <label className={`btn-gold flex items-center gap-2 cursor-pointer ${importing ? 'opacity-50' : ''}`} title="Import from CSV file">
+            <Upload size={16} />
+            {importing ? 'Importing...' : 'Import CSV'}
+            <input 
+              type="file" 
+              accept=".csv" 
+              onChange={handleCSVImport} 
+              className="hidden" 
+              disabled={importing}
+            />
+          </label>
           <button onClick={() => setShowAddModal(true)} className="btn-outline flex items-center gap-2">
             <Plus size={16} />
-            Add Manual
+            Add
           </button>
         </div>
       </div>
@@ -290,30 +301,26 @@ export default function EarningsPage() {
       {(!data?.transactions || data.transactions.length === 0) && (
         <div className="glass rounded-xl p-6 mb-6 border border-gold-500/30">
           <div className="flex items-start gap-4">
-            <RefreshCw className="text-gold-400 flex-shrink-0" size={24} />
+            <Upload className="text-gold-400 flex-shrink-0" size={24} />
             <div>
-              <h3 className="font-semibold mb-2">🔄 Sync your eBay earnings automatically</h3>
+              <h3 className="font-semibold mb-2">📥 Import your eBay earnings</h3>
               <p className="text-midnight-400 text-sm mb-3">
-                Click the <strong>"Sync from eBay"</strong> button to automatically fetch your transaction data from eBay Partner Network API.
+                Download your transaction report from eBay Partner Network and import it:
               </p>
-              <p className="text-sm text-midnight-500 mb-4">
-                Make sure EPN_ACCOUNT_SID and EPN_AUTH_TOKEN are configured in your environment variables.
-              </p>
-              <div className="flex gap-3">
-                <button onClick={syncEarnings} disabled={syncing} className="btn-gold inline-flex items-center gap-2 text-sm">
-                  <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-                  {syncing ? 'Syncing...' : 'Sync Now'}
-                </button>
-                <a 
-                  href="https://partner.ebay.com" 
-                  target="_blank" 
-                  rel="noopener"
-                  className="btn-outline inline-flex items-center gap-2 text-sm"
-                >
-                  <ExternalLink size={14} />
-                  Open eBay Partner Network
-                </a>
-              </div>
+              <ol className="text-sm text-midnight-300 space-y-1 list-decimal list-inside mb-4">
+                <li>Go to <a href="https://partner.ebay.com" target="_blank" rel="noopener" className="text-gold-400 hover:underline">partner.ebay.com</a> → Reports → Transaction Detail</li>
+                <li>Select date range and download CSV</li>
+                <li>Click <strong>"Import CSV"</strong> button above</li>
+              </ol>
+              <a 
+                href="https://partner.ebay.com" 
+                target="_blank" 
+                rel="noopener"
+                className="btn-gold inline-flex items-center gap-2 text-sm"
+              >
+                <ExternalLink size={14} />
+                Open eBay Partner Network
+              </a>
             </div>
           </div>
         </div>
