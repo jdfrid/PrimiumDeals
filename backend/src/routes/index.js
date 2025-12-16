@@ -584,6 +584,46 @@ router.get('/deals/inactive-count', authenticateToken, requireRole('admin'), (re
   }
 });
 
+// Debug Banggood API
+router.get('/debug/banggood-test', async (req, res) => {
+  try {
+    const banggoodService = (await import('../services/banggoodService.js')).default;
+    
+    // Get credentials
+    const appKey = banggoodService.appKey;
+    const appSecret = banggoodService.appSecret;
+    
+    res.json({
+      configured: !!(appKey && appSecret),
+      appKey: appKey ? appKey.substring(0, 5) + '...' : 'NOT SET',
+      appSecretSet: !!appSecret,
+      message: appKey && appSecret ? 'Credentials configured, testing API...' : 'Missing credentials'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug Banggood search
+router.get('/debug/banggood-search', async (req, res) => {
+  try {
+    const banggoodService = (await import('../services/banggoodService.js')).default;
+    const { keyword = 'phone' } = req.query;
+    
+    console.log('🧪 Testing Banggood search for:', keyword);
+    const results = await banggoodService.searchProducts({ keywords: keyword, limit: 5 });
+    
+    res.json({
+      keyword,
+      resultsCount: results.length,
+      results: results.slice(0, 3)
+    });
+  } catch (error) {
+    console.error('Banggood test error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 // Database status check
 router.get('/debug/db-status', (req, res) => {
   try {
