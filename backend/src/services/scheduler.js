@@ -132,20 +132,11 @@ class Scheduler {
         } catch (err) { console.error('Error saving deal:', err); }
       }
 
-      // Deactivate items that were not found in this sync (ended/sold/removed from eBay)
-      const activeDeals = prepare('SELECT id, ebay_item_id, title FROM deals WHERE is_active = 1').all();
-      for (const deal of activeDeals) {
-        if (!foundEbayIds.has(deal.ebay_item_id)) {
-          // Item not found in current sync - check if it's been missing for a while
-          // For now, we'll mark items older than 24 hours as inactive if not found
-          const staleCheck = prepare("SELECT id FROM deals WHERE id = ? AND updated_at < datetime('now', '-1 day')").get(deal.id);
-          if (staleCheck) {
-            prepare('UPDATE deals SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(deal.id);
-            itemsRemoved++;
-            console.log(`  🗑️ Removed (not found in eBay): "${deal.title.substring(0, 40)}..."`);
-          }
-        }
-      }
+      // NOTE: We do NOT remove items just because they weren't in the current search results
+      // eBay search results vary and don't always return the same items
+      // Items are only removed when:
+      // 1. We find them with updated data that no longer meets criteria (handled above)
+      // 2. The daily cleanup job marks old items as inactive (after 7 days)
       
       prepare('UPDATE query_rules SET last_run = CURRENT_TIMESTAMP WHERE id = ?').run(ruleId);
     } catch (error) { 

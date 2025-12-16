@@ -539,6 +539,43 @@ router.get('/stats', authenticateToken, (req, res) => {
   res.json(stats);
 });
 
+// Restore recently deactivated deals (admin only)
+router.post('/deals/restore-recent', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { hours = 24 } = req.body;
+    // Reactivate deals that were deactivated in the last X hours
+    const result = prepare(`
+      UPDATE deals 
+      SET is_active = 1, updated_at = CURRENT_TIMESTAMP 
+      WHERE is_active = 0 
+      AND updated_at > datetime('now', '-${parseInt(hours)} hours')
+    `).run();
+    
+    console.log(`♻️ Restored ${result.changes} recently deactivated deals`);
+    res.json({ 
+      message: `Restored ${result.changes} deals that were deactivated in the last ${hours} hours`,
+      restored: result.changes 
+    });
+  } catch (error) {
+    console.error('Restore deals error:', error);
+    res.status(500).json({ error: 'Failed to restore deals' });
+  }
+});
+
+// Get inactive deals count (for admin dashboard)
+router.get('/deals/inactive-count', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const total = prepare('SELECT COUNT(*) as count FROM deals WHERE is_active = 0').get();
+    const recent = prepare("SELECT COUNT(*) as count FROM deals WHERE is_active = 0 AND updated_at > datetime('now', '-24 hours')").get();
+    res.json({ 
+      totalInactive: total.count,
+      recentlyDeactivated: recent.count 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Database status check
 router.get('/debug/db-status', (req, res) => {
   try {
