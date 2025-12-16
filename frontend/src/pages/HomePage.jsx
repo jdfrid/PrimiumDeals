@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
 import api from '../services/api';
 
+// Source icons for different providers
+const SourceIcon = ({ source }) => {
+  if (source === 'banggood') {
+    return (
+      <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-white text-xs font-bold shadow" title="Banggood">
+        B
+      </div>
+    );
+  }
+  // Default to eBay
+  return (
+    <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shadow" title="eBay">
+      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+        <path d="M5.517 8.058c-1.793 0-2.98 1.016-2.98 2.73v.167c0 1.594 1.065 2.73 2.98 2.73 1.092 0 1.835-.32 2.312-.97l-.935-.779c-.337.392-.74.598-1.377.598-.934 0-1.497-.473-1.614-1.28h4.115v-.466c0-1.714-1.187-2.73-2.501-2.73zm-.09 1.151c.72 0 1.208.4 1.282 1.186H3.458c.107-.72.574-1.186 1.97-1.186zm13.09-1.151c-1.793 0-2.98 1.016-2.98 2.73v.167c0 1.594 1.065 2.73 2.98 2.73 1.092 0 1.835-.32 2.312-.97l-.935-.779c-.337.392-.74.598-1.377.598-.934 0-1.497-.473-1.614-1.28h4.115v-.466c0-1.714-1.187-2.73-2.501-2.73zm-.09 1.151c.72 0 1.208.4 1.282 1.186h-2.251c.107-.72.574-1.186 1.97-1.186zM8.67 5.233v4.825h-.033c-.28-.533-.86-.928-1.704-.928-1.472 0-2.358 1.122-2.358 2.73v.167c0 1.608.886 2.73 2.358 2.73.844 0 1.424-.395 1.704-.928h.033v.786h1.319V5.233H8.67zm-1.48 5.048c.747 0 1.245.506 1.245 1.579v.167c0 1.073-.498 1.579-1.246 1.579-.747 0-1.245-.506-1.245-1.58v-.166c0-1.073.498-1.58 1.245-1.58zm6.727-2.223l-1.77 5.55h-.033l-1.77-5.55h-1.397l2.432 7.07-.148.433c-.165.482-.436.647-.886.647-.181 0-.363-.017-.526-.05v1.15c.23.05.479.084.754.084.992 0 1.533-.44 1.934-1.654l2.808-7.68h-1.398z"/>
+      </svg>
+    </div>
+  );
+};
+
 function DealCard({ deal }) {
   const savings = deal.original_price - deal.current_price;
   // Use tracking URL to log clicks
@@ -26,13 +45,10 @@ function DealCard({ deal }) {
         <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
           -{deal.discount_percent}%
         </div>
-        {/* Wishlist Button */}
-        <button 
-          onClick={(e) => e.preventDefault()}
-          className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-50"
-        >
-          <Heart size={16} className="text-gray-400 hover:text-red-500" />
-        </button>
+        {/* Source Icon */}
+        <div className="absolute top-2 right-2">
+          <SourceIcon source={deal.source} />
+        </div>
         {/* Category Tag */}
         {deal.category_name && (
           <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow">

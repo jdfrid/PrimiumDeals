@@ -189,17 +189,48 @@ export async function initDatabase() {
     )
   `);
   
+  // Add source column to deals table if not exists
+  try {
+    db.run(`ALTER TABLE deals ADD COLUMN source TEXT DEFAULT 'ebay'`);
+    console.log('✅ Added source column to deals table');
+  } catch (e) {
+    // Column already exists
+  }
+
+  // Add source_item_id column to deals table if not exists (for Banggood product IDs)
+  try {
+    db.run(`ALTER TABLE deals ADD COLUMN source_item_id TEXT`);
+    console.log('✅ Added source_item_id column to deals table');
+  } catch (e) {
+    // Column already exists
+  }
+
   // Initialize default settings if not exist
   const defaultSettings = [
     ['contact_email', 'jdfrid@gmail.com'],
     ['site_name', 'Premium Deals'],
     ['min_discount_display', '10'],
-    ['deals_per_page', '50']
+    ['deals_per_page', '50'],
+    ['banggood_enabled', 'false'],
+    ['banggood_app_key', ''],
+    ['banggood_app_secret', '']
   ];
   for (const [key, value] of defaultSettings) {
     const existing = db.exec(`SELECT key FROM settings WHERE key = '${key}'`);
     if (existing.length === 0 || existing[0].values.length === 0) {
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('${key}', '${value}')`);
+    }
+  }
+
+  // Initialize default providers
+  const defaultProviders = [
+    { id: 'ebay', name: 'eBay', enabled: true },
+    { id: 'banggood', name: 'Banggood', enabled: false }
+  ];
+  for (const provider of defaultProviders) {
+    const existing = db.exec(`SELECT id FROM providers WHERE id = '${provider.id}'`);
+    if (existing.length === 0 || existing[0].values.length === 0) {
+      db.run(`INSERT OR IGNORE INTO providers (id, name, enabled, settings) VALUES ('${provider.id}', '${provider.name}', ${provider.enabled ? 1 : 0}, '{}')`);
     }
   }
 

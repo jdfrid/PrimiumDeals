@@ -418,6 +418,14 @@ router.put('/admin/settings', authenticateToken, requireRole('admin'), (req, res
         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP
       `).run(key, value, value);
     }
+    
+    // Update providers table when banggood_enabled changes
+    if (settings.banggood_enabled !== undefined) {
+      const enabled = settings.banggood_enabled === 'true' ? 1 : 0;
+      prepare('UPDATE providers SET enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(enabled, 'banggood');
+      console.log(`🛒 Banggood provider ${enabled ? 'enabled' : 'disabled'}`);
+    }
+    
     res.json({ success: true, message: 'Settings saved' });
   } catch (error) {
     console.error('Settings error:', error);
