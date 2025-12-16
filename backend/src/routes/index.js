@@ -604,22 +604,40 @@ router.get('/debug/banggood-test', async (req, res) => {
   }
 });
 
-// Debug Banggood search
+// Debug Banggood search with detailed logging
 router.get('/debug/banggood-search', async (req, res) => {
   try {
-    const banggoodService = (await import('../services/banggoodService.js')).default;
     const { keyword = 'phone' } = req.query;
+    const banggoodService = (await import('../services/banggoodService.js')).default;
     
-    console.log('🧪 Testing Banggood search for:', keyword);
-    const results = await banggoodService.searchProducts({ keywords: keyword, limit: 5 });
+    // Try to get token first
+    let tokenResult = null;
+    let tokenError = null;
+    try {
+      const token = await banggoodService.getAccessToken();
+      tokenResult = token ? 'Got token: ' + token.substring(0, 10) + '...' : 'No token';
+    } catch (e) {
+      tokenError = e.message;
+    }
+    
+    // Try search
+    let searchResults = [];
+    let searchError = null;
+    try {
+      searchResults = await banggoodService.searchProducts({ keywords: keyword, limit: 5 });
+    } catch (e) {
+      searchError = e.message;
+    }
     
     res.json({
       keyword,
-      resultsCount: results.length,
-      results: results.slice(0, 3)
+      tokenResult,
+      tokenError,
+      searchError,
+      resultsCount: searchResults.length,
+      results: searchResults.slice(0, 3)
     });
   } catch (error) {
-    console.error('Banggood test error:', error);
     res.status(500).json({ error: error.message, stack: error.stack });
   }
 });

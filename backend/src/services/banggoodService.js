@@ -4,7 +4,13 @@
 import crypto from 'crypto';
 import { prepare } from '../config/database.js';
 
-const API_BASE = 'https://affiliate.banggood.com/api';
+// Try different API URLs
+const API_URLS = [
+  'https://gw.api.banggood.com',
+  'https://affiliate.banggood.com/api',
+  'https://api.banggood.com/api'
+];
+let API_BASE = API_URLS[0]; // Start with first URL
 
 class BanggoodService {
   constructor() {
@@ -53,43 +59,72 @@ class BanggoodService {
     return crypto.createHash('md5').update(signStr).digest('hex').toUpperCase();
   }
 
-  // Get access token
+  // Get access token - try multiple API URLs
   async getAccessToken() {
     if (this.accessToken && Date.now() < this.tokenExpiry - 300000) {
       return this.accessToken;
     }
 
-    console.log('🔑 Getting Banggood access token...');
+    const appKey = this.appKey;
+    const appSecret = this.appSecret;
     
-    const timestamp = Math.floor(Date.now() / 1000);
-    const params = {
-      app_id: this.appKey,
-      app_secret: this.appSecret,
-      timestamp: timestamp.toString()
-    };
-
-    try {
-      const response = await fetch(`${API_BASE}/getAccessToken`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-      });
-
-      const data = await response.json();
-      
-      if (data.code === 0 && data.access_token) {
-        this.accessToken = data.access_token;
-        this.tokenExpiry = Date.now() + (data.expire_time || 7200) * 1000;
-        console.log('✅ Got Banggood access token');
-        return this.accessToken;
-      } else {
-        console.error('❌ Banggood token error:', data);
-        throw new Error(data.msg || 'Failed to get Banggood token');
-      }
-    } catch (error) {
-      console.error('❌ Banggood token error:', error.message);
-      throw error;
+    if (!appKey || !appSecret) {
+      throw new Error('Banggood credentials not configured');
     }
+
+    console.log('🔑 Getting Banggood access token...');
+    console.log('   App Key:', appKey.substring(0, 5) + '...');
+    
+    // Try each API URL
+    for (const apiUrl of API_URLS) {
+      try {
+        console.log(`   Trying: ${apiUrl}`);
+        
+        const timestamp = Math.floor(Date.now() / 1000);
+        const params = {
+          app_id: appKey,
+          app_secret: appSecret,
+          timestamp: timestamp.toString()
+        };
+
+        const response = await fetch(`${apiUrl}/getAccessToken`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        });
+
+        const text = await response.text();
+        console.log(`   Response (${response.status}):`, text.substring(0, 200));
+        
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.log('   Not JSON, trying next URL...');
+          continue;
+        }
+        
+        if (data.code === 0 && data.access_token) {
+          this.accessToken = data.access_token;
+          this.tokenExpiry = Date.now() + (data.expire_time || 7200) * 1000;
+          API_BASE = apiUrl; // Remember working URL
+          console.log('✅ Got Banggood access token from', apiUrl);
+          return this.accessToken;
+        } else if (data.access_token) {
+          // Some APIs return token without code
+          this.accessToken = data.access_token;
+          this.tokenExpiry = Date.now() + 7200000;
+          API_BASE = apiUrl;
+          console.log('✅ Got Banggood access token (alt format) from', apiUrl);
+          return this.accessToken;
+        }
+      } catch (error) {
+        console.log(`   Error with ${apiUrl}:`, error.message);
+        continue;
+      }
+    }
+    
+    throw new Error('Failed to get Banggood token from any API URL');
   }
 
   // Search products
