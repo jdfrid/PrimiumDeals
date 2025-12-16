@@ -93,7 +93,7 @@ export const toggleDealActive = (req, res) => {
 };
 
 export const getPublicDeals = (req, res) => {
-  const { page = 1, limit = 48, category, sort = 'discount', seed } = req.query;
+  const { page = 1, limit = 50, category, sort = 'discount', seed } = req.query;
   const offset = (page - 1) * limit;
   const minDiscount = 10; // Show deals with 10%+ discount
 

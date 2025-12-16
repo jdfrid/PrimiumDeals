@@ -194,7 +194,7 @@ export async function initDatabase() {
     ['contact_email', 'jdfrid@gmail.com'],
     ['site_name', 'Premium Deals'],
     ['min_discount_display', '10'],
-    ['deals_per_page', '48']
+    ['deals_per_page', '50']
   ];
   for (const [key, value] of defaultSettings) {
     const existing = db.exec(`SELECT key FROM settings WHERE key = '${key}'`);

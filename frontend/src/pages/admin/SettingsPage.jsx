@@ -7,7 +7,7 @@ export default function SettingsPage() {
     contact_email: '',
     site_name: '',
     min_discount_display: '10',
-    deals_per_page: '48'
+    deals_per_page: '50'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
