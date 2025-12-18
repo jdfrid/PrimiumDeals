@@ -642,6 +642,80 @@ router.get('/debug/banggood-search', async (req, res) => {
   }
 });
 
+// Clean duplicate deals
+router.post('/admin/clean-duplicates', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    // Find duplicates based on title similarity and price
+    const duplicates = prepare(`
+      SELECT d1.id, d1.title, d1.ebay_item_id, d1.current_price
+      FROM deals d1
+      INNER JOIN deals d2 ON d1.title = d2.title 
+        AND d1.current_price = d2.current_price 
+        AND d1.id > d2.id
+      WHERE d1.is_active = 1
+    `).all();
+    
+    // Also find exact ebay_item_id duplicates
+    const exactDuplicates = prepare(`
+      SELECT d1.id, d1.title, d1.ebay_item_id
+      FROM deals d1
+      INNER JOIN deals d2 ON d1.ebay_item_id = d2.ebay_item_id 
+        AND d1.ebay_item_id != ''
+        AND d1.id > d2.id
+      WHERE d1.is_active = 1
+    `).all();
+    
+    const allDuplicateIds = [...new Set([...duplicates.map(d => d.id), ...exactDuplicates.map(d => d.id)])];
+    
+    // Deactivate duplicates (keep the older ones)
+    let removed = 0;
+    for (const id of allDuplicateIds) {
+      prepare('UPDATE deals SET is_active = 0 WHERE id = ?').run(id);
+      removed++;
+    }
+    
+    console.log(`🧹 Cleaned ${removed} duplicate deals`);
+    res.json({ 
+      message: `Cleaned ${removed} duplicate deals`,
+      duplicatesFound: allDuplicateIds.length,
+      removed
+    });
+  } catch (error) {
+    console.error('Clean duplicates error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get duplicate count
+router.get('/admin/duplicates-count', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const titleDuplicates = prepare(`
+      SELECT COUNT(*) as count FROM (
+        SELECT title, current_price, COUNT(*) as cnt 
+        FROM deals WHERE is_active = 1 
+        GROUP BY title, current_price 
+        HAVING cnt > 1
+      )
+    `).get();
+    
+    const idDuplicates = prepare(`
+      SELECT COUNT(*) as count FROM (
+        SELECT ebay_item_id, COUNT(*) as cnt 
+        FROM deals WHERE is_active = 1 AND ebay_item_id != ''
+        GROUP BY ebay_item_id 
+        HAVING cnt > 1
+      )
+    `).get();
+    
+    res.json({ 
+      titleDuplicates: titleDuplicates.count,
+      idDuplicates: idDuplicates.count
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Database status check
 router.get('/debug/db-status', (req, res) => {
   try {
