@@ -205,6 +205,22 @@ export async function initDatabase() {
     // Column already exists
   }
 
+  // Create unique index on source_item_id to prevent duplicates
+  try {
+    db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_deals_source_item_id ON deals(source_item_id) WHERE source_item_id IS NOT NULL AND source_item_id != ''`);
+    console.log('✅ Created unique index on source_item_id');
+  } catch (e) {
+    // Index already exists or can't create (duplicates exist)
+    console.log('⚠️ Could not create unique index on source_item_id (duplicates may exist)');
+  }
+
+  // Populate source_item_id from ebay_item_id for existing records
+  try {
+    db.run(`UPDATE deals SET source_item_id = ebay_item_id WHERE source_item_id IS NULL OR source_item_id = ''`);
+  } catch (e) {
+    // Ignore
+  }
+
   // Initialize default settings if not exist
   const defaultSettings = [
     ['contact_email', 'jdfrid@gmail.com'],

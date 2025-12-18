@@ -156,9 +156,18 @@ class Scheduler {
             const meetsMaxPrice = item.currentPrice <= (rule.max_price || 999999);
             
             if (meetsMinDiscount && meetsMinPrice && meetsMaxPrice) {
-              prepare('INSERT INTO deals (ebay_item_id, source_item_id, source, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                .run(source === 'ebay' ? itemId : '', itemId, source, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition || 'New', itemUrl, dbCategoryId);
-              itemsAdded++;
+              // Double-check for duplicates before inserting (by source_item_id)
+              const duplicateCheck = prepare('SELECT id FROM deals WHERE source_item_id = ?').get(itemId);
+              if (duplicateCheck) {
+                // Already exists, update instead
+                prepare('UPDATE deals SET title = ?, image_url = ?, original_price = ?, current_price = ?, discount_percent = ?, currency = ?, condition = ?, ebay_url = ?, category_id = ?, source = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+                  .run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition || 'New', itemUrl, dbCategoryId, source, duplicateCheck.id);
+              } else {
+                // Insert new item
+                prepare('INSERT INTO deals (ebay_item_id, source_item_id, source, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(source === 'ebay' ? itemId : '', itemId, source, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition || 'New', itemUrl, dbCategoryId);
+                itemsAdded++;
+              }
             }
           }
         } catch (err) { console.error('Error saving deal:', err.message); }
