@@ -55,19 +55,18 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../../frontend/dis
 
 async function initializeAdmin() {
   const adminEmail = process.env.ADMIN_EMAIL || 'jdfrid@gmail.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || '12345678';
+  const defaultPassword = '12345678';
   
   // Check if admin exists
   const existingAdmin = prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
   if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    // Only create admin if doesn't exist
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
     prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)').run(adminEmail, hashedPassword, 'Administrator', 'admin');
-    console.log(`✅ Admin user created: ${adminEmail}`);
+    console.log(`✅ Admin user created: ${adminEmail} (default password: ${defaultPassword})`);
   } else {
-    // Update password for existing admin
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    prepare('UPDATE users SET password = ? WHERE email = ?').run(hashedPassword, adminEmail);
-    console.log(`✅ Admin password updated: ${adminEmail}`);
+    // Admin exists - DON'T reset password on every restart!
+    console.log(`✅ Admin user exists: ${adminEmail}`);
   }
 }
 
