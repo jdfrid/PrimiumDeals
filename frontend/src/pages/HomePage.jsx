@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
 import api from '../services/api';
 
@@ -246,23 +246,52 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Categories Bar */}
-          <div className="flex items-center gap-3 py-3 overflow-x-auto scrollbar-hide">
-            <CategoryButton 
-              category={{ name: 'All', icon: '🏷️' }} 
-              active={!selectedCategory} 
-              onClick={() => handleCategoryChange(null)}
-              count={pagination?.total || 0}
-            />
-            {categories.map(cat => (
+          {/* Categories Bar with Scroll Buttons */}
+          <div className="relative py-3">
+            {/* Left Scroll Button */}
+            <button 
+              onClick={() => {
+                const container = document.getElementById('categories-scroll');
+                container?.scrollBy({ left: -200, behavior: 'smooth' });
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 border border-gray-200 hidden md:flex"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            
+            {/* Categories Container */}
+            <div 
+              id="categories-scroll"
+              className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-0 md:px-10"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               <CategoryButton 
-                key={cat.id} 
-                category={cat} 
-                active={selectedCategory === cat.id} 
-                onClick={() => handleCategoryChange(cat.id)}
-                count={cat.deal_count}
+                category={{ name: 'All', icon: '🏷️' }} 
+                active={!selectedCategory} 
+                onClick={() => handleCategoryChange(null)}
+                count={pagination?.total || 0}
               />
-            ))}
+              {categories.map(cat => (
+                <CategoryButton 
+                  key={cat.id} 
+                  category={cat} 
+                  active={selectedCategory === cat.id} 
+                  onClick={() => handleCategoryChange(cat.id)}
+                  count={cat.deal_count}
+                />
+              ))}
+            </div>
+            
+            {/* Right Scroll Button */}
+            <button 
+              onClick={() => {
+                const container = document.getElementById('categories-scroll');
+                container?.scrollBy({ left: 200, behavior: 'smooth' });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 border border-gray-200 hidden md:flex"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
         </div>
       </header>
