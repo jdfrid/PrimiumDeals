@@ -26,11 +26,28 @@ function DealCard({ deal }) {
   // Use tracking URL to log clicks
   const trackingUrl = `/api/track/click/${deal.id}`;
   
+  // Track click in Google Analytics
+  const handleClick = () => {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'deal_click', {
+        event_category: 'engagement',
+        event_label: deal.title?.substring(0, 50),
+        deal_id: deal.id,
+        deal_price: deal.current_price,
+        deal_discount: deal.discount_percent,
+        deal_category: deal.category_name || 'Uncategorized',
+        deal_source: deal.source || 'ebay',
+        value: deal.current_price
+      });
+    }
+  };
+  
   return (
     <a
       href={trackingUrl}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleClick}
       className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col"
     >
       {/* Image Container */}
