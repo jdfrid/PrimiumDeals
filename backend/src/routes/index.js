@@ -716,6 +716,95 @@ router.get('/admin/duplicates-count', authenticateToken, requireRole('admin'), (
   }
 });
 
+// Validate and remove unavailable eBay items
+router.post('/admin/validate-items', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const ebayService = (await import('../services/ebayService.js')).default;
+    const { limit = 50 } = req.body;
+    
+    // Get oldest checked active deals from eBay
+    const deals = prepare(`
+      SELECT id, ebay_item_id, source_item_id, title, source 
+      FROM deals 
+      WHERE is_active = 1 AND source = 'ebay' AND ebay_item_id != ''
+      ORDER BY updated_at ASC 
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    if (deals.length === 0) {
+      return res.json({ message: 'No eBay deals to validate', checked: 0, removed: 0 });
+    }
+    
+    console.log(`🔍 Validating ${deals.length} eBay items...`);
+    
+    const itemIds = deals.map(d => d.ebay_item_id || d.source_item_id);
+    const unavailable = await ebayService.checkItemsAvailability(itemIds, 5);
+    
+    // Remove unavailable items
+    let removed = 0;
+    for (const item of unavailable) {
+      const deal = deals.find(d => (d.ebay_item_id === item.itemId || d.source_item_id === item.itemId));
+      if (deal) {
+        prepare('UPDATE deals SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(deal.id);
+        console.log(`🗑️ Removed unavailable: "${deal.title?.substring(0, 40)}..." (${item.reason})`);
+        removed++;
+      }
+    }
+    
+    // Update checked timestamp for remaining items
+    const checkedIds = deals.filter(d => !unavailable.some(u => u.itemId === d.ebay_item_id)).map(d => d.id);
+    if (checkedIds.length > 0) {
+      prepare(`UPDATE deals SET updated_at = CURRENT_TIMESTAMP WHERE id IN (${checkedIds.join(',')})`).run();
+    }
+    
+    saveDatabase();
+    
+    res.json({
+      message: `Validated ${deals.length} items, removed ${removed} unavailable`,
+      checked: deals.length,
+      removed,
+      unavailableItems: unavailable.map(u => ({ itemId: u.itemId, reason: u.reason }))
+    });
+  } catch (error) {
+    console.error('Validate items error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check a single item availability
+router.get('/admin/check-item/:dealId', authenticateToken, async (req, res) => {
+  try {
+    const ebayService = (await import('../services/ebayService.js')).default;
+    const deal = prepare('SELECT * FROM deals WHERE id = ?').get(req.params.dealId);
+    
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    
+    if (deal.source !== 'ebay') {
+      return res.json({ available: true, message: 'Only eBay items can be checked' });
+    }
+    
+    const itemId = deal.ebay_item_id || deal.source_item_id;
+    const result = await ebayService.checkItemAvailability(itemId);
+    
+    // If unavailable, deactivate the deal
+    if (!result.available) {
+      prepare('UPDATE deals SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(deal.id);
+      saveDatabase();
+    }
+    
+    res.json({
+      dealId: deal.id,
+      title: deal.title,
+      ...result,
+      action: result.available ? 'none' : 'deactivated'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Database status check
 router.get('/debug/db-status', (req, res) => {
   try {

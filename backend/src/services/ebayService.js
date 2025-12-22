@@ -260,6 +260,102 @@ class EbayService {
     
     return `https://www.ebay.com/itm/${legacyItemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
   }
+
+  // Check if a single item is still available
+  async checkItemAvailability(itemId) {
+    try {
+      const token = await this.getAccessToken();
+      
+      // Extract legacy item ID if needed
+      let legacyItemId = itemId;
+      if (itemId && itemId.includes('|')) {
+        const parts = itemId.split('|');
+        if (parts.length >= 2) {
+          legacyItemId = parts[1];
+        }
+      }
+      
+      // Use eBay Get Item API
+      const url = `https://api.ebay.com/buy/browse/v1/item/v1|${legacyItemId}|0`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.status === 404) {
+        console.log(`❌ Item ${legacyItemId} not found (404)`);
+        return { available: false, reason: 'not_found' };
+      }
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.log(`⚠️ Item ${legacyItemId} check failed: ${response.status}`);
+        // Don't mark as unavailable on API errors
+        return { available: true, reason: 'api_error', status: response.status };
+      }
+      
+      const data = await response.json();
+      
+      // Check if item is ended or unavailable
+      if (data.itemEndDate) {
+        const endDate = new Date(data.itemEndDate);
+        if (endDate < new Date()) {
+          console.log(`❌ Item ${legacyItemId} ended on ${endDate.toISOString()}`);
+          return { available: false, reason: 'ended' };
+        }
+      }
+      
+      // Check availability status
+      const availability = data.estimatedAvailabilities?.[0];
+      if (availability) {
+        if (availability.availabilityStatus === 'OUT_OF_STOCK' || 
+            availability.estimatedAvailableQuantity === 0) {
+          console.log(`❌ Item ${legacyItemId} out of stock`);
+          return { available: false, reason: 'out_of_stock' };
+        }
+      }
+      
+      return { available: true, item: data };
+    } catch (error) {
+      console.error(`Error checking item ${itemId}:`, error.message);
+      // On error, assume still available (don't remove items due to API issues)
+      return { available: true, reason: 'error', error: error.message };
+    }
+  }
+
+  // Check multiple items and return unavailable ones
+  async checkItemsAvailability(itemIds, batchSize = 10) {
+    const unavailableItems = [];
+    
+    // Process in batches to avoid rate limits
+    for (let i = 0; i < itemIds.length; i += batchSize) {
+      const batch = itemIds.slice(i, i + batchSize);
+      
+      const results = await Promise.all(
+        batch.map(async (itemId) => {
+          const result = await this.checkItemAvailability(itemId);
+          return { itemId, ...result };
+        })
+      );
+      
+      for (const result of results) {
+        if (!result.available) {
+          unavailableItems.push(result);
+        }
+      }
+      
+      // Small delay between batches
+      if (i + batchSize < itemIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    return unavailableItems;
+  }
 }
 
 export default new EbayService();

@@ -26,19 +26,36 @@ function DealCard({ deal }) {
   // Use tracking URL to log clicks
   const trackingUrl = `/api/track/click/${deal.id}`;
   
-  // Track click in Google Analytics
+  // Track click in Google Analytics (using GA4 e-commerce events)
   const handleClick = () => {
     if (typeof window.gtag === 'function') {
-      window.gtag('event', 'deal_click', {
-        event_category: 'engagement',
-        event_label: deal.title?.substring(0, 50),
-        deal_id: deal.id,
-        deal_price: deal.current_price,
-        deal_discount: deal.discount_percent,
-        deal_category: deal.category_name || 'Uncategorized',
-        deal_source: deal.source || 'ebay',
-        value: deal.current_price
+      // GA4 select_item event (standard e-commerce event)
+      window.gtag('event', 'select_item', {
+        item_list_name: 'Deals',
+        items: [{
+          item_id: deal.id?.toString(),
+          item_name: deal.title?.substring(0, 100),
+          item_category: deal.category_name || 'Uncategorized',
+          item_brand: deal.source || 'ebay',
+          price: deal.current_price,
+          discount: deal.discount_percent,
+          currency: 'USD'
+        }]
       });
+      
+      // Also send custom event for more details
+      window.gtag('event', 'deal_click', {
+        currency: 'USD',
+        value: deal.current_price,
+        items: [{
+          item_id: deal.id?.toString(),
+          item_name: deal.title?.substring(0, 100),
+          price: deal.current_price,
+          discount: deal.discount_percent
+        }]
+      });
+      
+      console.log('📊 GA Event sent:', deal.title?.substring(0, 30));
     }
   };
   
