@@ -188,6 +188,23 @@ export async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Newsletter subscribers table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS subscribers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      preferences TEXT DEFAULT '{}',
+      source TEXT DEFAULT 'website',
+      is_active INTEGER DEFAULT 1,
+      confirmed INTEGER DEFAULT 0,
+      confirm_token TEXT,
+      unsubscribe_token TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
   
   // Add source column to deals table if not exists
   try {

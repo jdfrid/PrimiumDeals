@@ -924,6 +924,171 @@ Sitemap: https://dealsluxy.com/api/sitemap.xml
   res.send(robots);
 });
 
+// ============================================
+// NEWSLETTER ROUTES
+// ============================================
+
+// Subscribe to newsletter (public)
+router.post('/newsletter/subscribe', async (req, res) => {
+  try {
+    const { email, name, source = 'website', preferences = {} } = req.body;
+    
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Valid email is required' });
+    }
+    
+    const crypto = await import('crypto');
+    const confirmToken = crypto.randomBytes(32).toString('hex');
+    const unsubscribeToken = crypto.randomBytes(32).toString('hex');
+    
+    // Check if already subscribed
+    const existing = prepare('SELECT id, is_active FROM subscribers WHERE email = ?').get(email.toLowerCase());
+    
+    if (existing) {
+      if (existing.is_active) {
+        return res.json({ success: true, message: 'Already subscribed!', alreadySubscribed: true });
+      } else {
+        // Reactivate
+        prepare('UPDATE subscribers SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(existing.id);
+        return res.json({ success: true, message: 'Welcome back! Subscription reactivated.' });
+      }
+    }
+    
+    // New subscriber
+    prepare(`
+      INSERT INTO subscribers (email, name, preferences, source, confirm_token, unsubscribe_token)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(email.toLowerCase(), name || '', JSON.stringify(preferences), source, confirmToken, unsubscribeToken);
+    
+    console.log(`📧 New subscriber: ${email} from ${source}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Successfully subscribed! Check your email for confirmation.' 
+    });
+  } catch (error) {
+    console.error('Subscribe error:', error);
+    if (error.message?.includes('UNIQUE constraint')) {
+      return res.json({ success: true, message: 'Already subscribed!' });
+    }
+    res.status(500).json({ error: 'Failed to subscribe' });
+  }
+});
+
+// Unsubscribe (public)
+router.get('/newsletter/unsubscribe/:token', (req, res) => {
+  try {
+    const { token } = req.params;
+    const subscriber = prepare('SELECT id, email FROM subscribers WHERE unsubscribe_token = ?').get(token);
+    
+    if (!subscriber) {
+      return res.status(404).send('<h1>Invalid unsubscribe link</h1>');
+    }
+    
+    prepare('UPDATE subscribers SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(subscriber.id);
+    
+    res.send(`
+      <html>
+        <head><title>Unsubscribed</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>You've been unsubscribed</h1>
+          <p>You will no longer receive emails from Dealsluxy.</p>
+          <p><a href="https://dealsluxy.com">Return to website</a></p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error processing request');
+  }
+});
+
+// Get subscriber stats (admin)
+router.get('/admin/newsletter/stats', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const total = prepare('SELECT COUNT(*) as count FROM subscribers').get();
+    const active = prepare('SELECT COUNT(*) as count FROM subscribers WHERE is_active = 1').get();
+    const today = prepare("SELECT COUNT(*) as count FROM subscribers WHERE date(created_at) = date('now')").get();
+    const thisWeek = prepare("SELECT COUNT(*) as count FROM subscribers WHERE created_at > datetime('now', '-7 days')").get();
+    
+    const bySource = prepare(`
+      SELECT source, COUNT(*) as count 
+      FROM subscribers 
+      WHERE is_active = 1 
+      GROUP BY source 
+      ORDER BY count DESC
+    `).all();
+    
+    res.json({
+      total: total.count,
+      active: active.count,
+      today: today.count,
+      thisWeek: thisWeek.count,
+      bySource
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all subscribers (admin)
+router.get('/admin/newsletter/subscribers', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { page = 1, limit = 50, active } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let sql = 'SELECT id, email, name, source, is_active, created_at FROM subscribers';
+    let countSql = 'SELECT COUNT(*) as count FROM subscribers';
+    const params = [];
+    
+    if (active !== undefined) {
+      sql += ' WHERE is_active = ?';
+      countSql += ' WHERE is_active = ?';
+      params.push(active === 'true' ? 1 : 0);
+    }
+    
+    const total = prepare(countSql).get(...params);
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    
+    const subscribers = prepare(sql).all(...params);
+    
+    res.json({
+      subscribers,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total.count,
+        pages: Math.ceil(total.count / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Export subscribers as CSV (admin)
+router.get('/admin/newsletter/export', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const subscribers = prepare(`
+      SELECT email, name, source, is_active, created_at 
+      FROM subscribers 
+      WHERE is_active = 1 
+      ORDER BY created_at DESC
+    `).all();
+    
+    let csv = 'Email,Name,Source,Status,Subscribed Date\n';
+    for (const s of subscribers) {
+      csv += `"${s.email}","${s.name || ''}","${s.source}","${s.is_active ? 'Active' : 'Inactive'}","${s.created_at}"\n`;
+    }
+    
+    res.set('Content-Type', 'text/csv');
+    res.set('Content-Disposition', 'attachment; filename=subscribers.csv');
+    res.send(csv);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // SEO metadata API for dynamic pages
 router.get('/seo/page-data', (req, res) => {
   try {

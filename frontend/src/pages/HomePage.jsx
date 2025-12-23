@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
 import api from '../services/api';
+import NewsletterPopup from '../components/NewsletterPopup';
+import NewsletterFooter from '../components/NewsletterFooter';
 
 // Source icons for different providers
 const SourceIcon = ({ source }) => {
@@ -483,8 +485,14 @@ export default function HomePage() {
         )}
       </main>
 
+      {/* Newsletter Section */}
+      <NewsletterFooter />
+      
+      {/* Newsletter Popup */}
+      <NewsletterPopup />
+
       {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-12">
+      <footer className="bg-gray-900 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* About */}
@@ -515,11 +523,11 @@ export default function HomePage() {
             <div>
               <h3 className="font-bold mb-4">Popular Brands</h3>
               <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Rolex</span>
-                <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Louis Vuitton</span>
-                <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Gucci</span>
-                <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Cartier</span>
-                <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">Omega</span>
+                <a href="/brand/rolex" className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300 hover:bg-gray-700 transition-colors">Rolex</a>
+                <a href="/brand/louis-vuitton" className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300 hover:bg-gray-700 transition-colors">Louis Vuitton</a>
+                <a href="/brand/gucci" className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300 hover:bg-gray-700 transition-colors">Gucci</a>
+                <a href="/brand/cartier" className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300 hover:bg-gray-700 transition-colors">Cartier</a>
+                <a href="/brand/omega" className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300 hover:bg-gray-700 transition-colors">Omega</a>
               </div>
             </div>
           </div>
