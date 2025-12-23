@@ -513,9 +513,10 @@ export default function HomePage() {
             <div>
               <h3 className="font-bold mb-4">Links</h3>
               <ul className="space-y-2 text-gray-400 text-sm">
+                <li><a href="/how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+                <li><a href="/designer-sale" className="hover:text-white transition-colors">Designer Sale</a></li>
                 <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
                 <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="https://www.ebay.com" target="_blank" rel="noopener" className="hover:text-white transition-colors">Visit eBay</a></li>
               </ul>
             </div>
             

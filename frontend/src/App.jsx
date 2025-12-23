@@ -6,6 +6,7 @@ import ContactPage from './pages/ContactPage';
 import LandingPage from './pages/LandingPage';
 import BrandPage from './pages/BrandPage';
 import CategoryPage from './pages/CategoryPage';
+import HowItWorksPage from './pages/HowItWorksPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -52,6 +53,8 @@ function App() {
         <Route path="/designer-bags-sale" element={<LandingPage />} />
         <Route path="/brand/:brandSlug" element={<BrandPage />} />
         <Route path="/category/:categorySlug" element={<CategoryPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/about" element={<HowItWorksPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />

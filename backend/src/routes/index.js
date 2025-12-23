@@ -905,6 +905,11 @@ router.get('/sitemap.xml', (req, res) => {
     // Static pages
     xml += `
   <url>
+    <loc>${baseUrl}/how-it-works</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>${baseUrl}/terms</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
@@ -1077,6 +1082,71 @@ router.get('/admin/newsletter/subscribers', authenticateToken, requireRole('admi
         pages: Math.ceil(total.count / limit)
       }
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get top weekly deals (public)
+router.get('/deals/top-weekly', (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    
+    // Get top deals from the last 7 days by discount + clicks
+    const deals = prepare(`
+      SELECT 
+        d.id, d.title, d.image_url, d.original_price, d.current_price, 
+        d.discount_percent, d.currency, d.ebay_url, d.source,
+        c.name as category_name, c.icon as category_icon,
+        COALESCE(clicks.click_count, 0) as click_count
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      LEFT JOIN (
+        SELECT deal_id, COUNT(*) as click_count 
+        FROM clicks 
+        WHERE created_at > datetime('now', '-7 days')
+        GROUP BY deal_id
+      ) clicks ON d.id = clicks.deal_id
+      WHERE d.is_active = 1 
+        AND d.discount_percent >= 25
+        AND d.created_at > datetime('now', '-7 days')
+      ORDER BY d.discount_percent DESC, click_count DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    res.json({
+      title: "This Week's Top Deals",
+      subtitle: "Biggest discounts from the last 7 days",
+      deals,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get featured deals (editor's picks)
+router.get('/deals/featured', (req, res) => {
+  try {
+    const { limit = 6 } = req.query;
+    
+    // Get deals with highest discount that have good images
+    const deals = prepare(`
+      SELECT 
+        d.id, d.title, d.image_url, d.original_price, d.current_price, 
+        d.discount_percent, d.currency, d.ebay_url, d.source,
+        c.name as category_name, c.icon as category_icon
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      WHERE d.is_active = 1 
+        AND d.discount_percent >= 30
+        AND d.image_url IS NOT NULL
+        AND d.image_url != ''
+      ORDER BY d.discount_percent DESC, d.current_price DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    res.json({ deals });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
