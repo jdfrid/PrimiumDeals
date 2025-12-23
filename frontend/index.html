@@ -35,10 +35,32 @@
     <meta name="msapplication-TileColor" content="#f97316" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
-    <!-- Fonts -->
+    <!-- Performance: DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://api.ebay.com" />
+    <link rel="dns-prefetch" href="https://i.ebayimg.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    
+    <!-- Fonts with display=swap for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Critical CSS for above-the-fold content -->
+    <style>
+      /* Critical styles for initial render */
+      body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+      #root { min-height: 100vh; }
+      .loading-spinner {
+        position: fixed; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px; height: 40px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #f97316;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    </style>
     
     <!-- Schema.org Structured Data -->
     <script type="application/ld+json">

@@ -821,6 +821,11 @@ router.get('/sitemap.xml', (req, res) => {
       'chanel', 'cartier', 'hermes', 'tag-heuer', 'balenciaga'
     ];
     
+    // Category pages for SEO
+    const categoryPages = [
+      'watches', 'handbags', 'jewelry', 'sunglasses', 'shoes', 'accessories', 'fragrances'
+    ];
+    
     // Get all active categories
     const categories = prepare(`
       SELECT c.id, c.name, MAX(d.updated_at) as last_updated
@@ -873,7 +878,18 @@ router.get('/sitemap.xml', (req, res) => {
   </url>`;
     }
 
-    // Add category pages
+    // Add SEO category pages
+    for (const catPage of categoryPages) {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${catPage}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>`;
+    }
+
+    // Add dynamic category pages from DB
     for (const cat of categories) {
       const slug = cat.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const lastmod = cat.last_updated ? new Date(cat.last_updated).toISOString().split('T')[0] : today;
