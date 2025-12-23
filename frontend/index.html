@@ -103,13 +103,47 @@
     }
     </script>
     
-    <!-- Google Analytics -->
+    <!-- Google Analytics + Google Ads -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-07H9H3Q3M9"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-07H9H3Q3M9');
+      
+      // GA4 Configuration
+      gtag('config', 'G-07H9H3Q3M9', {
+        'send_page_view': true,
+        'cookie_flags': 'SameSite=None;Secure'
+      });
+      
+      // Google Ads Configuration (uncomment and add your conversion ID)
+      // gtag('config', 'AW-XXXXXXXXXX');
+      
+      // Enhanced conversions for better tracking
+      gtag('set', 'user_properties', {
+        'site_version': '2.0',
+        'user_type': 'visitor'
+      });
+    </script>
+    
+    <!-- Google Ads Remarketing Tag -->
+    <script>
+      // Remarketing parameters - will be updated dynamically
+      window.google_remarketing_params = {
+        ecomm_prodid: '',
+        ecomm_pagetype: 'home',
+        ecomm_totalvalue: 0
+      };
+      
+      // Update remarketing on deal view
+      window.updateRemarketing = function(type, data) {
+        window.google_remarketing_params = {
+          ecomm_pagetype: type,
+          ecomm_prodid: data.prodId || '',
+          ecomm_totalvalue: data.value || 0,
+          ecomm_category: data.category || ''
+        };
+      };
     </script>
   </head>
   <body>

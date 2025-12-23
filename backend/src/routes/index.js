@@ -1082,6 +1082,125 @@ router.get('/admin/newsletter/subscribers', authenticateToken, requireRole('admi
   }
 });
 
+// Track UTM conversions (public - called from frontend)
+router.post('/track/conversion', (req, res) => {
+  try {
+    const { 
+      type, 
+      utm_source, 
+      utm_medium, 
+      utm_campaign, 
+      utm_term,
+      utm_content,
+      gclid,
+      value,
+      item_id,
+      landing_page
+    } = req.body;
+    
+    // Store conversion for analytics
+    prepare(`
+      INSERT INTO conversions (
+        type, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+        gclid, value, item_id, landing_page, ip_address, user_agent, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      type || 'unknown',
+      utm_source || '',
+      utm_medium || '',
+      utm_campaign || '',
+      utm_term || '',
+      utm_content || '',
+      gclid || '',
+      value || 0,
+      item_id || '',
+      landing_page || '',
+      req.ip || req.headers['x-forwarded-for'] || '',
+      req.headers['user-agent'] || ''
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    // Silently fail - don't break user experience
+    console.error('Conversion tracking error:', error);
+    res.json({ success: true });
+  }
+});
+
+// Get conversion stats (admin)
+router.get('/admin/conversions/stats', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    
+    // Total conversions by type
+    const byType = prepare(`
+      SELECT type, COUNT(*) as count, SUM(value) as total_value
+      FROM conversions 
+      WHERE created_at > datetime('now', '-${days} days')
+      GROUP BY type
+      ORDER BY count DESC
+    `).all();
+    
+    // By UTM source
+    const bySource = prepare(`
+      SELECT utm_source, COUNT(*) as count, SUM(value) as total_value
+      FROM conversions 
+      WHERE created_at > datetime('now', '-${days} days') AND utm_source != ''
+      GROUP BY utm_source
+      ORDER BY count DESC
+      LIMIT 10
+    `).all();
+    
+    // By campaign
+    const byCampaign = prepare(`
+      SELECT utm_campaign, COUNT(*) as count, SUM(value) as total_value
+      FROM conversions 
+      WHERE created_at > datetime('now', '-${days} days') AND utm_campaign != ''
+      GROUP BY utm_campaign
+      ORDER BY count DESC
+      LIMIT 10
+    `).all();
+    
+    // Daily trend
+    const dailyTrend = prepare(`
+      SELECT date(created_at) as date, type, COUNT(*) as count
+      FROM conversions 
+      WHERE created_at > datetime('now', '-${days} days')
+      GROUP BY date(created_at), type
+      ORDER BY date DESC
+    `).all();
+    
+    // Google Ads clicks (gclid)
+    const googleAdsClicks = prepare(`
+      SELECT COUNT(*) as count, SUM(value) as total_value
+      FROM conversions 
+      WHERE created_at > datetime('now', '-${days} days') AND gclid != ''
+    `).get();
+    
+    // Top landing pages
+    const topLandingPages = prepare(`
+      SELECT landing_page, COUNT(*) as count
+      FROM conversions 
+      WHERE created_at > datetime('now', '-${days} days') AND landing_page != ''
+      GROUP BY landing_page
+      ORDER BY count DESC
+      LIMIT 10
+    `).all();
+    
+    res.json({
+      period: `Last ${days} days`,
+      byType,
+      bySource,
+      byCampaign,
+      dailyTrend,
+      googleAdsClicks,
+      topLandingPages
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Export subscribers as CSV (admin)
 router.get('/admin/newsletter/export', authenticateToken, requireRole('admin'), (req, res) => {
   try {
