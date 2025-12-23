@@ -179,6 +179,21 @@ export default function HomePage() {
       if (data.seed && !randomSeed) {
         setRandomSeed(data.seed);
       }
+      
+      // GA4: Track view_item_list event
+      if (typeof window.gtag === 'function' && data.deals?.length > 0) {
+        window.gtag('event', 'view_item_list', {
+          item_list_name: selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : 'All Deals',
+          items: data.deals.slice(0, 10).map((deal, index) => ({
+            item_id: deal.id?.toString(),
+            item_name: deal.title?.substring(0, 100),
+            item_category: deal.category_name || 'Uncategorized',
+            item_brand: deal.source || 'ebay',
+            price: deal.current_price,
+            index: index
+          }))
+        });
+      }
     } catch (error) {
       console.error('Failed to load deals:', error);
     } finally {
@@ -193,13 +208,28 @@ export default function HomePage() {
     if (newSort === 'random') {
       setRandomSeed(null); // New random seed
     }
+    // GA4: Track filter usage
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'filter_used', {
+        filter_type: 'sort',
+        filter_value: newSort
+      });
+    }
   };
   
   const handleCategoryChange = (catId) => {
+    const catName = catId ? categories.find(c => c.id === catId)?.name : 'All';
     setSelectedCategory(catId);
     setPage(1);
     if (sortBy === 'random') {
       setRandomSeed(null); // New random seed
+    }
+    // GA4: Track category filter
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'filter_used', {
+        filter_type: 'category',
+        filter_value: catName || 'All'
+      });
     }
   };
 

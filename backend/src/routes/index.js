@@ -805,6 +805,153 @@ router.get('/admin/check-item/:dealId', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// SEO ROUTES
+// ============================================
+
+// Dynamic Sitemap.xml
+router.get('/sitemap.xml', (req, res) => {
+  try {
+    const baseUrl = 'https://dealsluxy.com';
+    
+    // Get all active categories
+    const categories = prepare(`
+      SELECT c.id, c.name, MAX(d.updated_at) as last_updated
+      FROM categories c
+      LEFT JOIN deals d ON d.category_id = c.id AND d.is_active = 1
+      GROUP BY c.id
+      HAVING COUNT(d.id) > 0
+    `).all();
+    
+    // Get recent deals for lastmod
+    const recentDeal = prepare(`
+      SELECT MAX(updated_at) as last_updated FROM deals WHERE is_active = 1
+    `).get();
+    
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${new Date(recentDeal?.last_updated || Date.now()).toISOString().split('T')[0]}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/designer-sale</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/luxury-watches-sale</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/designer-bags-sale</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>`;
+
+    // Add category pages
+    for (const cat of categories) {
+      const slug = cat.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const lastmod = cat.last_updated ? new Date(cat.last_updated).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${slug}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    }
+
+    xml += `
+</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
+// Robots.txt
+router.get('/robots.txt', (req, res) => {
+  const robots = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/admin
+Disallow: /api/debug
+
+Sitemap: https://dealsluxy.com/api/sitemap.xml
+`;
+  res.set('Content-Type', 'text/plain');
+  res.send(robots);
+});
+
+// SEO metadata API for dynamic pages
+router.get('/seo/page-data', (req, res) => {
+  try {
+    const { path } = req.query;
+    const baseUrl = 'https://dealsluxy.com';
+    
+    // Default metadata
+    let meta = {
+      title: 'Premium Deals | Luxury Brands at Best Prices - Up to 70% Off',
+      description: 'Discover exclusive deals on luxury brands. Designer handbags, watches, jewelry & accessories at up to 70% off. Authentic products with worldwide shipping.',
+      canonical: baseUrl,
+      og: {
+        title: 'Premium Deals - Luxury Brands at Best Prices',
+        description: 'Up to 70% off on designer brands. Handbags, watches, jewelry & more.',
+        image: `${baseUrl}/og-image.jpg`,
+        type: 'website'
+      }
+    };
+
+    // Category specific metadata
+    if (path?.startsWith('/category/')) {
+      const slug = path.replace('/category/', '');
+      const catName = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      meta = {
+        title: `${catName} Sale - Up to 70% Off | Premium Deals`,
+        description: `Shop ${catName.toLowerCase()} at incredible prices. Authentic designer ${catName.toLowerCase()} with up to 70% discount. Free worldwide shipping on orders.`,
+        canonical: `${baseUrl}${path}`,
+        og: {
+          title: `${catName} Sale - Up to 70% Off`,
+          description: `Discover amazing deals on ${catName.toLowerCase()}. Save big on authentic designer items.`,
+          image: `${baseUrl}/og-${slug}.jpg`,
+          type: 'website'
+        }
+      };
+    }
+
+    // Landing pages
+    const landingPages = {
+      '/designer-sale': {
+        title: 'Designer Sale 2024 - Up to 70% Off Luxury Brands | Dealsluxy',
+        description: 'Exclusive designer sale with up to 70% off luxury brands. Shop authentic designer handbags, watches, jewelry & accessories. Updated daily with new deals.',
+      },
+      '/luxury-watches-sale': {
+        title: 'Luxury Watches Sale - Premium Timepieces Up to 60% Off | Dealsluxy',
+        description: 'Shop luxury watches at incredible prices. Rolex, Omega, TAG Heuer & more at up to 60% off. Authentic timepieces with warranty.',
+      },
+      '/designer-bags-sale': {
+        title: 'Designer Bags Sale - Luxury Handbags Up to 70% Off | Dealsluxy',
+        description: 'Discover designer handbags at unbeatable prices. Louis Vuitton, Gucci, Prada & more at up to 70% off. Authentic luxury bags.',
+      }
+    };
+
+    if (landingPages[path]) {
+      meta = { ...meta, ...landingPages[path], canonical: `${baseUrl}${path}` };
+    }
+
+    res.json(meta);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Database status check
 router.get('/debug/db-status', (req, res) => {
   try {
