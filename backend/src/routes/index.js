@@ -813,6 +813,13 @@ router.get('/admin/check-item/:dealId', authenticateToken, async (req, res) => {
 router.get('/sitemap.xml', (req, res) => {
   try {
     const baseUrl = 'https://dealsluxy.com';
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Brand pages for SEO
+    const brands = [
+      'rolex', 'louis-vuitton', 'gucci', 'omega', 'prada', 
+      'chanel', 'cartier', 'hermes', 'tag-heuer', 'balenciaga'
+    ];
     
     // Get all active categories
     const categories = prepare(`
@@ -838,24 +845,38 @@ router.get('/sitemap.xml', (req, res) => {
   </url>
   <url>
     <loc>${baseUrl}/designer-sale</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>${baseUrl}/luxury-watches-sale</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>${baseUrl}/designer-bags-sale</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>`;
 
+    // Add brand pages
+    for (const brand of brands) {
+      xml += `
+  <url>
+    <loc>${baseUrl}/brand/${brand}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>`;
+    }
+
     // Add category pages
     for (const cat of categories) {
       const slug = cat.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const lastmod = cat.last_updated ? new Date(cat.last_updated).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const lastmod = cat.last_updated ? new Date(cat.last_updated).toISOString().split('T')[0] : today;
       xml += `
   <url>
     <loc>${baseUrl}/category/${slug}</loc>
@@ -864,6 +885,19 @@ router.get('/sitemap.xml', (req, res) => {
     <priority>0.8</priority>
   </url>`;
     }
+
+    // Static pages
+    xml += `
+  <url>
+    <loc>${baseUrl}/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>`;
 
     xml += `
 </urlset>`;

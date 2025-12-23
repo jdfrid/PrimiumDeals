@@ -3,6 +3,20 @@ import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Tag, Clock, Shield, Truck, Star, TrendingDown, ShoppingBag } from 'lucide-react';
 import api from '../services/api';
 
+// Popular brands for designer-sale page
+const POPULAR_BRANDS = [
+  { slug: 'rolex', name: 'Rolex', logo: '⌚' },
+  { slug: 'louis-vuitton', name: 'Louis Vuitton', logo: '👜' },
+  { slug: 'gucci', name: 'Gucci', logo: '✨' },
+  { slug: 'omega', name: 'Omega', logo: '⌚' },
+  { slug: 'prada', name: 'Prada', logo: '👜' },
+  { slug: 'chanel', name: 'Chanel', logo: '👜' },
+  { slug: 'cartier', name: 'Cartier', logo: '💎' },
+  { slug: 'hermes', name: 'Hermès', logo: '🧣' },
+  { slug: 'tag-heuer', name: 'TAG Heuer', logo: '⌚' },
+  { slug: 'balenciaga', name: 'Balenciaga', logo: '👜' }
+];
+
 // Landing page configurations
 const LANDING_PAGES = {
   'designer-sale': {
@@ -12,6 +26,7 @@ const LANDING_PAGES = {
     keywords: ['luxury', 'designer', 'sale', 'discount'],
     heroImage: '/images/designer-sale-hero.jpg',
     categories: null, // All categories
+    showBrands: true,
     faq: [
       { q: 'Are these products authentic?', a: 'Yes, all products are sourced from verified sellers on eBay with authenticity guarantees.' },
       { q: 'How much can I save?', a: 'Discounts range from 20% to 70% off retail prices, with new deals added daily.' },
@@ -201,6 +216,25 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+      
+      {/* Popular Brands Section */}
+      {config.showBrands && (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Shop by Brand</h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {POPULAR_BRANDS.map(brand => (
+              <Link 
+                key={brand.slug}
+                to={`/brand/${brand.slug}`}
+                className="bg-white rounded-xl p-4 text-center hover:shadow-lg transition-all border border-gray-100 hover:border-orange-200"
+              >
+                <span className="text-2xl mb-1 block">{brand.logo}</span>
+                <span className="font-medium text-gray-800 text-sm">{brand.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* Deals Grid */}
       <div className="max-w-7xl mx-auto px-4 py-12">

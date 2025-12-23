@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import TermsPage from './pages/TermsPage';
 import ContactPage from './pages/ContactPage';
 import LandingPage from './pages/LandingPage';
+import BrandPage from './pages/BrandPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -48,6 +49,7 @@ function App() {
         <Route path="/designer-sale" element={<LandingPage />} />
         <Route path="/luxury-watches-sale" element={<LandingPage />} />
         <Route path="/designer-bags-sale" element={<LandingPage />} />
+        <Route path="/brand/:brandSlug" element={<BrandPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
