@@ -60,257 +60,78 @@ class BannerService {
   }
 
   /**
-   * Generate HTML banner for a deal - AGGRESSIVE STYLE
+   * Generate HTML banner for a deal - SIMPLE RELIABLE STYLE
    */
   generateBannerHTML(deal, size = 'instagram_square', style = 'gradient_orange') {
     const sizeConfig = BANNER_SIZES[size] || BANNER_SIZES.instagram_square;
     const styleConfig = BANNER_STYLES[style] || BANNER_STYLES.gradient_orange;
     const savings = deal.original_price - deal.current_price;
     const isVertical = sizeConfig.height > sizeConfig.width;
+    const w = sizeConfig.width;
+    const h = sizeConfig.height;
     
     // Aggressive headlines based on discount
     const getHeadline = (discount) => {
-      if (discount >= 70) return { text: '🔥 CRAZY DEAL', sub: 'ALMOST FREE!' };
-      if (discount >= 50) return { text: '💥 MEGA SALE', sub: 'HALF PRICE!' };
-      if (discount >= 40) return { text: '⚡ HOT DEAL', sub: 'MASSIVE SAVINGS!' };
-      if (discount >= 30) return { text: '🎯 STEAL THIS', sub: 'LIMITED TIME!' };
-      return { text: '✨ SPECIAL OFFER', sub: 'DON\'T MISS OUT!' };
+      if (discount >= 70) return '🔥 CRAZY DEAL';
+      if (discount >= 50) return '💥 MEGA SALE';
+      if (discount >= 40) return '⚡ HOT DEAL';
+      if (discount >= 30) return '🎯 STEAL IT';
+      return '✨ SPECIAL';
     };
-    
-    const headline = getHeadline(deal.discount_percent);
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    .banner {
-      width: ${sizeConfig.width}px;
-      height: ${sizeConfig.height}px;
-      background: #000;
-      font-family: 'Inter', sans-serif;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    /* Full bleed image */
-    .image-bg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      ${isVertical ? '' : 'object-position: center;'}
-    }
-    
-    /* Dark overlay for text readability */
-    .overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        ${isVertical ? '180deg' : '90deg'},
-        rgba(0,0,0,0.1) 0%,
-        rgba(0,0,0,0.3) 40%,
-        rgba(0,0,0,0.85) 100%
-      );
-    }
-    
-    /* Discount explosion */
-    .discount-burst {
-      position: absolute;
-      ${isVertical ? 'top: 30px; right: 30px;' : 'top: 40px; right: 40px;'}
-      width: ${isVertical ? '180px' : '200px'};
-      height: ${isVertical ? '180px' : '200px'};
-      background: ${styleConfig.background};
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 60px rgba(239,68,68,0.6), 0 0 100px rgba(239,68,68,0.3);
-      animation: pulse 1.5s ease-in-out infinite;
-      border: 4px solid rgba(255,255,255,0.3);
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    
-    .discount-number {
-      font-size: ${isVertical ? '72px' : '80px'};
-      font-weight: 900;
-      color: white;
-      line-height: 1;
-      text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-    }
-    
-    .discount-percent {
-      font-size: ${isVertical ? '28px' : '32px'};
-      font-weight: 900;
-      color: white;
-      margin-top: -10px;
-    }
-    
-    .discount-off {
-      font-size: ${isVertical ? '20px' : '24px'};
-      font-weight: 700;
-      color: rgba(255,255,255,0.9);
-      letter-spacing: 3px;
-    }
-    
-    /* Content area - compact at bottom */
-    .content {
-      position: absolute;
-      ${isVertical ? `
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 40px 30px 50px;
-        background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%);
-      ` : `
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 30px 40px 40px;
-        background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 80%, transparent 100%);
-      `}
-      color: white;
-    }
-    
-    .headline {
-      font-size: ${isVertical ? '42px' : '48px'};
-      font-weight: 900;
-      color: ${styleConfig.accentColor};
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 5px;
-      text-shadow: 2px 2px 20px rgba(0,0,0,0.5);
-    }
-    
-    .subheadline {
-      font-size: ${isVertical ? '22px' : '26px'};
-      font-weight: 700;
-      color: white;
-      letter-spacing: 4px;
-      margin-bottom: 15px;
-      opacity: 0.9;
-    }
-    
-    .title {
-      font-size: ${isVertical ? '20px' : '22px'};
-      font-weight: 700;
-      color: rgba(255,255,255,0.85);
-      line-height: 1.3;
-      margin-bottom: 20px;
-      max-width: ${isVertical ? '100%' : '70%'};
-    }
-    
-    .price-row {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    
-    .old-price {
-      font-size: ${isVertical ? '28px' : '32px'};
-      color: rgba(255,255,255,0.5);
-      text-decoration: line-through;
-      font-weight: 700;
-    }
-    
-    .new-price {
-      font-size: ${isVertical ? '48px' : '56px'};
-      font-weight: 900;
-      color: #4ade80;
-      text-shadow: 0 0 30px rgba(74,222,128,0.5);
-    }
-    
-    .save-badge {
-      background: #ef4444;
-      color: white;
-      padding: 8px 16px;
-      font-size: ${isVertical ? '16px' : '18px'};
-      font-weight: 900;
-      border-radius: 6px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 4px 15px rgba(239,68,68,0.4);
-    }
-    
-    .cta {
-      position: absolute;
-      ${isVertical ? 'bottom: 50px; left: 30px; right: 30px;' : 'bottom: 40px; right: 40px;'}
-      background: white;
-      color: #000;
-      padding: 16px 40px;
-      font-size: ${isVertical ? '20px' : '22px'};
-      font-weight: 900;
-      border-radius: 50px;
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-      ${isVertical ? '' : 'display: inline-block;'}
-    }
-    
-    .logo {
-      position: absolute;
-      ${isVertical ? 'top: 30px; left: 30px;' : 'top: 40px; left: 40px;'}
-      font-size: ${isVertical ? '18px' : '20px'};
-      font-weight: 900;
-      color: white;
-      letter-spacing: 3px;
-      text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-      opacity: 0.9;
-    }
-    
-    .urgency {
-      position: absolute;
-      ${isVertical ? 'top: 230px; right: 30px;' : 'top: 260px; right: 40px;'}
-      background: rgba(0,0,0,0.7);
-      color: #fbbf24;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border: 1px solid #fbbf24;
-    }
+    body { font-family: Arial, Helvetica, sans-serif; }
   </style>
 </head>
 <body>
-  <div class="banner">
-    <img class="image-bg" src="${deal.image_url}" alt="" />
-    <div class="overlay"></div>
+  <div style="width:${w}px;height:${h}px;position:relative;overflow:hidden;background:#000;">
     
-    <div class="logo">DEALSLUXY</div>
+    <!-- Product Image -->
+    <img src="${deal.image_url}" style="position:absolute;top:0;left:0;width:100%;height:${isVertical ? '60%' : '100%'};object-fit:cover;" />
     
-    <div class="discount-burst">
-      <span class="discount-number">${deal.discount_percent}</span>
-      <span class="discount-percent">%</span>
-      <span class="discount-off">OFF</span>
+    <!-- Gradient Overlay -->
+    <div style="position:absolute;inset:0;background:linear-gradient(${isVertical ? '180deg' : '135deg'},transparent 30%,rgba(0,0,0,0.9) 100%);"></div>
+    
+    <!-- Discount Circle -->
+    <div style="position:absolute;top:${isVertical ? '20px' : '30px'};right:${isVertical ? '20px' : '30px'};width:${isVertical ? '140px' : '160px'};height:${isVertical ? '140px' : '160px'};background:linear-gradient(135deg,#f97316,#ef4444);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(239,68,68,0.5);border:3px solid rgba(255,255,255,0.3);">
+      <span style="font-size:${isVertical ? '52px' : '60px'};font-weight:900;color:white;line-height:1;">${deal.discount_percent}</span>
+      <span style="font-size:${isVertical ? '20px' : '24px'};font-weight:900;color:white;margin-top:-5px;">% OFF</span>
     </div>
     
-    <div class="urgency">⏰ Limited Time Only</div>
+    <!-- Logo -->
+    <div style="position:absolute;top:${isVertical ? '25px' : '35px'};left:${isVertical ? '25px' : '35px'};color:white;font-size:${isVertical ? '16px' : '18px'};font-weight:900;letter-spacing:2px;text-shadow:2px 2px 8px rgba(0,0,0,0.8);">DEALSLUXY</div>
     
-    <div class="content">
-      <div class="headline">${headline.text}</div>
-      <div class="subheadline">${headline.sub}</div>
-      <div class="title">${deal.title?.substring(0, 50)}${deal.title?.length > 50 ? '...' : ''}</div>
-      <div class="price-row">
-        <span class="old-price">$${deal.original_price?.toFixed(0)}</span>
-        <span class="new-price">$${deal.current_price?.toFixed(0)}</span>
-        <span class="save-badge">Save $${savings?.toFixed(0)}</span>
+    <!-- Content Box -->
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:${isVertical ? '30px 25px 100px' : '25px 30px 30px'};background:linear-gradient(0deg,rgba(0,0,0,0.95) 60%,transparent);">
+      
+      <!-- Headline -->
+      <div style="font-size:${isVertical ? '32px' : '36px'};font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;text-shadow:2px 2px 10px rgba(0,0,0,0.5);">
+        ${getHeadline(deal.discount_percent)}
+      </div>
+      
+      <!-- Product Title -->
+      <div style="font-size:${isVertical ? '18px' : '20px'};font-weight:700;color:rgba(255,255,255,0.9);line-height:1.3;margin-bottom:15px;max-width:${isVertical ? '100%' : '65%'};">
+        ${deal.title?.substring(0, 45)}${deal.title?.length > 45 ? '...' : ''}
+      </div>
+      
+      <!-- Prices -->
+      <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
+        <span style="font-size:${isVertical ? '22px' : '26px'};color:rgba(255,255,255,0.5);text-decoration:line-through;font-weight:700;">$${deal.original_price?.toFixed(0)}</span>
+        <span style="font-size:${isVertical ? '38px' : '44px'};font-weight:900;color:#4ade80;text-shadow:0 0 20px rgba(74,222,128,0.4);">$${deal.current_price?.toFixed(0)}</span>
+        <span style="background:#ef4444;color:white;padding:6px 12px;font-size:${isVertical ? '14px' : '16px'};font-weight:900;border-radius:5px;text-transform:uppercase;">SAVE $${savings?.toFixed(0)}</span>
       </div>
     </div>
     
-    <div class="cta">🛒 Get This Deal</div>
+    <!-- CTA Button -->
+    <div style="position:absolute;bottom:${isVertical ? '30px' : '25px'};${isVertical ? 'left:25px;right:25px;' : 'right:30px;'}background:white;color:#000;padding:${isVertical ? '14px 30px' : '12px 28px'};font-size:${isVertical ? '18px' : '20px'};font-weight:900;border-radius:50px;text-align:center;text-transform:uppercase;letter-spacing:1px;box-shadow:0 6px 20px rgba(0,0,0,0.3);">
+      🛒 GET THIS DEAL
+    </div>
+    
   </div>
 </body>
 </html>`;
