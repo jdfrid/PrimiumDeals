@@ -91,20 +91,20 @@ class BannerService {
 <body>
   <div style="width:${w}px;height:${h}px;position:relative;overflow:hidden;background:#000;">
     
-    <!-- Product Image -->
-    <img src="${deal.image_url}" style="position:absolute;top:0;left:0;width:100%;height:${isVertical ? '60%' : '100%'};object-fit:cover;" />
-    
-    <!-- Gradient Overlay -->
-    <div style="position:absolute;inset:0;background:linear-gradient(${isVertical ? '180deg' : '135deg'},transparent 30%,rgba(0,0,0,0.9) 100%);"></div>
-    
-    <!-- Discount Circle -->
-    <div style="position:absolute;top:${isVertical ? '20px' : '30px'};right:${isVertical ? '20px' : '30px'};width:${isVertical ? '140px' : '160px'};height:${isVertical ? '140px' : '160px'};background:linear-gradient(135deg,#f97316,#ef4444);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(239,68,68,0.5);border:3px solid rgba(255,255,255,0.3);">
-      <span style="font-size:${isVertical ? '52px' : '60px'};font-weight:900;color:white;line-height:1;">${deal.discount_percent}</span>
-      <span style="font-size:${isVertical ? '20px' : '24px'};font-weight:900;color:white;margin-top:-5px;">% OFF</span>
+    <!-- RED DISCOUNT BANNER AT TOP -->
+    <div style="position:absolute;top:0;left:0;right:0;z-index:100;background:linear-gradient(90deg,#dc2626,#ef4444,#dc2626);padding:${isVertical ? '15px 20px' : '18px 25px'};display:flex;align-items:center;justify-content:center;gap:15px;box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+      <span style="font-size:${isVertical ? '28px' : '32px'};font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">🔥 ${deal.discount_percent}% OFF</span>
+      <span style="background:white;color:#dc2626;padding:6px 14px;font-size:${isVertical ? '14px' : '16px'};font-weight:900;border-radius:4px;text-transform:uppercase;">LIMITED TIME</span>
     </div>
     
+    <!-- Product Image -->
+    <img src="${deal.image_url}" style="position:absolute;top:${isVertical ? '60px' : '70px'};left:0;width:100%;height:${isVertical ? '55%' : 'calc(100% - 70px)'};object-fit:cover;" />
+    
+    <!-- Gradient Overlay -->
+    <div style="position:absolute;inset:0;background:linear-gradient(${isVertical ? '180deg' : '135deg'},transparent 40%,rgba(0,0,0,0.95) 100%);"></div>
+    
     <!-- Logo -->
-    <div style="position:absolute;top:${isVertical ? '25px' : '35px'};left:${isVertical ? '25px' : '35px'};color:white;font-size:${isVertical ? '16px' : '18px'};font-weight:900;letter-spacing:2px;text-shadow:2px 2px 8px rgba(0,0,0,0.8);">DEALSLUXY</div>
+    <div style="position:absolute;top:${isVertical ? '75px' : '90px'};left:${isVertical ? '20px' : '25px'};color:white;font-size:${isVertical ? '14px' : '16px'};font-weight:900;letter-spacing:2px;text-shadow:2px 2px 8px rgba(0,0,0,0.8);background:rgba(0,0,0,0.5);padding:6px 12px;border-radius:4px;">DEALSLUXY</div>
     
     <!-- Content Box -->
     <div style="position:absolute;bottom:0;left:0;right:0;padding:${isVertical ? '30px 25px 100px' : '25px 30px 30px'};background:linear-gradient(0deg,rgba(0,0,0,0.95) 60%,transparent);">
