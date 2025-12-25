@@ -225,6 +225,18 @@ export async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Social media posts tracking
+  db.run(`
+    CREATE TABLE IF NOT EXISTS social_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deal_id INTEGER NOT NULL,
+      platform TEXT NOT NULL,
+      post_id TEXT,
+      posted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (deal_id) REFERENCES deals(id)
+    )
+  `);
   
   // Add source column to deals table if not exists
   try {

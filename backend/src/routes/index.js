@@ -1087,6 +1087,219 @@ router.get('/admin/newsletter/subscribers', authenticateToken, requireRole('admi
   }
 });
 
+// Get today's new deals (public)
+router.get('/deals/today', (req, res) => {
+  try {
+    const { limit = 50 } = req.query;
+    
+    const deals = prepare(`
+      SELECT 
+        d.id, d.title, d.image_url, d.original_price, d.current_price, 
+        d.discount_percent, d.currency, d.ebay_url, d.source, d.created_at,
+        c.name as category_name, c.icon as category_icon
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      WHERE d.is_active = 1 
+        AND date(d.created_at) = date('now')
+      ORDER BY d.discount_percent DESC, d.created_at DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    res.json({
+      date: new Date().toISOString().split('T')[0],
+      count: deals.length,
+      deals
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get deals for social media posting (returns formatted content)
+router.get('/deals/for-social', authenticateToken, (req, res) => {
+  try {
+    const { limit = 5, platform = 'all' } = req.query;
+    
+    // Get today's best deals that haven't been posted
+    const deals = prepare(`
+      SELECT 
+        d.id, d.title, d.image_url, d.original_price, d.current_price, 
+        d.discount_percent, d.ebay_url, d.source,
+        c.name as category_name
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      WHERE d.is_active = 1 
+        AND d.discount_percent >= 30
+        AND d.image_url IS NOT NULL
+        AND date(d.created_at) >= date('now', '-1 day')
+      ORDER BY d.discount_percent DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    // Generate social media content for each deal
+    const socialContent = deals.map(deal => {
+      const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}?utm_source=social&utm_medium=${platform}`;
+      const savings = deal.original_price - deal.current_price;
+      
+      return {
+        id: deal.id,
+        image_url: deal.image_url,
+        tracking_url: trackingUrl,
+        
+        // Twitter/X format (280 chars)
+        twitter: `🔥 ${deal.discount_percent}% OFF!\n\n${deal.title.substring(0, 80)}...\n\n💰 $${deal.original_price.toFixed(0)} → $${deal.current_price.toFixed(0)}\n\n🛒 ${trackingUrl}\n\n#deals #luxury #sale`,
+        
+        // Instagram/Facebook format
+        instagram: `🔥 DEAL ALERT: ${deal.discount_percent}% OFF!\n\n${deal.title}\n\n💰 Was: $${deal.original_price.toFixed(0)}\n✨ Now: $${deal.current_price.toFixed(0)}\n💵 You Save: $${savings.toFixed(0)}!\n\n🛒 Link in bio or visit dealsluxy.com\n\n#luxurydeals #designersale #fashiondeals #luxuryfashion #sale #discount #shopping #deals`,
+        
+        // Telegram format
+        telegram: `🔥 <b>${deal.discount_percent}% OFF!</b>\n\n${deal.title}\n\n💰 <s>$${deal.original_price.toFixed(0)}</s> → <b>$${deal.current_price.toFixed(0)}</b>\n💵 Save $${savings.toFixed(0)}!\n\n<a href="${trackingUrl}">🛒 Get This Deal</a>`,
+        
+        // Pinterest format
+        pinterest: {
+          title: `${deal.discount_percent}% OFF - ${deal.title.substring(0, 100)}`,
+          description: `Save $${savings.toFixed(0)}! Was $${deal.original_price.toFixed(0)}, now $${deal.current_price.toFixed(0)}. Shop luxury deals at Dealsluxy.`,
+          link: trackingUrl
+        }
+      };
+    });
+    
+    res.json({
+      generated_at: new Date().toISOString(),
+      platform,
+      count: socialContent.length,
+      posts: socialContent
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate HTML banner for a deal
+router.get('/deals/:id/banner', (req, res) => {
+  try {
+    const deal = prepare(`
+      SELECT d.*, c.name as category_name 
+      FROM deals d 
+      LEFT JOIN categories c ON d.category_id = c.id 
+      WHERE d.id = ?
+    `).get(req.params.id);
+    
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    
+    const savings = deal.original_price - deal.current_price;
+    const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}`;
+    
+    // Generate HTML banner
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta property="og:title" content="${deal.discount_percent}% OFF - ${deal.title.substring(0, 60)}">
+  <meta property="og:description" content="Save $${savings.toFixed(0)}! Was $${deal.original_price.toFixed(0)}, now $${deal.current_price.toFixed(0)}">
+  <meta property="og:image" content="${deal.image_url}">
+  <meta property="og:url" content="${trackingUrl}">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .banner {
+      width: 1200px;
+      height: 630px;
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      display: flex;
+      padding: 40px;
+      color: white;
+    }
+    .image-container {
+      width: 500px;
+      height: 550px;
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .content {
+      flex: 1;
+      padding: 20px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .discount {
+      font-size: 80px;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 600;
+      margin: 20px 0;
+      line-height: 1.3;
+    }
+    .prices {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .old-price {
+      font-size: 32px;
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    .new-price {
+      font-size: 48px;
+      font-weight: 900;
+    }
+    .savings {
+      background: rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 20px;
+    }
+    .logo {
+      margin-top: auto;
+      font-size: 24px;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <div class="image-container">
+      <img src="${deal.image_url}" alt="${deal.title}">
+    </div>
+    <div class="content">
+      <div class="discount">${deal.discount_percent}% OFF</div>
+      <div class="title">${deal.title.substring(0, 80)}${deal.title.length > 80 ? '...' : ''}</div>
+      <div class="prices">
+        <span class="old-price">$${deal.original_price.toFixed(0)}</span>
+        <span class="new-price">$${deal.current_price.toFixed(0)}</span>
+      </div>
+      <div class="savings">💰 You Save $${savings.toFixed(0)}!</div>
+      <div class="logo">🏷️ DEALSLUXY.COM</div>
+    </div>
+  </div>
+</body>
+</html>`;
+    
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get top weekly deals (public)
 router.get('/deals/top-weekly', (req, res) => {
   try {
@@ -1289,6 +1502,126 @@ router.get('/admin/newsletter/export', authenticateToken, requireRole('admin'), 
     res.set('Content-Type', 'text/csv');
     res.set('Content-Disposition', 'attachment; filename=subscribers.csv');
     res.send(csv);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// SOCIAL MEDIA AUTOMATION ROUTES
+// ============================================
+
+// Run social media automation manually (admin)
+router.post('/admin/social/post', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const socialAutomation = (await import('../services/socialAutomation.js')).default;
+    const { limit = 3 } = req.body;
+    
+    const results = await socialAutomation.runAutomatedPosts(limit);
+    
+    res.json({
+      success: true,
+      message: `Posted ${results.total} deals to social media`,
+      results
+    });
+  } catch (error) {
+    console.error('Social automation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Post a specific deal (admin)
+router.post('/admin/social/post/:dealId', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const socialAutomation = (await import('../services/socialAutomation.js')).default;
+    const deal = prepare(`
+      SELECT d.*, c.name as category_name 
+      FROM deals d 
+      LEFT JOIN categories c ON d.category_id = c.id 
+      WHERE d.id = ?
+    `).get(req.params.dealId);
+    
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    
+    const result = await socialAutomation.postToTelegram(deal);
+    
+    res.json({
+      success: result?.ok || false,
+      deal_id: deal.id,
+      result
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get social posting stats (admin)
+router.get('/admin/social/stats', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const socialAutomation = (await import('../services/socialAutomation.js')).default;
+    const { days = 7 } = req.query;
+    
+    const stats = socialAutomation.getStats(parseInt(days));
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get unposted deals (admin)
+router.get('/admin/social/unposted', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const socialAutomation = (await import('../services/socialAutomation.js')).default;
+    const { limit = 10 } = req.query;
+    
+    const deals = socialAutomation.getUnpostedDeals(parseInt(limit));
+    res.json({ count: deals.length, deals });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Configure social platforms (admin)
+router.put('/admin/social/config', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { platform, config } = req.body;
+    
+    // Store config in settings
+    for (const [key, value] of Object.entries(config)) {
+      const settingKey = `social_${platform}_${key}`;
+      prepare(`
+        INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP
+      `).run(settingKey, value, value);
+    }
+    
+    saveDatabase();
+    res.json({ success: true, message: `${platform} configuration saved` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get social config (admin)
+router.get('/admin/social/config', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const settings = prepare(`
+      SELECT key, value FROM settings WHERE key LIKE 'social_%'
+    `).all();
+    
+    const config = {};
+    for (const s of settings) {
+      const parts = s.key.replace('social_', '').split('_');
+      const platform = parts[0];
+      const key = parts.slice(1).join('_');
+      
+      if (!config[platform]) config[platform] = {};
+      config[platform][key] = s.value;
+    }
+    
+    res.json(config);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
