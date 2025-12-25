@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Image, Download, RefreshCw, Wand2, Eye, Copy, Check, Filter, LayoutGrid, Layers } from 'lucide-react';
+import { Image, Download, RefreshCw, Wand2, Eye, Copy, Check, Filter, LayoutGrid, Layers, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 
 // Size dimensions for display
@@ -311,6 +311,21 @@ export default function BannersGallery() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!confirm(`Are you sure you want to delete all ${banners.length} banners? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      const response = await api.request('/admin/banners/all', { method: 'DELETE' });
+      alert(`Deleted ${response.deleted} banners!`);
+      loadBanners();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to delete banners:', error);
+      alert('Failed to delete banners: ' + error.message);
+    }
+  };
+
   const copyUrl = (url) => {
     navigator.clipboard.writeText(window.location.origin + url);
     setCopied(true);
@@ -336,6 +351,15 @@ export default function BannersGallery() {
           <p className="text-midnight-400 mt-1">Generate and manage promotional banners for social media</p>
         </div>
         <div className="flex gap-3">
+          {banners.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+            >
+              <Trash2 size={18} />
+              Delete All
+            </button>
+          )}
           <button
             onClick={handleGenerateNewDeals}
             disabled={generating}
