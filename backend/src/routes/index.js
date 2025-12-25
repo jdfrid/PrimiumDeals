@@ -1741,6 +1741,28 @@ router.get('/banners/:bannerId/info', (req, res) => {
   }).catch(err => res.status(500).json({ error: err.message }));
 });
 
+// Delete all banners (admin)
+router.delete('/admin/banners/all', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const result = prepare('DELETE FROM banners').run();
+    saveDatabase();
+    res.json({ success: true, deleted: result.changes, message: 'All banners deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete single banner (admin)
+router.delete('/admin/banners/:bannerId', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const result = prepare('DELETE FROM banners WHERE banner_id = ?').run(req.params.bannerId);
+    saveDatabase();
+    res.json({ success: true, deleted: result.changes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // SEO metadata API for dynamic pages
 router.get('/seo/page-data', (req, res) => {
   try {
