@@ -1627,6 +1627,120 @@ router.get('/admin/social/config', authenticateToken, requireRole('admin'), (req
   }
 });
 
+// ============================================
+// BANNER ROUTES
+// ============================================
+
+// Get banner options (sizes and styles)
+router.get('/banners/options', (req, res) => {
+  import('../services/bannerService.js').then(module => {
+    res.json(module.default.getOptions());
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Generate banner for a deal
+router.post('/admin/banners/generate', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const bannerService = (await import('../services/bannerService.js')).default;
+    const { deal_id, size, style } = req.body;
+    
+    if (!deal_id) {
+      return res.status(400).json({ error: 'deal_id is required' });
+    }
+    
+    const banner = await bannerService.generateBanner(deal_id, size, style);
+    res.json({ success: true, banner });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate all banner sizes for a deal
+router.post('/admin/banners/generate-all/:dealId', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const bannerService = (await import('../services/bannerService.js')).default;
+    const { style = 'gradient_orange' } = req.body;
+    
+    const banners = await bannerService.generateAllBanners(req.params.dealId, style);
+    res.json({ success: true, count: banners.length, banners });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Auto-generate banners for new deals
+router.post('/admin/banners/generate-new', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const bannerService = (await import('../services/bannerService.js')).default;
+    const { limit = 10 } = req.body;
+    
+    const banners = await bannerService.generateBannersForNewDeals(limit);
+    res.json({ success: true, count: banners.length, banners });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all banners (admin gallery)
+router.get('/admin/banners', authenticateToken, (req, res) => {
+  import('../services/bannerService.js').then(module => {
+    const { limit = 50 } = req.query;
+    const banners = module.default.getRecentBanners(parseInt(limit));
+    res.json({ count: banners.length, banners });
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get banners for a specific deal
+router.get('/admin/banners/deal/:dealId', authenticateToken, (req, res) => {
+  import('../services/bannerService.js').then(module => {
+    const banners = module.default.getBannersForDeal(req.params.dealId);
+    res.json({ count: banners.length, banners });
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get banner stats
+router.get('/admin/banners/stats', authenticateToken, (req, res) => {
+  import('../services/bannerService.js').then(module => {
+    res.json(module.default.getStats());
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
+// View banner by ID (public - for viewing/downloading)
+router.get('/banners/:bannerId', (req, res) => {
+  import('../services/bannerService.js').then(module => {
+    const banner = module.default.getBanner(req.params.bannerId);
+    
+    if (!banner) {
+      return res.status(404).json({ error: 'Banner not found' });
+    }
+    
+    res.set('Content-Type', 'text/html');
+    res.send(banner.html_content);
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get banner preview info
+router.get('/banners/:bannerId/info', (req, res) => {
+  import('../services/bannerService.js').then(module => {
+    const banner = module.default.getBanner(req.params.bannerId);
+    
+    if (!banner) {
+      return res.status(404).json({ error: 'Banner not found' });
+    }
+    
+    res.json({
+      id: banner.id,
+      banner_id: banner.banner_id,
+      deal_id: banner.deal_id,
+      size: banner.size,
+      style: banner.style,
+      created_at: banner.created_at,
+      view_url: `/api/banners/${banner.banner_id}`,
+      download_url: `/api/banners/${banner.banner_id}?download=1`
+    });
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
 // SEO metadata API for dynamic pages
 router.get('/seo/page-data', (req, res) => {
   try {

@@ -237,6 +237,20 @@ export async function initDatabase() {
       FOREIGN KEY (deal_id) REFERENCES deals(id)
     )
   `);
+
+  // Marketing banners
+  db.run(`
+    CREATE TABLE IF NOT EXISTS banners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deal_id INTEGER NOT NULL,
+      banner_id TEXT UNIQUE NOT NULL,
+      size TEXT NOT NULL,
+      style TEXT NOT NULL,
+      html_content TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (deal_id) REFERENCES deals(id)
+    )
+  `);
   
   // Add source column to deals table if not exists
   try {

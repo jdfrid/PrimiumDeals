@@ -21,6 +21,7 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import MessagesPage from './pages/admin/MessagesPage';
 import EarningsPage from './pages/admin/EarningsPage';
+import BannersGallery from './pages/admin/BannersGallery';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -73,6 +74,7 @@ function App() {
           <Route path="settings" element={<ProtectedRoute roles={['admin']}><SettingsPage /></ProtectedRoute>} />
           <Route path="messages" element={<ProtectedRoute roles={['admin']}><MessagesPage /></ProtectedRoute>} />
           <Route path="earnings" element={<ProtectedRoute roles={['admin']}><EarningsPage /></ProtectedRoute>} />
+          <Route path="banners" element={<ProtectedRoute roles={['admin']}><BannersGallery /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
