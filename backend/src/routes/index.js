@@ -5,7 +5,7 @@ import * as usersController from '../controllers/usersController.js';
 import * as dealsController from '../controllers/dealsController.js';
 import * as categoriesController from '../controllers/categoriesController.js';
 import * as rulesController from '../controllers/rulesController.js';
-import { prepare } from '../config/database.js';
+import { prepare, saveDatabase } from '../config/database.js';
 
 const router = express.Router();
 
