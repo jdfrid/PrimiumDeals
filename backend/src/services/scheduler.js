@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import socialAutomation from './socialAutomation.js';
 import { prepare, saveDatabase } from '../config/database.js';
 import ebayService from './ebayService.js';
 import banggoodService from './banggoodService.js';
@@ -12,8 +13,32 @@ class Scheduler {
     console.log('🕐 Initializing scheduler...');
     const rules = prepare('SELECT * FROM query_rules WHERE is_active = 1').all();
     for (const rule of rules) this.scheduleRule(rule);
+    
+    // Cleanup old deals daily at 2 AM
     cron.schedule('0 2 * * *', () => this.cleanupOldDeals());
-    console.log(`✅ Scheduled ${rules.length} query rules`);
+    
+    // Social media automation - every 4 hours
+    cron.schedule('0 */4 * * *', async () => {
+      console.log('📱 Running social media automation...');
+      try {
+        await socialAutomation.runAutomatedPosts(3);
+      } catch (err) {
+        console.error('Social automation error:', err.message);
+      }
+    });
+    
+    // Generate banners for new deals - every 2 hours
+    cron.schedule('0 */2 * * *', async () => {
+      console.log('🎨 Auto-generating banners...');
+      try {
+        const bannerService = (await import('./bannerService.js')).default;
+        await bannerService.generateBannersForNewDeals(10);
+      } catch (err) {
+        console.error('Banner generation error:', err.message);
+      }
+    });
+    
+    console.log(`✅ Scheduled ${rules.length} query rules + social media + banner generation`);
   }
 
   scheduleRule(rule) {

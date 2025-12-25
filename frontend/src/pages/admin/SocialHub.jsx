@@ -1,6 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Share2, Download, Copy, Check, Facebook, Instagram, Send, RefreshCw, ExternalLink, Image, MessageCircle } from 'lucide-react';
+import { Share2, Download, Copy, Check, Facebook, Instagram, Send, RefreshCw, ExternalLink, Image, MessageCircle, Zap } from 'lucide-react';
 import api from '../../services/api';
+
+function TelegramAutoPost() {
+  const [posting, setPosting] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const triggerAutoPost = async () => {
+    setPosting(true);
+    setResult(null);
+    try {
+      const res = await api.request('/admin/social/post', {
+        method: 'POST',
+        body: JSON.stringify({ limit: 3 })
+      });
+      setResult({ success: true, message: `Posted ${res.results?.total || 0} deals to Telegram!` });
+    } catch (error) {
+      setResult({ success: false, message: error.message || 'Failed to post' });
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      {result && (
+        <span className={`text-sm ${result.success ? 'text-green-400' : 'text-red-400'}`}>
+          {result.message}
+        </span>
+      )}
+      <button
+        onClick={triggerAutoPost}
+        disabled={posting}
+        className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+      >
+        {posting ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+        {posting ? 'Posting...' : 'Post Now'}
+      </button>
+    </div>
+  );
+}
 
 const PLATFORMS = {
   facebook: { name: 'Facebook', color: '#1877f2', icon: '👥' },
@@ -249,6 +288,20 @@ export default function SocialHub() {
           <RefreshCw size={18} />
           Refresh
         </button>
+      </div>
+
+      {/* Telegram Auto-Post */}
+      <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border border-cyan-500/30 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            ✈️ Telegram Auto-Posting
+          </h3>
+          <TelegramAutoPost />
+        </div>
+        <p className="text-midnight-300 text-sm">
+          Configure your Telegram bot to auto-post deals every 4 hours.
+          Set <code className="bg-midnight-800 px-2 py-1 rounded">TELEGRAM_BOT_TOKEN</code> and <code className="bg-midnight-800 px-2 py-1 rounded">TELEGRAM_CHANNEL_ID</code> in Render environment variables.
+        </p>
       </div>
 
       {/* Instructions */}
