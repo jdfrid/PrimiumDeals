@@ -20,7 +20,7 @@ const STYLE_INFO = {
   light: { label: 'Light', color: '#f8fafc' }
 };
 
-function BannerCard({ banner, onView, onCopyUrl }) {
+function BannerCard({ banner, onView, onCopyUrl, onDelete, onRegenerate }) {
   const sizeInfo = SIZE_INFO[banner.size] || { label: banner.size, icon: '🖼️' };
   const styleInfo = STYLE_INFO[banner.style] || { label: banner.style, color: '#888' };
   const bannerUrl = `/api/banners/${banner.banner_id}`;
@@ -38,15 +38,15 @@ function BannerCard({ banner, onView, onCopyUrl }) {
         <div className="absolute inset-0 bg-gradient-to-t from-midnight-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4 gap-2">
           <button
             onClick={() => onView(banner)}
-            className="bg-brand-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-brand-600"
+            className="bg-brand-500 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 hover:bg-brand-600"
           >
-            <Eye size={16} /> View
+            <Eye size={14} /> View
           </button>
           <button
             onClick={() => onCopyUrl(bannerUrl)}
-            className="bg-midnight-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-midnight-600"
+            className="bg-midnight-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 hover:bg-midnight-600"
           >
-            <Copy size={16} /> Copy URL
+            <Copy size={14} />
           </button>
         </div>
       </div>
@@ -73,6 +73,22 @@ function BannerCard({ banner, onView, onCopyUrl }) {
         
         <div className="mt-2 text-xs text-midnight-500">
           {new Date(banner.created_at).toLocaleString('he-IL')}
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex gap-2 mt-3 pt-3 border-t border-midnight-700">
+          <button
+            onClick={() => onRegenerate(banner)}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+          >
+            <RefreshCw size={14} /> Regenerate
+          </button>
+          <button
+            onClick={() => onDelete(banner)}
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
         </div>
       </div>
     </div>
@@ -326,6 +342,41 @@ export default function BannersGallery() {
     }
   };
 
+  const handleDeleteSingle = async (banner) => {
+    if (!confirm(`Delete this ${SIZE_INFO[banner.size]?.label || banner.size} banner?`)) {
+      return;
+    }
+    try {
+      await api.request(`/admin/banners/${banner.banner_id}`, { method: 'DELETE' });
+      loadBanners();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to delete banner:', error);
+      alert('Failed to delete banner: ' + error.message);
+    }
+  };
+
+  const handleRegenerate = async (banner) => {
+    try {
+      // First delete the old one
+      await api.request(`/admin/banners/${banner.banner_id}`, { method: 'DELETE' });
+      // Then generate a new one with same settings
+      await api.request('/admin/banners/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          deal_id: banner.deal_id,
+          size: banner.size,
+          style: banner.style
+        })
+      });
+      loadBanners();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to regenerate banner:', error);
+      alert('Failed to regenerate banner: ' + error.message);
+    }
+  };
+
   const copyUrl = (url) => {
     navigator.clipboard.writeText(window.location.origin + url);
     setCopied(true);
@@ -460,6 +511,8 @@ export default function BannersGallery() {
               banner={banner}
               onView={setViewingBanner}
               onCopyUrl={copyUrl}
+              onDelete={handleDeleteSingle}
+              onRegenerate={handleRegenerate}
             />
           ))}
         </div>
