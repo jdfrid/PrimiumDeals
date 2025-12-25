@@ -128,8 +128,20 @@ class BannerService {
     </div>
     
     <!-- CTA Button -->
-    <div style="position:absolute;bottom:${isVertical ? '30px' : '25px'};${isVertical ? 'left:25px;right:25px;' : 'right:30px;'}background:white;color:#000;padding:${isVertical ? '14px 30px' : '12px 28px'};font-size:${isVertical ? '18px' : '20px'};font-weight:900;border-radius:50px;text-align:center;text-transform:uppercase;letter-spacing:1px;box-shadow:0 6px 20px rgba(0,0,0,0.3);">
+    <div style="position:absolute;bottom:${isVertical ? '85px' : '75px'};${isVertical ? 'left:25px;right:25px;' : 'right:30px;'}background:white;color:#000;padding:${isVertical ? '14px 30px' : '12px 28px'};font-size:${isVertical ? '18px' : '20px'};font-weight:900;border-radius:50px;text-align:center;text-transform:uppercase;letter-spacing:1px;box-shadow:0 6px 20px rgba(0,0,0,0.3);">
       🛒 GET THIS DEAL
+    </div>
+    
+    <!-- Website Footer -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(90deg,#1e1e1e,#2d2d2d,#1e1e1e);padding:${isVertical ? '18px 25px' : '15px 30px'};display:flex;align-items:center;justify-content:space-between;border-top:2px solid #fbbf24;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:${isVertical ? '24px' : '28px'};font-weight:900;color:#fbbf24;letter-spacing:1px;">DEALSLUXY</span>
+        <span style="color:rgba(255,255,255,0.5);font-size:${isVertical ? '14px' : '16px'};">|</span>
+        <span style="color:rgba(255,255,255,0.7);font-size:${isVertical ? '14px' : '16px'};font-weight:600;">Luxury Deals Daily</span>
+      </div>
+      <div style="background:#fbbf24;color:#000;padding:${isVertical ? '8px 16px' : '6px 14px'};border-radius:6px;font-weight:900;font-size:${isVertical ? '14px' : '16px'};">
+        DEALSLUXY.COM
+      </div>
     </div>
     
   </div>
