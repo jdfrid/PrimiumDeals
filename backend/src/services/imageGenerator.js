@@ -4,29 +4,23 @@
  */
 
 import puppeteer from 'puppeteer';
-import fs from 'fs';
-import path from 'path';
+import { prepare } from '../config/database.js';
+import bannerService from './bannerService.js';
 
 class ImageGenerator {
   constructor() {
     this.browser = null;
-    this.imagesDir = path.join(process.cwd(), 'public', 'banner-images');
-    
-    // Ensure images directory exists
-    if (!fs.existsSync(this.imagesDir)) {
-      fs.mkdirSync(this.imagesDir, { recursive: true });
-    }
   }
 
   async getBrowser() {
     if (!this.browser) {
-      console.log('🌐 Launching Puppeteer browser...');
       this.browser = await puppeteer.launch({
         headless: 'new',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
           '--disable-gpu',
           '--single-process'
         ]
@@ -36,81 +30,84 @@ class ImageGenerator {
   }
 
   /**
-   * Generate PNG image from HTML banner
+   * Convert HTML to PNG image buffer
    */
-  async generateImage(html, width, height, filename) {
+  async generateImageBuffer(html, width = 1080, height = 1080) {
+    const browser = await this.getBrowser();
+    const page = await browser.newPage();
+    
     try {
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
-      
-      // Set viewport to banner size
-      await page.setViewport({ width, height });
-      
-      // Load HTML content
+      await page.setViewport({ width, height, deviceScaleFactor: 1 });
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
       
-      // Wait for images to load
-      await page.evaluate(() => {
-        return Promise.all(
-          Array.from(document.images)
-            .filter(img => !img.complete)
-            .map(img => new Promise(resolve => {
-              img.onload = img.onerror = resolve;
-            }))
-        );
-      });
+      // Wait a bit for images to load
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Take screenshot
-      const imagePath = path.join(this.imagesDir, `${filename}.png`);
-      await page.screenshot({
-        path: imagePath,
+      const imageBuffer = await page.screenshot({
         type: 'png',
         clip: { x: 0, y: 0, width, height }
       });
       
+      return imageBuffer;
+    } finally {
       await page.close();
-      
-      console.log(`✅ Generated image: ${filename}.png`);
-      return imagePath;
-    } catch (error) {
-      console.error('Image generation error:', error.message);
-      throw error;
     }
   }
 
   /**
-   * Generate image buffer (for direct upload to Telegram)
+   * Generate image for a specific banner
    */
-  async generateImageBuffer(html, width, height) {
-    try {
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
-      
-      await page.setViewport({ width, height });
-      await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
-      
-      // Wait for images to load
-      await page.evaluate(() => {
-        return Promise.all(
-          Array.from(document.images)
-            .filter(img => !img.complete)
-            .map(img => new Promise(resolve => {
-              img.onload = img.onerror = resolve;
-            }))
-        );
-      });
-      
-      const buffer = await page.screenshot({
-        type: 'png',
-        clip: { x: 0, y: 0, width, height }
-      });
-      
-      await page.close();
-      return buffer;
-    } catch (error) {
-      console.error('Image buffer generation error:', error.message);
-      throw error;
+  async generateBannerImage(bannerId) {
+    const banner = bannerService.getBanner(bannerId);
+    if (!banner) {
+      throw new Error('Banner not found');
     }
+
+    // Get size dimensions
+    const sizes = {
+      instagram_square: { width: 1080, height: 1080 },
+      instagram_story: { width: 1080, height: 1920 },
+      facebook_post: { width: 1200, height: 630 },
+      twitter_post: { width: 1200, height: 675 },
+      pinterest_pin: { width: 1000, height: 1500 },
+      telegram: { width: 800, height: 600 }
+    };
+
+    const size = sizes[banner.size] || sizes.instagram_square;
+    const imageBuffer = await this.generateImageBuffer(banner.html_content, size.width, size.height);
+    
+    return imageBuffer;
+  }
+
+  /**
+   * Generate image for a deal (creates banner + converts to image)
+   */
+  async generateDealImage(dealId, size = 'telegram', style = 'gradient_orange') {
+    const deal = prepare(`
+      SELECT d.*, c.name as category_name 
+      FROM deals d 
+      LEFT JOIN categories c ON d.category_id = c.id 
+      WHERE d.id = ?
+    `).get(dealId);
+
+    if (!deal) {
+      throw new Error('Deal not found');
+    }
+
+    const sizes = {
+      instagram_square: { width: 1080, height: 1080 },
+      instagram_story: { width: 1080, height: 1920 },
+      facebook_post: { width: 1200, height: 630 },
+      twitter_post: { width: 1200, height: 675 },
+      pinterest_pin: { width: 1000, height: 1500 },
+      telegram: { width: 800, height: 600 }
+    };
+
+    const sizeConfig = sizes[size] || sizes.telegram;
+    const html = bannerService.generateBannerHTML(deal, size, style);
+    const imageBuffer = await this.generateImageBuffer(html, sizeConfig.width, sizeConfig.height);
+    
+    return imageBuffer;
   }
 
   /**
@@ -125,4 +122,3 @@ class ImageGenerator {
 }
 
 export default new ImageGenerator();
-
