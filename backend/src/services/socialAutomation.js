@@ -4,9 +4,6 @@
  */
 
 import { prepare, saveDatabase } from '../config/database.js';
-import bannerService from './bannerService.js';
-import imageGenerator from './imageGenerator.js';
-import FormData from 'form-data';
 
 class SocialAutomationService {
   constructor() {
@@ -107,7 +104,7 @@ class SocialAutomationService {
   }
 
   /**
-   * Post to Telegram with banner image
+   * Post to Telegram with product image
    */
   async postToTelegram(deal) {
     if (!this.platforms.telegram.botToken || !this.platforms.telegram.channelId) {
@@ -118,68 +115,39 @@ class SocialAutomationService {
     const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}?utm_source=telegram&utm_medium=social&utm_campaign=auto_post`;
     const savings = deal.original_price - deal.current_price;
     
-    // Short caption for Telegram (image has all the info)
-    const caption = `🔥 ${deal.discount_percent}% OFF!\n\n` +
-                   `${deal.title.substring(0, 100)}${deal.title.length > 100 ? '...' : ''}\n\n` +
-                   `💰 $${deal.original_price.toFixed(0)} → $${deal.current_price.toFixed(0)}\n` +
+    // Nice formatted caption
+    const caption = `🔥 <b>${deal.discount_percent}% OFF!</b>\n\n` +
+                   `${deal.title}\n\n` +
+                   `💰 <s>$${deal.original_price.toFixed(0)}</s> → <b>$${deal.current_price.toFixed(0)}</b>\n` +
                    `💵 Save $${savings.toFixed(0)}!\n\n` +
                    `🛒 <a href="${trackingUrl}">Get This Deal</a>\n\n` +
-                   `📱 @dealsluxy_deals | dealsluxy.com`;
+                   `━━━━━━━━━━━━━━━\n` +
+                   `🏷️ <b>DEALSLUXY.COM</b>`;
     
     try {
-      // Generate banner image
-      console.log(`🎨 Generating banner image for deal ${deal.id}...`);
-      const bannerHtml = bannerService.generateBannerHTML(deal, 'instagram_square', 'gradient_orange');
-      const imageBuffer = await imageGenerator.generateImageBuffer(bannerHtml, 1080, 1080);
-      
-      // Send banner image to Telegram using multipart form
-      const formData = new FormData();
-      formData.append('chat_id', this.platforms.telegram.channelId);
-      formData.append('caption', caption);
-      formData.append('parse_mode', 'HTML');
-      formData.append('photo', imageBuffer, {
-        filename: `deal_${deal.id}.png`,
-        contentType: 'image/png'
-      });
-
       const response = await fetch(
         `https://api.telegram.org/bot${this.platforms.telegram.botToken}/sendPhoto`,
         {
           method: 'POST',
-          body: formData
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: this.platforms.telegram.channelId,
+            photo: deal.image_url,
+            caption: caption,
+            parse_mode: 'HTML'
+          })
         }
       );
 
       const data = await response.json();
       
       if (data.ok) {
-        console.log(`✅ Posted banner to Telegram: ${deal.title.substring(0, 40)}...`);
+        console.log(`✅ Posted to Telegram: ${deal.title.substring(0, 40)}...`);
         this.markAsPosted(deal.id, 'telegram', data.result.message_id);
         return data;
       } else {
         console.error('Telegram API error:', data.description);
-        
-        // Fallback to product image if banner fails
-        console.log('⚠️ Falling back to product image...');
-        const fallbackResponse = await fetch(
-          `https://api.telegram.org/bot${this.platforms.telegram.botToken}/sendPhoto`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: this.platforms.telegram.channelId,
-              photo: deal.image_url,
-              caption: caption,
-              parse_mode: 'HTML'
-            })
-          }
-        );
-        
-        const fallbackData = await fallbackResponse.json();
-        if (fallbackData.ok) {
-          this.markAsPosted(deal.id, 'telegram', fallbackData.result.message_id);
-        }
-        return fallbackData;
+        return null;
       }
     } catch (error) {
       console.error('Telegram post error:', error.message);
