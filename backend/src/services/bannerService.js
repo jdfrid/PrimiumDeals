@@ -60,186 +60,257 @@ class BannerService {
   }
 
   /**
-   * Generate HTML banner for a deal
+   * Generate HTML banner for a deal - AGGRESSIVE STYLE
    */
   generateBannerHTML(deal, size = 'instagram_square', style = 'gradient_orange') {
     const sizeConfig = BANNER_SIZES[size] || BANNER_SIZES.instagram_square;
     const styleConfig = BANNER_STYLES[style] || BANNER_STYLES.gradient_orange;
     const savings = deal.original_price - deal.current_price;
-    const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}`;
-
-    // Calculate font sizes based on banner dimensions
-    const baseFontSize = Math.min(sizeConfig.width, sizeConfig.height) / 20;
     const isVertical = sizeConfig.height > sizeConfig.width;
+    
+    // Aggressive headlines based on discount
+    const getHeadline = (discount) => {
+      if (discount >= 70) return { text: '🔥 CRAZY DEAL', sub: 'ALMOST FREE!' };
+      if (discount >= 50) return { text: '💥 MEGA SALE', sub: 'HALF PRICE!' };
+      if (discount >= 40) return { text: '⚡ HOT DEAL', sub: 'MASSIVE SAVINGS!' };
+      if (discount >= 30) return { text: '🎯 STEAL THIS', sub: 'LIMITED TIME!' };
+      return { text: '✨ SPECIAL OFFER', sub: 'DON\'T MISS OUT!' };
+    };
+    
+    const headline = getHeadline(deal.discount_percent);
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta property="og:title" content="${deal.discount_percent}% OFF - ${deal.title?.substring(0, 60)}">
-  <meta property="og:image" content="${deal.image_url}">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     .banner {
       width: ${sizeConfig.width}px;
       height: ${sizeConfig.height}px;
-      background: ${styleConfig.background};
-      font-family: 'Inter', system-ui, sans-serif;
-      color: ${styleConfig.textColor};
-      display: flex;
-      flex-direction: ${isVertical ? 'column' : 'row'};
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .image-section {
-      ${isVertical ? `
-        width: 100%;
-        height: 55%;
-      ` : `
-        width: 45%;
-        height: 100%;
-      `}
+      background: #000;
+      font-family: 'Inter', sans-serif;
       position: relative;
       overflow: hidden;
     }
     
-    .deal-image {
+    /* Full bleed image */
+    .image-bg {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      ${isVertical ? '' : 'object-position: center;'}
     }
     
-    .discount-badge {
+    /* Dark overlay for text readability */
+    .overlay {
       position: absolute;
-      ${isVertical ? 'top: 20px; left: 20px;' : 'top: 30px; left: 30px;'}
-      background: ${styleConfig.accentColor};
-      color: ${style === 'light' ? '#ffffff' : '#000000'};
-      padding: ${baseFontSize * 0.5}px ${baseFontSize}px;
-      border-radius: ${baseFontSize * 0.5}px;
-      font-weight: 900;
-      font-size: ${baseFontSize * 1.5}px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      transform: rotate(-5deg);
+      inset: 0;
+      background: linear-gradient(
+        ${isVertical ? '180deg' : '90deg'},
+        rgba(0,0,0,0.1) 0%,
+        rgba(0,0,0,0.3) 40%,
+        rgba(0,0,0,0.85) 100%
+      );
     }
     
-    .content-section {
-      flex: 1;
-      padding: ${baseFontSize * 1.5}px;
+    /* Discount explosion */
+    .discount-burst {
+      position: absolute;
+      ${isVertical ? 'top: 30px; right: 30px;' : 'top: 40px; right: 40px;'}
+      width: ${isVertical ? '180px' : '200px'};
+      height: ${isVertical ? '180px' : '200px'};
+      background: ${styleConfig.background};
+      border-radius: 50%;
       display: flex;
       flex-direction: column;
+      align-items: center;
       justify-content: center;
-      ${isVertical ? 'align-items: center; text-align: center;' : ''}
+      box-shadow: 0 0 60px rgba(239,68,68,0.6), 0 0 100px rgba(239,68,68,0.3);
+      animation: pulse 1.5s ease-in-out infinite;
+      border: 4px solid rgba(255,255,255,0.3);
     }
     
-    .sale-tag {
-      background: rgba(255,255,255,0.2);
-      padding: ${baseFontSize * 0.3}px ${baseFontSize * 0.8}px;
-      border-radius: ${baseFontSize * 0.3}px;
-      font-size: ${baseFontSize * 0.7}px;
-      font-weight: 600;
-      letter-spacing: 2px;
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    .discount-number {
+      font-size: ${isVertical ? '72px' : '80px'};
+      font-weight: 900;
+      color: white;
+      line-height: 1;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .discount-percent {
+      font-size: ${isVertical ? '28px' : '32px'};
+      font-weight: 900;
+      color: white;
+      margin-top: -10px;
+    }
+    
+    .discount-off {
+      font-size: ${isVertical ? '20px' : '24px'};
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      letter-spacing: 3px;
+    }
+    
+    /* Content area - compact at bottom */
+    .content {
+      position: absolute;
+      ${isVertical ? `
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 40px 30px 50px;
+        background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%);
+      ` : `
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 30px 40px 40px;
+        background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 80%, transparent 100%);
+      `}
+      color: white;
+    }
+    
+    .headline {
+      font-size: ${isVertical ? '42px' : '48px'};
+      font-weight: 900;
+      color: ${styleConfig.accentColor};
       text-transform: uppercase;
-      margin-bottom: ${baseFontSize * 0.5}px;
-      display: inline-block;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+      text-shadow: 2px 2px 20px rgba(0,0,0,0.5);
+    }
+    
+    .subheadline {
+      font-size: ${isVertical ? '22px' : '26px'};
+      font-weight: 700;
+      color: white;
+      letter-spacing: 4px;
+      margin-bottom: 15px;
+      opacity: 0.9;
     }
     
     .title {
-      font-size: ${baseFontSize * (isVertical ? 1.3 : 1.1)}px;
+      font-size: ${isVertical ? '20px' : '22px'};
       font-weight: 700;
-      line-height: 1.2;
-      margin-bottom: ${baseFontSize}px;
-      ${isVertical ? '' : 'max-width: 90%;'}
+      color: rgba(255,255,255,0.85);
+      line-height: 1.3;
+      margin-bottom: 20px;
+      max-width: ${isVertical ? '100%' : '70%'};
     }
     
-    .prices {
+    .price-row {
       display: flex;
       align-items: center;
-      gap: ${baseFontSize}px;
-      margin-bottom: ${baseFontSize * 0.8}px;
-      ${isVertical ? 'justify-content: center;' : ''}
+      gap: 20px;
+      flex-wrap: wrap;
     }
     
     .old-price {
-      font-size: ${baseFontSize * 1.2}px;
+      font-size: ${isVertical ? '28px' : '32px'};
+      color: rgba(255,255,255,0.5);
       text-decoration: line-through;
-      opacity: 0.6;
+      font-weight: 700;
     }
     
     .new-price {
-      font-size: ${baseFontSize * 2}px;
+      font-size: ${isVertical ? '48px' : '56px'};
       font-weight: 900;
+      color: #4ade80;
+      text-shadow: 0 0 30px rgba(74,222,128,0.5);
     }
     
-    .savings-box {
-      background: rgba(255,255,255,0.15);
-      padding: ${baseFontSize * 0.5}px ${baseFontSize}px;
-      border-radius: ${baseFontSize * 0.4}px;
-      font-size: ${baseFontSize * 0.9}px;
-      font-weight: 600;
-      margin-bottom: ${baseFontSize}px;
-      display: inline-block;
+    .save-badge {
+      background: #ef4444;
+      color: white;
+      padding: 8px 16px;
+      font-size: ${isVertical ? '16px' : '18px'};
+      font-weight: 900;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(239,68,68,0.4);
     }
     
-    .cta-button {
-      background: ${style === 'light' ? '#ef4444' : 'rgba(255,255,255,0.95)'};
-      color: ${style === 'light' ? '#ffffff' : '#000000'};
-      padding: ${baseFontSize * 0.7}px ${baseFontSize * 1.5}px;
-      border-radius: ${baseFontSize * 0.5}px;
-      font-weight: 700;
-      font-size: ${baseFontSize * 0.9}px;
-      display: inline-block;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    .cta {
+      position: absolute;
+      ${isVertical ? 'bottom: 50px; left: 30px; right: 30px;' : 'bottom: 40px; right: 40px;'}
+      background: white;
+      color: #000;
+      padding: 16px 40px;
+      font-size: ${isVertical ? '20px' : '22px'};
+      font-weight: 900;
+      border-radius: 50px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      ${isVertical ? '' : 'display: inline-block;'}
     }
     
     .logo {
       position: absolute;
-      bottom: ${baseFontSize}px;
-      right: ${baseFontSize}px;
-      font-size: ${baseFontSize * 0.8}px;
-      font-weight: 700;
-      opacity: 0.8;
+      ${isVertical ? 'top: 30px; left: 30px;' : 'top: 40px; left: 40px;'}
+      font-size: ${isVertical ? '18px' : '20px'};
+      font-weight: 900;
+      color: white;
+      letter-spacing: 3px;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+      opacity: 0.9;
     }
     
-    .watermark {
+    .urgency {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-30deg);
-      font-size: ${baseFontSize * 4}px;
-      font-weight: 900;
-      opacity: 0.03;
-      white-space: nowrap;
-      pointer-events: none;
+      ${isVertical ? 'top: 230px; right: 30px;' : 'top: 260px; right: 40px;'}
+      background: rgba(0,0,0,0.7);
+      color: #fbbf24;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border: 1px solid #fbbf24;
     }
   </style>
 </head>
 <body>
   <div class="banner">
-    <div class="watermark">DEALSLUXY</div>
+    <img class="image-bg" src="${deal.image_url}" alt="" />
+    <div class="overlay"></div>
     
-    <div class="image-section">
-      <img class="deal-image" src="${deal.image_url}" alt="${deal.title}" />
-      <div class="discount-badge">-${deal.discount_percent}%</div>
+    <div class="logo">DEALSLUXY</div>
+    
+    <div class="discount-burst">
+      <span class="discount-number">${deal.discount_percent}</span>
+      <span class="discount-percent">%</span>
+      <span class="discount-off">OFF</span>
     </div>
     
-    <div class="content-section">
-      <span class="sale-tag">🔥 LIMITED DEAL</span>
-      <h2 class="title">${deal.title?.substring(0, isVertical ? 60 : 80)}${deal.title?.length > (isVertical ? 60 : 80) ? '...' : ''}</h2>
-      
-      <div class="prices">
+    <div class="urgency">⏰ Limited Time Only</div>
+    
+    <div class="content">
+      <div class="headline">${headline.text}</div>
+      <div class="subheadline">${headline.sub}</div>
+      <div class="title">${deal.title?.substring(0, 50)}${deal.title?.length > 50 ? '...' : ''}</div>
+      <div class="price-row">
         <span class="old-price">$${deal.original_price?.toFixed(0)}</span>
         <span class="new-price">$${deal.current_price?.toFixed(0)}</span>
+        <span class="save-badge">Save $${savings?.toFixed(0)}</span>
       </div>
-      
-      <div class="savings-box">💰 You Save $${savings?.toFixed(0)}!</div>
-      
-      <div class="cta-button">🛒 Shop Now</div>
     </div>
     
-    <div class="logo">DEALSLUXY.COM</div>
+    <div class="cta">🛒 Get This Deal</div>
   </div>
 </body>
 </html>`;
