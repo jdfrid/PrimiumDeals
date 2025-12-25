@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3, Mail, Cog, DollarSign, Image } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3, Mail, Cog, DollarSign, Image, Share2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { path: '/admin/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin'] },
   { path: '/admin/earnings', icon: DollarSign, label: 'Earnings', roles: ['admin'] },
   { path: '/admin/banners', icon: Image, label: 'Banners', roles: ['admin'] },
+  { path: '/admin/social', icon: Share2, label: 'Social Hub', roles: ['admin'] },
   { path: '/admin/messages', icon: Mail, label: 'Messages', roles: ['admin'] },
   { path: '/admin/settings', icon: Cog, label: 'Settings', roles: ['admin'] },
   { path: '/admin/logs', icon: FileText, label: 'Logs', roles: ['admin'] },
