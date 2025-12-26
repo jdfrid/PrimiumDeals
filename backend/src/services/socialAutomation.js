@@ -156,6 +156,58 @@ class SocialAutomationService {
   }
 
   /**
+   * Get all active Telegram channels from database
+   */
+  getActiveChannels() {
+    try {
+      return prepare('SELECT * FROM telegram_channels WHERE is_active = 1').all();
+    } catch (error) {
+      console.error('Error getting channels:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Post to a specific channel
+   */
+  async postToChannel(deal, channelId) {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) return null;
+
+    const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}?utm_source=telegram&utm_medium=social&utm_campaign=auto_post`;
+    const savings = deal.original_price - deal.current_price;
+    
+    const caption = `🔥 <b>${deal.discount_percent}% OFF!</b>\n\n` +
+                   `${deal.title}\n\n` +
+                   `💰 <s>$${deal.original_price.toFixed(0)}</s> → <b>$${deal.current_price.toFixed(0)}</b>\n` +
+                   `💵 Save $${savings.toFixed(0)}!\n\n` +
+                   `🛒 <a href="${trackingUrl}">Get This Deal</a>\n\n` +
+                   `━━━━━━━━━━━━━━━\n` +
+                   `🏷️ <b>DEALSLUXY.COM</b>`;
+
+    try {
+      const response = await fetch(
+        `https://api.telegram.org/bot${botToken}/sendPhoto`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: channelId,
+            photo: deal.image_url,
+            caption: caption,
+            parse_mode: 'HTML'
+          })
+        }
+      );
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error posting to ${channelId}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * Run automated posting for all configured platforms
    */
   async runAutomatedPosts(limit = 3) {
@@ -166,26 +218,52 @@ class SocialAutomationService {
     const deals = this.getUnpostedDeals(limit);
     console.log(`📦 Found ${deals.length} unposted deals`);
 
+    // Get all active channels
+    const channels = this.getActiveChannels();
+    const mainChannel = process.env.TELEGRAM_CHANNEL_ID;
+    
+    // Add main channel if configured and not in database
+    const allChannels = [...channels.map(c => c.channel_id)];
+    if (mainChannel && !allChannels.includes(mainChannel)) {
+      allChannels.push(mainChannel);
+    }
+
+    console.log(`📢 Broadcasting to ${allChannels.length} channels`);
+
     const results = {
       telegram: [],
-      twitter: [],
+      channels: allChannels.length,
       total: 0
     };
 
     for (const deal of deals) {
-      // Post to Telegram
-      if (this.platforms.telegram.botToken) {
-        const telegramResult = await this.postToTelegram(deal);
-        if (telegramResult?.ok) {
-          results.telegram.push(deal.id);
-          results.total++;
+      let postedToAny = false;
+      
+      for (const channelId of allChannels) {
+        const result = await this.postToChannel(deal, channelId);
+        if (result?.ok) {
+          postedToAny = true;
+          // Update channel post count if in database
+          try {
+            prepare('UPDATE telegram_channels SET post_count = post_count + 1, last_post_at = CURRENT_TIMESTAMP WHERE channel_id = ?').run(channelId);
+          } catch (e) {}
         }
-        // Rate limit: wait 3 seconds between posts
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Rate limit between channels
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
+      
+      if (postedToAny) {
+        this.markAsPosted(deal.id, 'telegram', Date.now().toString());
+        results.telegram.push(deal.id);
+        results.total++;
+      }
+      
+      // Rate limit between deals
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    console.log(`\n✅ Automation completed: ${results.total} posts created`);
+    saveDatabase();
+    console.log(`\n✅ Automation completed: ${results.total} deals posted to ${allChannels.length} channels`);
     return results;
   }
 

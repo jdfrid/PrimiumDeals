@@ -1628,6 +1628,203 @@ router.get('/admin/social/config', authenticateToken, requireRole('admin'), (req
 });
 
 // ============================================
+// TELEGRAM CHANNELS MANAGEMENT
+// ============================================
+
+// Get all Telegram channels
+router.get('/admin/telegram/channels', authenticateToken, (req, res) => {
+  try {
+    const channels = prepare(`
+      SELECT * FROM telegram_channels ORDER BY is_active DESC, post_count DESC
+    `).all();
+    res.json({ channels });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add a new Telegram channel
+router.post('/admin/telegram/channels', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { name, channel_id, description } = req.body;
+    
+    if (!name || !channel_id) {
+      return res.status(400).json({ error: 'Name and channel_id are required' });
+    }
+    
+    // Check if already exists
+    const existing = prepare('SELECT id FROM telegram_channels WHERE channel_id = ?').get(channel_id);
+    if (existing) {
+      return res.status(400).json({ error: 'Channel already exists' });
+    }
+    
+    const result = prepare(`
+      INSERT INTO telegram_channels (name, channel_id, description) VALUES (?, ?, ?)
+    `).run(name, channel_id, description || '');
+    
+    saveDatabase();
+    
+    res.json({ 
+      success: true, 
+      id: result.lastInsertRowid,
+      message: `Channel "${name}" added successfully`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update a Telegram channel
+router.put('/admin/telegram/channels/:id', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { name, channel_id, description, is_active } = req.body;
+    
+    prepare(`
+      UPDATE telegram_channels 
+      SET name = COALESCE(?, name),
+          channel_id = COALESCE(?, channel_id),
+          description = COALESCE(?, description),
+          is_active = COALESCE(?, is_active)
+      WHERE id = ?
+    `).run(name, channel_id, description, is_active, req.params.id);
+    
+    saveDatabase();
+    res.json({ success: true, message: 'Channel updated' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a Telegram channel
+router.delete('/admin/telegram/channels/:id', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    prepare('DELETE FROM telegram_channels WHERE id = ?').run(req.params.id);
+    saveDatabase();
+    res.json({ success: true, message: 'Channel deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test posting to a specific channel
+router.post('/admin/telegram/channels/:id/test', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const channel = prepare('SELECT * FROM telegram_channels WHERE id = ?').get(req.params.id);
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+    
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      return res.status(400).json({ error: 'TELEGRAM_BOT_TOKEN not configured' });
+    }
+    
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: channel.channel_id,
+          text: `✅ Test message from Dealsluxy!\n\nThis channel is connected successfully.\n\n🏷️ dealsluxy.com`,
+          parse_mode: 'HTML'
+        })
+      }
+    );
+    
+    const data = await response.json();
+    
+    if (data.ok) {
+      res.json({ success: true, message: 'Test message sent successfully!' });
+    } else {
+      res.status(400).json({ error: data.description || 'Failed to send test message' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Post deal to all active channels
+router.post('/admin/telegram/broadcast', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { deal_id } = req.body;
+    
+    const deal = prepare('SELECT * FROM deals WHERE id = ?').get(deal_id);
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    
+    const channels = prepare('SELECT * FROM telegram_channels WHERE is_active = 1').all();
+    if (channels.length === 0) {
+      return res.status(400).json({ error: 'No active channels configured' });
+    }
+    
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      return res.status(400).json({ error: 'TELEGRAM_BOT_TOKEN not configured' });
+    }
+    
+    const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}?utm_source=telegram&utm_medium=broadcast`;
+    const savings = deal.original_price - deal.current_price;
+    
+    const caption = `🔥 <b>${deal.discount_percent}% OFF!</b>\n\n` +
+                   `${deal.title}\n\n` +
+                   `💰 <s>$${deal.original_price.toFixed(0)}</s> → <b>$${deal.current_price.toFixed(0)}</b>\n` +
+                   `💵 Save $${savings.toFixed(0)}!\n\n` +
+                   `🛒 <a href="${trackingUrl}">Get This Deal</a>\n\n` +
+                   `━━━━━━━━━━━━━━━\n` +
+                   `🏷️ <b>DEALSLUXY.COM</b>`;
+    
+    const results = { success: 0, failed: 0, errors: [] };
+    
+    for (const channel of channels) {
+      try {
+        const response = await fetch(
+          `https://api.telegram.org/bot${botToken}/sendPhoto`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: channel.channel_id,
+              photo: deal.image_url,
+              caption: caption,
+              parse_mode: 'HTML'
+            })
+          }
+        );
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          results.success++;
+          // Update post count
+          prepare('UPDATE telegram_channels SET post_count = post_count + 1, last_post_at = CURRENT_TIMESTAMP WHERE id = ?').run(channel.id);
+        } else {
+          results.failed++;
+          results.errors.push({ channel: channel.name, error: data.description });
+        }
+        
+        // Rate limit: wait between posts
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (err) {
+        results.failed++;
+        results.errors.push({ channel: channel.name, error: err.message });
+      }
+    }
+    
+    saveDatabase();
+    
+    res.json({
+      success: true,
+      message: `Posted to ${results.success}/${channels.length} channels`,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // BANNER ROUTES
 // ============================================
 

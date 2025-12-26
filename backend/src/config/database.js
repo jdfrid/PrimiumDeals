@@ -251,6 +251,20 @@ export async function initDatabase() {
       FOREIGN KEY (deal_id) REFERENCES deals(id)
     )
   `);
+
+  // Telegram channels/groups for posting
+  db.run(`
+    CREATE TABLE IF NOT EXISTS telegram_channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      channel_id TEXT UNIQUE NOT NULL,
+      description TEXT,
+      is_active INTEGER DEFAULT 1,
+      post_count INTEGER DEFAULT 0,
+      last_post_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
   
   // Add source column to deals table if not exists
   try {

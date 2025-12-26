@@ -23,6 +23,7 @@ import MessagesPage from './pages/admin/MessagesPage';
 import EarningsPage from './pages/admin/EarningsPage';
 import BannersGallery from './pages/admin/BannersGallery';
 import SocialHub from './pages/admin/SocialHub';
+import TelegramChannels from './pages/admin/TelegramChannels';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -77,6 +78,7 @@ function App() {
           <Route path="earnings" element={<ProtectedRoute roles={['admin']}><EarningsPage /></ProtectedRoute>} />
           <Route path="banners" element={<ProtectedRoute roles={['admin']}><BannersGallery /></ProtectedRoute>} />
           <Route path="social" element={<ProtectedRoute roles={['admin']}><SocialHub /></ProtectedRoute>} />
+          <Route path="telegram" element={<ProtectedRoute roles={['admin']}><TelegramChannels /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
