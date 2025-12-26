@@ -104,18 +104,75 @@ class SocialAutomationService {
   }
 
   /**
-   * Post to Telegram with product image
+   * Post to Telegram - all active channels
    */
   async postToTelegram(deal) {
-    if (!this.platforms.telegram.botToken || !this.platforms.telegram.channelId) {
-      console.log('⚠️ Telegram not configured');
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      console.log('⚠️ Telegram bot token not configured');
       return null;
     }
 
-    const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}?utm_source=telegram&utm_medium=social&utm_campaign=auto_post`;
+    // Get all channels
+    const dbChannels = this.getActiveChannels();
+    const mainChannel = process.env.TELEGRAM_CHANNEL_ID;
+    
+    const channelIds = dbChannels.map(c => c.channel_id);
+    if (mainChannel && !channelIds.includes(mainChannel)) {
+      channelIds.push(mainChannel);
+    }
+
+    if (channelIds.length === 0) {
+      console.log('⚠️ No Telegram channels configured');
+      return null;
+    }
+
+    console.log(`📤 Posting to ${channelIds.length} channel(s)...`);
+    
+    let successCount = 0;
+    for (const channelId of channelIds) {
+      const result = await this.postToChannel(deal, channelId);
+      if (result?.ok) {
+        successCount++;
+        try {
+          prepare('UPDATE telegram_channels SET post_count = post_count + 1, last_post_at = CURRENT_TIMESTAMP WHERE channel_id = ?').run(channelId);
+        } catch (e) {}
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    if (successCount > 0) {
+      console.log(`✅ Posted to ${successCount}/${channelIds.length} channels: ${deal.title.substring(0, 40)}...`);
+      this.markAsPosted(deal.id, 'telegram', Date.now().toString());
+      try { saveDatabase(); } catch (e) {}
+      return { ok: true, channels: successCount };
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get all active channels from database
+   */
+  getActiveChannels() {
+    try {
+      return prepare('SELECT * FROM telegram_channels WHERE is_active = 1').all();
+    } catch (error) {
+      // Table might not exist yet
+      return [];
+    }
+  }
+
+  /**
+   * Post to a specific channel ID
+   */
+  async postToChannel(deal, channelId) {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) return null;
+
+    const trackingUrl = `https://dealsluxy.com/api/track/click/${deal.id}?utm_source=telegram&utm_medium=social`;
     const savings = deal.original_price - deal.current_price;
     
-    // Nice formatted caption
     const caption = `🔥 <b>${deal.discount_percent}% OFF!</b>\n\n` +
                    `${deal.title}\n\n` +
                    `💰 <s>$${deal.original_price.toFixed(0)}</s> → <b>$${deal.current_price.toFixed(0)}</b>\n` +
@@ -123,34 +180,24 @@ class SocialAutomationService {
                    `🛒 <a href="${trackingUrl}">Get This Deal</a>\n\n` +
                    `━━━━━━━━━━━━━━━\n` +
                    `🏷️ <b>DEALSLUXY.COM</b>`;
-    
+
     try {
       const response = await fetch(
-        `https://api.telegram.org/bot${this.platforms.telegram.botToken}/sendPhoto`,
+        `https://api.telegram.org/bot${botToken}/sendPhoto`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: this.platforms.telegram.channelId,
+            chat_id: channelId,
             photo: deal.image_url,
             caption: caption,
             parse_mode: 'HTML'
           })
         }
       );
-
-      const data = await response.json();
-      
-      if (data.ok) {
-        console.log(`✅ Posted to Telegram: ${deal.title.substring(0, 40)}...`);
-        this.markAsPosted(deal.id, 'telegram', data.result.message_id);
-        return data;
-      } else {
-        console.error('Telegram API error:', data.description);
-        return null;
-      }
+      return await response.json();
     } catch (error) {
-      console.error('Telegram post error:', error.message);
+      console.error(`Error posting to ${channelId}:`, error.message);
       return null;
     }
   }
@@ -166,25 +213,63 @@ class SocialAutomationService {
     const deals = this.getUnpostedDeals(limit);
     console.log(`📦 Found ${deals.length} unposted deals`);
 
+    // Get all channels: from DB + from env
+    const dbChannels = this.getActiveChannels();
+    const mainChannel = process.env.TELEGRAM_CHANNEL_ID;
+    
+    const channelIds = dbChannels.map(c => c.channel_id);
+    if (mainChannel && !channelIds.includes(mainChannel)) {
+      channelIds.push(mainChannel);
+    }
+
+    console.log(`📢 Broadcasting to ${channelIds.length} channel(s)`);
+
     const results = {
       telegram: [],
+      channels: channelIds.length,
       total: 0
     };
 
-    for (const deal of deals) {
-      // Post to Telegram
-      if (this.platforms.telegram.botToken && this.platforms.telegram.channelId) {
-        const telegramResult = await this.postToTelegram(deal);
-        if (telegramResult?.ok) {
-          results.telegram.push(deal.id);
-          results.total++;
-        }
-        // Rate limit: wait 3 seconds between posts
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
+    if (channelIds.length === 0) {
+      console.log('⚠️ No Telegram channels configured');
+      return results;
     }
 
-    console.log(`\n✅ Automation completed: ${results.total} posts created`);
+    for (const deal of deals) {
+      let postedToAny = false;
+      
+      for (const channelId of channelIds) {
+        console.log(`  📤 Posting to ${channelId}...`);
+        const result = await this.postToChannel(deal, channelId);
+        
+        if (result?.ok) {
+          console.log(`  ✅ Success: ${channelId}`);
+          postedToAny = true;
+          
+          // Update channel stats in DB
+          try {
+            prepare('UPDATE telegram_channels SET post_count = post_count + 1, last_post_at = CURRENT_TIMESTAMP WHERE channel_id = ?').run(channelId);
+          } catch (e) {}
+        } else {
+          console.log(`  ❌ Failed: ${channelId} - ${result?.description || 'Unknown error'}`);
+        }
+        
+        // Rate limit between channels
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+      
+      if (postedToAny) {
+        this.markAsPosted(deal.id, 'telegram', Date.now().toString());
+        results.telegram.push(deal.id);
+        results.total++;
+      }
+      
+      // Rate limit between deals
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    try { saveDatabase(); } catch (e) {}
+    console.log(`\n✅ Automation completed: ${results.total} deals posted to ${channelIds.length} channels`);
     return results;
   }
 
