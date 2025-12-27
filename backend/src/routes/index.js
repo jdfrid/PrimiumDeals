@@ -1744,6 +1744,70 @@ router.post('/admin/telegram/channels/:id/test', authenticateToken, requireRole(
   }
 });
 
+// ============================================
+// FACEBOOK PAGE ROUTES
+// ============================================
+
+// Get Facebook page info
+router.get('/admin/facebook/info', authenticateToken, async (req, res) => {
+  try {
+    const facebookService = (await import('../services/facebookService.js')).default;
+    const info = await facebookService.getPageInfo();
+    res.json(info);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test Facebook connection
+router.post('/admin/facebook/test', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const facebookService = (await import('../services/facebookService.js')).default;
+    
+    if (!facebookService.isConfigured()) {
+      return res.status(400).json({ 
+        error: 'Facebook not configured. Set FACEBOOK_PAGE_ID and FACEBOOK_PAGE_ACCESS_TOKEN in environment variables.' 
+      });
+    }
+    
+    const info = await facebookService.getPageInfo();
+    
+    if (info.error) {
+      return res.status(400).json({ error: info.error });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Connected to Facebook Page: ${info.name}`,
+      page: info
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Post a deal to Facebook Page
+router.post('/admin/facebook/post/:dealId', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const facebookService = (await import('../services/facebookService.js')).default;
+    
+    const deal = prepare('SELECT * FROM deals WHERE id = ?').get(req.params.dealId);
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    
+    const result = await facebookService.postDeal(deal);
+    
+    if (result?.ok) {
+      res.json({ success: true, message: 'Posted to Facebook!', post_id: result.post_id });
+    } else {
+      res.status(400).json({ error: result?.error || 'Failed to post to Facebook' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Post deal to all active channels
 router.post('/admin/telegram/broadcast', authenticateToken, requireRole('admin'), async (req, res) => {
   try {

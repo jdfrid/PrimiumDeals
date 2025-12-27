@@ -41,6 +41,69 @@ function TelegramAutoPost() {
   );
 }
 
+function FacebookPagePost() {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [pageInfo, setPageInfo] = useState(null);
+
+  useEffect(() => {
+    checkFacebookConnection();
+  }, []);
+
+  const checkFacebookConnection = async () => {
+    try {
+      const res = await api.request('/admin/facebook/info');
+      if (res.name) {
+        setPageInfo(res);
+        setStatus({ success: true });
+      } else {
+        setStatus({ success: false, message: res.error || 'Not configured' });
+      }
+    } catch (error) {
+      setStatus({ success: false, message: 'Not configured' });
+    }
+  };
+
+  const testConnection = async () => {
+    setLoading(true);
+    try {
+      const res = await api.request('/admin/facebook/test', { method: 'POST' });
+      if (res.success) {
+        setPageInfo(res.page);
+        setStatus({ success: true, message: res.message });
+      } else {
+        setStatus({ success: false, message: res.error });
+      }
+    } catch (error) {
+      setStatus({ success: false, message: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      {pageInfo ? (
+        <span className="text-sm text-green-400">
+          ✅ Connected: {pageInfo.name} ({pageInfo.followers?.toLocaleString()} followers)
+        </span>
+      ) : (
+        <span className="text-sm text-midnight-400">
+          Not configured
+        </span>
+      )}
+      <button
+        onClick={testConnection}
+        disabled={loading}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+      >
+        {loading ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+        Test
+      </button>
+    </div>
+  );
+}
+
 const PLATFORMS = {
   facebook: { name: 'Facebook', color: '#1877f2', icon: '👥' },
   instagram: { name: 'Instagram', color: '#e4405f', icon: '📸' },
@@ -301,6 +364,20 @@ export default function SocialHub() {
         <p className="text-midnight-300 text-sm">
           Configure your Telegram bot to auto-post deals every 4 hours.
           Set <code className="bg-midnight-800 px-2 py-1 rounded">TELEGRAM_BOT_TOKEN</code> and <code className="bg-midnight-800 px-2 py-1 rounded">TELEGRAM_CHANNEL_ID</code> in Render environment variables.
+        </p>
+      </div>
+
+      {/* Facebook Page */}
+      <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 border border-blue-500/30 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            👥 Facebook Page
+          </h3>
+          <FacebookPagePost />
+        </div>
+        <p className="text-midnight-300 text-sm">
+          Post deals to your Facebook Page automatically.
+          Set <code className="bg-midnight-800 px-2 py-1 rounded">FACEBOOK_PAGE_ID</code> and <code className="bg-midnight-800 px-2 py-1 rounded">FACEBOOK_PAGE_ACCESS_TOKEN</code> in Render.
         </p>
       </div>
 
