@@ -371,3 +371,4 @@ export default function BrandPage() {
 // Export brands list for sitemap
 export { BRANDS };
 
+

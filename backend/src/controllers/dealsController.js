@@ -93,19 +93,39 @@ export const toggleDealActive = (req, res) => {
 };
 
 export const getPublicDeals = (req, res) => {
-  const { page = 1, limit = 50, category, sort = 'random', seed, source } = req.query;
+  const { page = 1, limit = 50, category, search, sort = 'random', seed, source } = req.query;
   const offset = (page - 1) * limit;
   const minDiscount = 10; // Show deals with 10%+ discount
 
   // Include source field in SELECT
   let sql = `SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent, d.currency, d.condition, d.ebay_url, d.source, c.name as category_name, c.icon as category_icon FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?`;
-  let countSql = 'SELECT COUNT(*) as count FROM deals d WHERE d.is_active = 1 AND d.discount_percent >= ?';
+  let countSql = 'SELECT COUNT(*) as count FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?';
   const params = [minDiscount];
 
+  // Support both category ID (number) and category name (string)
   if (category) { 
-    sql += ' AND d.category_id = ?'; 
-    countSql += ' AND d.category_id = ?'; 
-    params.push(category); 
+    const isNumeric = /^\d+$/.test(category);
+    if (isNumeric) {
+      sql += ' AND d.category_id = ?'; 
+      countSql += ' AND d.category_id = ?'; 
+      params.push(parseInt(category));
+    } else {
+      // Category name passed - look it up
+      sql += ' AND c.name = ?'; 
+      countSql += ' AND c.name = ?'; 
+      params.push(category);
+    }
+  }
+  
+  // Search by keywords in title
+  if (search) {
+    const searchTerms = search.split(' ').filter(t => t.length > 2);
+    if (searchTerms.length > 0) {
+      const searchConditions = searchTerms.map(() => 'd.title LIKE ?').join(' OR ');
+      sql += ` AND (${searchConditions})`;
+      countSql += ` AND (${searchConditions})`;
+      searchTerms.forEach(term => params.push(`%${term}%`));
+    }
   }
   
   // Filter by source if specified

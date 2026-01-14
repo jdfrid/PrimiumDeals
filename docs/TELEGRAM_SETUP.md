@@ -51,3 +51,4 @@ From Admin panel, you can also trigger posts manually:
 - Admin → Social Hub → Click Telegram icon on any banner
 - Or use API: `POST /api/admin/social/post`
 
+

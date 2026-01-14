@@ -140,6 +140,15 @@ export default function LandingPage() {
     setLoading(true);
     try {
       const params = { limit: 20, sort: 'discount' };
+      
+      // Filter by category or search by keywords
+      if (config.categories && config.categories.length > 0) {
+        params.category = config.categories[0];
+      } else if (config.keywords && config.keywords.length > 0) {
+        // Search by keywords for general pages
+        params.search = config.keywords.join(' ');
+      }
+      
       const data = await api.getPublicDeals(params);
       setDeals(data.deals || []);
     } catch (error) {
@@ -287,6 +296,39 @@ export default function LandingPage() {
         </div>
       </div>
       
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="text-xl font-bold mb-4">Dealsluxy</h3>
+              <p className="text-gray-400 text-sm">
+                Your destination for luxury deals. We find the best discounts on designer brands daily.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><Link to="/" className="hover:text-white">All Deals</Link></li>
+                <li><Link to="/todays-deals" className="hover:text-white">Today's Deals</Link></li>
+                <li><Link to="/designer-bags-sale" className="hover:text-white">Designer Bags</Link></li>
+                <li><Link to="/luxury-watches-sale" className="hover:text-white">Luxury Watches</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">About</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><Link to="/how-it-works" className="hover:text-white">How It Works</Link></li>
+                <li><Link to="/about" className="hover:text-white">About Us</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
+            © {new Date().getFullYear()} Dealsluxy. All rights reserved.
+          </div>
+        </div>
+      </footer>
+
       {/* Schema.org FAQ */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
