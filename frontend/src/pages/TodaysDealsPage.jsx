@@ -148,7 +148,7 @@ export default function TodaysDealsPage() {
   
   useEffect(() => {
     loadTodaysDeals();
-    document.title = "Today's New Deals | Dealsluxy";
+    document.title = "Latest Deals | Dealsluxy";
   }, []);
   
   const loadTodaysDeals = async () => {
@@ -177,7 +177,7 @@ export default function TodaysDealsPage() {
               <Calendar size={24} />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold">Today's New Deals</h1>
+              <h1 className="text-3xl md:text-4xl font-bold">Latest Deals</h1>
               <p className="text-white/80">{today}</p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function TodaysDealsPage() {
             </div>
             <div className="flex items-center gap-1">
               <ShoppingBag size={14} />
-              <span>{deals.length} new deals today</span>
+              <span>{deals.length} deals</span>
             </div>
           </div>
         </div>
