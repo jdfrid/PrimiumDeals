@@ -483,7 +483,71 @@ router.post('/users', authenticateToken, requireRole('admin'), usersController.c
 router.put('/users/:id', authenticateToken, requireRole('admin'), usersController.updateUser);
 router.delete('/users/:id', authenticateToken, requireRole('admin'), usersController.deleteUser);
 
-// Deals
+// Deals - PUBLIC routes first (before :id to avoid route conflict!)
+router.get('/deals/today', (req, res) => {
+  try {
+    const { limit = 50 } = req.query;
+    const deals = prepare(`
+      SELECT 
+        d.id, d.title, d.image_url, d.original_price, d.current_price, 
+        d.discount_percent, d.currency, d.ebay_url, d.source, d.created_at,
+        c.name as category_name, c.icon as category_icon
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      WHERE d.is_active = 1
+      ORDER BY d.created_at DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    
+    res.json({
+      date: new Date().toISOString().split('T')[0],
+      count: deals.length,
+      deals
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/deals/top-weekly', (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+    const deals = prepare(`
+      SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, 
+             d.discount_percent, d.currency, d.ebay_url, d.source,
+             c.name as category_name, c.icon as category_icon
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      WHERE d.is_active = 1 AND d.created_at >= datetime('now', '-7 days')
+      ORDER BY d.discount_percent DESC
+      LIMIT ?
+    `).all(parseInt(limit));
+    res.json({ deals });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/deals/featured', (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const deals = prepare(`
+      SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, 
+             d.discount_percent, d.currency, d.ebay_url, d.source,
+             c.name as category_name, c.icon as category_icon
+      FROM deals d
+      LEFT JOIN categories c ON d.category_id = c.id
+      WHERE d.is_active = 1 AND d.discount_percent >= 50
+      ORDER BY RANDOM()
+      LIMIT ?
+    `).all(parseInt(limit));
+    res.json({ deals });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deals - Protected routes
 router.get('/deals', authenticateToken, dealsController.getDeals);
 router.get('/deals/:id', authenticateToken, dealsController.getDeal);
 router.post('/deals', authenticateToken, requireRole('admin', 'editor'), dealsController.createDeal);
@@ -1087,33 +1151,7 @@ router.get('/admin/newsletter/subscribers', authenticateToken, requireRole('admi
   }
 });
 
-// Get today's new deals (public) - shows newest deals
-router.get('/deals/today', (req, res) => {
-  try {
-    const { limit = 50 } = req.query;
-    
-    // Get the newest deals sorted by created_at
-    const deals = prepare(`
-      SELECT 
-        d.id, d.title, d.image_url, d.original_price, d.current_price, 
-        d.discount_percent, d.currency, d.ebay_url, d.source, d.created_at,
-        c.name as category_name, c.icon as category_icon
-      FROM deals d
-      LEFT JOIN categories c ON d.category_id = c.id
-      WHERE d.is_active = 1
-      ORDER BY d.created_at DESC
-      LIMIT ?
-    `).all(parseInt(limit));
-    
-    res.json({
-      date: new Date().toISOString().split('T')[0],
-      count: deals.length,
-      deals
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// NOTE: /deals/today moved to top of file (before /deals/:id) to avoid route conflict
 
 // Get deals for social media posting (returns formatted content)
 router.get('/deals/for-social', authenticateToken, (req, res) => {
@@ -1300,70 +1338,7 @@ router.get('/deals/:id/banner', (req, res) => {
   }
 });
 
-// Get top weekly deals (public)
-router.get('/deals/top-weekly', (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    
-    // Get top deals from the last 7 days by discount + clicks
-    const deals = prepare(`
-      SELECT 
-        d.id, d.title, d.image_url, d.original_price, d.current_price, 
-        d.discount_percent, d.currency, d.ebay_url, d.source,
-        c.name as category_name, c.icon as category_icon,
-        COALESCE(clicks.click_count, 0) as click_count
-      FROM deals d
-      LEFT JOIN categories c ON d.category_id = c.id
-      LEFT JOIN (
-        SELECT deal_id, COUNT(*) as click_count 
-        FROM clicks 
-        WHERE created_at > datetime('now', '-7 days')
-        GROUP BY deal_id
-      ) clicks ON d.id = clicks.deal_id
-      WHERE d.is_active = 1 
-        AND d.discount_percent >= 25
-        AND d.created_at > datetime('now', '-7 days')
-      ORDER BY d.discount_percent DESC, click_count DESC
-      LIMIT ?
-    `).all(parseInt(limit));
-    
-    res.json({
-      title: "This Week's Top Deals",
-      subtitle: "Biggest discounts from the last 7 days",
-      deals,
-      generatedAt: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get featured deals (editor's picks)
-router.get('/deals/featured', (req, res) => {
-  try {
-    const { limit = 6 } = req.query;
-    
-    // Get deals with highest discount that have good images
-    const deals = prepare(`
-      SELECT 
-        d.id, d.title, d.image_url, d.original_price, d.current_price, 
-        d.discount_percent, d.currency, d.ebay_url, d.source,
-        c.name as category_name, c.icon as category_icon
-      FROM deals d
-      LEFT JOIN categories c ON d.category_id = c.id
-      WHERE d.is_active = 1 
-        AND d.discount_percent >= 30
-        AND d.image_url IS NOT NULL
-        AND d.image_url != ''
-      ORDER BY d.discount_percent DESC, d.current_price DESC
-      LIMIT ?
-    `).all(parseInt(limit));
-    
-    res.json({ deals });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// NOTE: /deals/top-weekly and /deals/featured moved to top of file (before /deals/:id)
 
 // Track UTM conversions (public - called from frontend)
 router.post('/track/conversion', (req, res) => {

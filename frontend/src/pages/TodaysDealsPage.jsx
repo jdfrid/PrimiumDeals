@@ -155,9 +155,18 @@ export default function TodaysDealsPage() {
     setLoading(true);
     try {
       const response = await api.request('/deals/today');
+      console.log('Today deals response:', response);
       setDeals(response.deals || []);
     } catch (error) {
       console.error('Failed to load deals:', error);
+      // Fallback: try to get public deals
+      try {
+        const fallback = await api.getPublicDeals({ limit: 50, sort: 'newest' });
+        console.log('Fallback response:', fallback);
+        setDeals(fallback.deals || []);
+      } catch (e) {
+        console.error('Fallback also failed:', e);
+      }
     } finally {
       setLoading(false);
     }
