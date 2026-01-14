@@ -1087,12 +1087,13 @@ router.get('/admin/newsletter/subscribers', authenticateToken, requireRole('admi
   }
 });
 
-// Get today's new deals (public)
+// Get today's new deals (public) - shows deals from last 24 hours
 router.get('/deals/today', (req, res) => {
   try {
-    const { limit = 50 } = req.query;
+    const { limit = 50, hours = 24 } = req.query;
     
-    const deals = prepare(`
+    // First try to get deals from today
+    let deals = prepare(`
       SELECT 
         d.id, d.title, d.image_url, d.original_price, d.current_price, 
         d.discount_percent, d.currency, d.ebay_url, d.source, d.created_at,
@@ -1100,15 +1101,31 @@ router.get('/deals/today', (req, res) => {
       FROM deals d
       LEFT JOIN categories c ON d.category_id = c.id
       WHERE d.is_active = 1 
-        AND date(d.created_at) = date('now')
-      ORDER BY d.discount_percent DESC, d.created_at DESC
+        AND d.created_at >= datetime('now', '-' || ? || ' hours')
+      ORDER BY d.created_at DESC, d.discount_percent DESC
       LIMIT ?
-    `).all(parseInt(limit));
+    `).all(parseInt(hours), parseInt(limit));
+    
+    // If no recent deals, show newest deals regardless of date
+    if (deals.length === 0) {
+      deals = prepare(`
+        SELECT 
+          d.id, d.title, d.image_url, d.original_price, d.current_price, 
+          d.discount_percent, d.currency, d.ebay_url, d.source, d.created_at,
+          c.name as category_name, c.icon as category_icon
+        FROM deals d
+        LEFT JOIN categories c ON d.category_id = c.id
+        WHERE d.is_active = 1
+        ORDER BY d.created_at DESC
+        LIMIT ?
+      `).all(parseInt(limit));
+    }
     
     res.json({
       date: new Date().toISOString().split('T')[0],
       count: deals.length,
-      deals
+      deals,
+      hours_range: parseInt(hours)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

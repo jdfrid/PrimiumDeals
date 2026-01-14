@@ -26,7 +26,7 @@ function DealCard({ deal, onShare }) {
             -{deal.discount_percent}%
           </div>
           <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-lg text-xs font-medium shadow">
-            NEW TODAY
+            NEW
           </div>
         </div>
         <div className="p-4">
@@ -182,7 +182,7 @@ export default function TodaysDealsPage() {
             </div>
           </div>
           <p className="text-white/70 max-w-2xl">
-            Fresh deals added today! Be the first to grab these amazing discounts before they're gone.
+            Fresh deals added recently! Be the first to grab these amazing discounts before they're gone.
           </p>
           <div className="flex items-center gap-4 mt-4 text-sm text-white/60">
             <div className="flex items-center gap-1">
@@ -211,9 +211,9 @@ export default function TodaysDealsPage() {
           </div>
         ) : deals.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl">
-            <div className="text-6xl mb-4">🌅</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-800">No new deals yet today</h3>
-            <p className="text-gray-500 mb-4">Check back soon - we add new deals throughout the day!</p>
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-800">Loading fresh deals...</h3>
+            <p className="text-gray-500 mb-4">Our system is searching for the best deals. Check back soon!</p>
             <Link 
               to="/"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
