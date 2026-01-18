@@ -16,6 +16,7 @@
     "form-data": "^4.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.8",
     "sql.js": "^1.10.0"
   }
 }

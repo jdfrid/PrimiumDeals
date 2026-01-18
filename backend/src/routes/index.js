@@ -9,8 +9,11 @@ import { prepare, saveDatabase } from '../config/database.js';
 
 const router = express.Router();
 
-// Public
+// Public Auth
 router.post('/auth/login', authController.login);
+router.post('/auth/verify-2fa', authController.verifyTwoFactor);
+router.post('/auth/resend-2fa', authController.resendTwoFactorCode);
+router.get('/auth/2fa-status', authController.getTwoFactorStatus);
 
 // Reset admin password (GET for easy access)
 router.get('/auth/reset-admin', async (req, res) => {
