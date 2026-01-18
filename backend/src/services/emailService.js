@@ -3,7 +3,7 @@
  * Uses nodemailer with Gmail SMTP
  */
 
-import nodemailer from 'nodemailer';
+let nodemailer = null;
 
 class EmailService {
   constructor() {
@@ -11,27 +11,38 @@ class EmailService {
     this.initialized = false;
   }
 
-  initialize() {
-    if (this.initialized) return;
+  async initialize() {
+    if (this.initialized) return true;
 
     const emailUser = process.env.EMAIL_USER;
     const emailPass = process.env.EMAIL_PASS;
 
     if (!emailUser || !emailPass) {
       console.log('⚠️ Email service not configured (EMAIL_USER/EMAIL_PASS missing)');
-      return;
+      return false;
     }
 
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: emailUser,
-        pass: emailPass // Use App Password for Gmail
+    try {
+      // Dynamic import to avoid crash if nodemailer not installed
+      if (!nodemailer) {
+        nodemailer = (await import('nodemailer')).default;
       }
-    });
 
-    this.initialized = true;
-    console.log('✅ Email service initialized');
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass // Use App Password for Gmail
+        }
+      });
+
+      this.initialized = true;
+      console.log('✅ Email service initialized');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to initialize email service:', error.message);
+      return false;
+    }
   }
 
   isConfigured() {
@@ -54,7 +65,10 @@ class EmailService {
       return { success: false, error: 'Email service not configured' };
     }
 
-    this.initialize();
+    const initialized = await this.initialize();
+    if (!initialized) {
+      return { success: false, error: 'Email service initialization failed' };
+    }
 
     const mailOptions = {
       from: {
@@ -150,7 +164,10 @@ If you didn't request this code, please ignore this email.
       return { success: false, error: 'Email service not configured' };
     }
 
-    this.initialize();
+    const initialized = await this.initialize();
+    if (!initialized) {
+      return { success: false, error: 'Email service initialization failed' };
+    }
 
     const resetUrl = `https://dealsluxy.com/admin/reset-password?token=${resetToken}`;
 
