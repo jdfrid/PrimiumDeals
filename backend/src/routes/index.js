@@ -225,6 +225,79 @@ router.get('/admin/earnings/status', authenticateToken, async (req, res) => {
   }
 });
 
+// Admin: Get full EPN dashboard data
+router.get('/admin/earnings/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const { default: epnService } = await import('../services/epnService.js');
+    const { days = 30 } = req.query;
+    
+    const dashboardData = await epnService.fetchDashboardData(parseInt(days));
+    res.json(dashboardData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Get click details report
+router.get('/admin/earnings/clicks', authenticateToken, async (req, res) => {
+  try {
+    const { default: epnService } = await import('../services/epnService.js');
+    const { days = 7 } = req.query;
+    
+    if (!epnService.isConfigured()) {
+      return res.json({ configured: false, clicks: [] });
+    }
+    
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const endDate = new Date().toISOString().split('T')[0];
+    
+    const clicks = await epnService.fetchClickDetails(startDate, endDate);
+    res.json({ configured: true, clicks, count: clicks.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Get campaign performance
+router.get('/admin/earnings/campaigns', authenticateToken, async (req, res) => {
+  try {
+    const { default: epnService } = await import('../services/epnService.js');
+    const { days = 30 } = req.query;
+    
+    if (!epnService.isConfigured()) {
+      return res.json({ configured: false, campaigns: [] });
+    }
+    
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const endDate = new Date().toISOString().split('T')[0];
+    
+    const campaigns = await epnService.fetchCampaignPerformanceV2(startDate, endDate);
+    res.json({ configured: true, campaigns });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Get daily performance
+router.get('/admin/earnings/daily', authenticateToken, async (req, res) => {
+  try {
+    const { default: epnService } = await import('../services/epnService.js');
+    const { days = 30 } = req.query;
+    
+    if (!epnService.isConfigured()) {
+      return res.json({ configured: false, daily: [] });
+    }
+    
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const endDate = new Date().toISOString().split('T')[0];
+    
+    const daily = await epnService.fetchPerformanceByDay(startDate, endDate);
+    res.json({ configured: true, daily });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Admin: Test EPN API connection
 router.get('/admin/earnings/test', authenticateToken, async (req, res) => {
   try {

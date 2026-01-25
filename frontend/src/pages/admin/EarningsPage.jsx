@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Clock, CheckCircle, RefreshCw, Plus, ExternalLink, AlertCircle, Upload } from 'lucide-react';
+import { 
+  DollarSign, TrendingUp, Clock, CheckCircle, RefreshCw, Plus, ExternalLink, 
+  AlertCircle, Upload, MousePointer, BarChart3, Calendar, Target, Percent
+} from 'lucide-react';
 import api from '../../services/api';
 
 function AddTransactionModal({ onClose, onSave }) {
@@ -16,7 +19,6 @@ function AddTransactionModal({ onClose, onSave }) {
   });
   const [loading, setLoading] = useState(false);
 
-  // Auto-calculate commission
   useEffect(() => {
     if (form.item_price && form.commission_percent) {
       const commission = (parseFloat(form.item_price) * parseFloat(form.commission_percent) / 100).toFixed(2);
@@ -28,10 +30,7 @@ function AddTransactionModal({ onClose, onSave }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.request('/admin/earnings/add', {
-        method: 'POST',
-        body: JSON.stringify(form)
-      });
+      await api.request('/admin/earnings/add', { method: 'POST', body: JSON.stringify(form) });
       onSave();
     } catch (error) {
       alert('Failed to add: ' + error.message);
@@ -104,85 +103,29 @@ function AddTransactionModal({ onClose, onSave }) {
 }
 
 export default function EarningsPage() {
+  const [activeTab, setActiveTab] = useState('overview');
   const [data, setData] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
   const [showAddModal, setShowAddModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
-    loadEarnings();
+    loadAllData();
   }, [days]);
 
-  // CSV Import handler
-  const handleCSVImport = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    setImporting(true);
-    const reader = new FileReader();
-    
-    reader.onload = async (e) => {
-      try {
-        const text = e.target.result;
-        const lines = text.split('\n');
-        const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-        
-        let imported = 0;
-        
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-          if (values.length < 3) continue;
-          
-          const row = {};
-          headers.forEach((h, idx) => row[h] = values[idx]);
-          
-          // Map common CSV column names to our format
-          const transaction = {
-            transaction_id: row['transaction id'] || row['event id'] || row['id'] || `CSV-${Date.now()}-${i}`,
-            transaction_date: row['transaction date'] || row['event date'] || row['date'] || new Date().toISOString(),
-            item_id: row['item id'] || row['product id'] || row['listing id'] || '',
-            item_title: row['item name'] || row['item title'] || row['product name'] || row['title'] || 'Unknown',
-            item_price: parseFloat(row['sale amount'] || row['gmv'] || row['price'] || row['transaction amount'] || 0),
-            quantity: parseInt(row['quantity'] || row['qty'] || 1),
-            commission_percent: parseFloat(row['commission rate'] || row['rate'] || 0) * 100,
-            commission_amount: parseFloat(row['earnings'] || row['payout'] || row['commission'] || row['epc'] || 0),
-            status: 'confirmed',
-            is_paid: (row['payment status'] || '').toLowerCase().includes('paid')
-          };
-          
-          try {
-            await api.request('/admin/earnings/add', {
-              method: 'POST',
-              body: JSON.stringify(transaction)
-            });
-            imported++;
-          } catch (err) {
-            console.log('Skip duplicate:', transaction.transaction_id);
-          }
-        }
-        
-        alert(`✅ Imported ${imported} transactions!`);
-        loadEarnings();
-      } catch (error) {
-        alert('❌ Failed to parse CSV: ' + error.message);
-      } finally {
-        setImporting(false);
-        event.target.value = '';
-      }
-    };
-    
-    reader.readAsText(file);
-  };
-
-  const loadEarnings = async () => {
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      const response = await api.request(`/admin/earnings?days=${days}`);
-      setData(response);
+      const [earningsResponse, dashboardResponse] = await Promise.all([
+        api.request(`/admin/earnings?days=${days}`),
+        api.request(`/admin/earnings/dashboard?days=${days}`)
+      ]);
+      setData(earningsResponse);
+      setDashboard(dashboardResponse);
     } catch (error) {
-      console.error('Failed to load earnings:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
@@ -195,10 +138,8 @@ export default function EarningsPage() {
       if (response.instructions) {
         alert('⚠️ Setup Required:\n\n' + response.instructions.join('\n'));
       } else if (response.success) {
-        alert(`✅ Synced successfully!\n\n${response.added} new transactions\n${response.updated} updated`);
-        loadEarnings();
-      } else {
-        alert('⚠️ ' + (response.message || 'Unknown error'));
+        alert(`✅ Synced!\n\n${response.added} new, ${response.updated} updated`);
+        loadAllData();
       }
     } catch (error) {
       alert('Failed to sync: ' + error.message);
@@ -216,13 +157,22 @@ export default function EarningsPage() {
   }
 
   const stats = data?.stats || {};
+  const summary = dashboard?.summary || {};
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'campaigns', label: 'Campaigns', icon: Target },
+    { id: 'clicks', label: 'Clicks', icon: MousePointer },
+    { id: 'transactions', label: 'Transactions', icon: DollarSign },
+  ];
 
   return (
     <div>
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Affiliate Earnings</h1>
-          <p className="text-midnight-400">Track your eBay Partner Network commissions</p>
+          <h1 className="text-2xl font-bold mb-1">eBay Partner Earnings</h1>
+          <p className="text-midnight-400">Track your affiliate performance and commissions</p>
         </div>
         <div className="flex items-center gap-3">
           <select value={days} onChange={e => setDays(parseInt(e.target.value))} className="input-dark">
@@ -230,190 +180,309 @@ export default function EarningsPage() {
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
             <option value={365}>Last year</option>
-            <option value={9999}>All time</option>
           </select>
-          <button onClick={syncEarnings} disabled={syncing} className="btn-outline flex items-center gap-2" title="Sync from eBay API">
+          <button onClick={syncEarnings} disabled={syncing} className="btn-outline flex items-center gap-2">
             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Syncing...' : 'Sync API'}
+            {syncing ? 'Syncing...' : 'Sync'}
           </button>
-          <label className={`btn-gold flex items-center gap-2 cursor-pointer ${importing ? 'opacity-50' : ''}`} title="Import from CSV file">
-            <Upload size={16} />
-            {importing ? 'Importing...' : 'Import CSV'}
-            <input 
-              type="file" 
-              accept=".csv" 
-              onChange={handleCSVImport} 
-              className="hidden" 
-              disabled={importing}
-            />
-          </label>
-          <button onClick={() => setShowAddModal(true)} className="btn-outline flex items-center gap-2">
-            <Plus size={16} />
-            Add
-          </button>
+          <a 
+            href="https://partner.ebay.com/secure/mediapartner/report/viewReport.report?handle=ebay_partner_perf_by_campaign_v2" 
+            target="_blank" 
+            rel="noopener"
+            className="btn-gold flex items-center gap-2"
+          >
+            <ExternalLink size={16} />
+            EPN Reports
+          </a>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="glass rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <DollarSign className="text-green-400" size={24} />
-            <span className="text-midnight-400">Total Earnings</span>
-          </div>
-          <div className="text-3xl font-bold text-green-400">
-            ${(stats.total_earnings || 0).toFixed(2)}
-          </div>
-        </div>
-        
-        <div className="glass rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckCircle className="text-blue-400" size={24} />
-            <span className="text-midnight-400">Paid</span>
-          </div>
-          <div className="text-3xl font-bold text-blue-400">
-            ${(stats.paid_earnings || 0).toFixed(2)}
-          </div>
-        </div>
-        
-        <div className="glass rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="text-yellow-400" size={24} />
-            <span className="text-midnight-400">Pending</span>
-          </div>
-          <div className="text-3xl font-bold text-yellow-400">
-            ${(stats.pending_earnings || 0).toFixed(2)}
-          </div>
-        </div>
-        
-        <div className="glass rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="text-purple-400" size={24} />
-            <span className="text-midnight-400">Total Sales</span>
-          </div>
-          <div className="text-3xl font-bold text-purple-400">
-            ${(stats.total_sales || 0).toFixed(2)}
-          </div>
-        </div>
-      </div>
-
-      {/* Info Box */}
-      {(!data?.transactions || data.transactions.length === 0) && (
-        <div className="glass rounded-xl p-6 mb-6 border border-gold-500/30">
-          <div className="flex items-start gap-4">
-            <Upload className="text-gold-400 flex-shrink-0" size={24} />
+      {/* API Status */}
+      {dashboard && !dashboard.configured && (
+        <div className="glass rounded-xl p-4 mb-6 border border-yellow-500/30 bg-yellow-500/5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-yellow-400 flex-shrink-0" size={20} />
             <div>
-              <h3 className="font-semibold mb-2">📥 Import your eBay earnings</h3>
-              <p className="text-midnight-400 text-sm mb-3">
-                Download your transaction report from eBay Partner Network and import it:
+              <p className="font-medium text-yellow-400">EPN API Not Configured</p>
+              <p className="text-sm text-midnight-400 mt-1">
+                To see live data, add <code className="bg-midnight-800 px-1 rounded">EPN_ACCOUNT_SID</code> and <code className="bg-midnight-800 px-1 rounded">EPN_AUTH_TOKEN</code> to Render environment.
               </p>
-              <ol className="text-sm text-midnight-300 space-y-1 list-decimal list-inside mb-4">
-                <li>Go to <a href="https://partner.ebay.com" target="_blank" rel="noopener" className="text-gold-400 hover:underline">partner.ebay.com</a> → Reports → Transaction Detail</li>
-                <li>Select date range and download CSV</li>
-                <li>Click <strong>"Import CSV"</strong> button above</li>
-              </ol>
-              <a 
-                href="https://partner.ebay.com" 
-                target="_blank" 
-                rel="noopener"
-                className="btn-gold inline-flex items-center gap-2 text-sm"
-              >
-                <ExternalLink size={14} />
-                Open eBay Partner Network
+              <a href="https://partner.ebay.com" target="_blank" rel="noopener" className="text-gold-400 text-sm hover:underline mt-2 inline-block">
+                Get credentials from eBay Partner Network →
               </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* Monthly Summary */}
-      {data?.byMonth?.length > 0 && (
-        <div className="glass rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Monthly Summary</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {data.byMonth.map(month => (
-              <div key={month.month} className="bg-midnight-800/50 rounded-lg p-3 text-center">
-                <div className="text-sm text-midnight-400 mb-1">{month.month}</div>
-                <div className="text-lg font-bold text-green-400">${(month.earnings || 0).toFixed(2)}</div>
-                <div className="text-xs text-midnight-500">{month.transactions} sales</div>
-              </div>
-            ))}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <MousePointer className="text-blue-400" size={20} />
+            <span className="text-midnight-400 text-sm">Total Clicks</span>
           </div>
+          <div className="text-2xl font-bold text-blue-400">
+            {(summary.totalClicks || 0).toLocaleString()}
+          </div>
+        </div>
+        
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <Target className="text-purple-400" size={20} />
+            <span className="text-midnight-400 text-sm">Transactions</span>
+          </div>
+          <div className="text-2xl font-bold text-purple-400">
+            {(summary.totalTransactions || stats.total_transactions || 0).toLocaleString()}
+          </div>
+        </div>
+        
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp className="text-cyan-400" size={20} />
+            <span className="text-midnight-400 text-sm">Total Sales</span>
+          </div>
+          <div className="text-2xl font-bold text-cyan-400">
+            ${(summary.totalSales || stats.total_sales || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+          </div>
+        </div>
+        
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <DollarSign className="text-green-400" size={20} />
+            <span className="text-midnight-400 text-sm">Earnings</span>
+          </div>
+          <div className="text-2xl font-bold text-green-400">
+            ${(summary.totalEarnings || stats.total_earnings || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+              activeTab === tab.id 
+                ? 'bg-gold-500 text-black font-medium' 
+                : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
+            }`}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Monthly Summary */}
+          {data?.byMonth?.length > 0 && (
+            <div className="glass rounded-xl p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Calendar size={20} />
+                Monthly Summary
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {data.byMonth.map(month => (
+                  <div key={month.month} className="bg-midnight-800/50 rounded-lg p-3 text-center">
+                    <div className="text-sm text-midnight-400 mb-1">{month.month}</div>
+                    <div className="text-lg font-bold text-green-400">${(month.earnings || 0).toFixed(2)}</div>
+                    <div className="text-xs text-midnight-500">{month.transactions} sales</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Errors */}
+          {dashboard?.errors?.length > 0 && (
+            <div className="glass rounded-xl p-4 border border-red-500/30">
+              <h3 className="font-medium text-red-400 mb-2">API Errors</h3>
+              {dashboard.errors.map((err, idx) => (
+                <p key={idx} className="text-sm text-midnight-400">
+                  {err.report}: {err.error}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Transactions Table */}
-      <div className="glass rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-midnight-700">
-          <h2 className="font-semibold">Transactions ({stats.total_transactions || 0})</h2>
-        </div>
-        
-        {data?.transactions?.length === 0 ? (
-          <p className="text-midnight-400 text-center py-12">No transactions yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-midnight-400 border-b border-midnight-700">
-                  <th className="p-4">Date</th>
-                  <th className="p-4">Item</th>
-                  <th className="p-4">Price</th>
-                  <th className="p-4">Commission</th>
-                  <th className="p-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-midnight-800">
-                {data?.transactions?.map(tx => (
-                  <tr key={tx.id} className="hover:bg-midnight-800/30">
-                    <td className="p-4 whitespace-nowrap">
-                      {new Date(tx.transaction_date).toLocaleDateString('he-IL')}
-                    </td>
-                    <td className="p-4">
-                      <div className="max-w-xs">
-                        <p className="truncate font-medium">{tx.item_title}</p>
-                        <p className="text-xs text-midnight-500">ID: {tx.item_id}</p>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-white">${tx.item_price?.toFixed(2)}</span>
-                      {tx.quantity > 1 && <span className="text-midnight-500"> x{tx.quantity}</span>}
-                    </td>
-                    <td className="p-4">
-                      <div className="text-green-400 font-medium">${tx.commission_amount?.toFixed(2)}</div>
-                      <div className="text-xs text-midnight-500">{tx.commission_percent}%</div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                        tx.is_paid 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : tx.status === 'confirmed'
-                            ? 'bg-blue-500/20 text-blue-400'
-                            : tx.status === 'cancelled'
-                              ? 'bg-red-500/20 text-red-400'
-                              : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {tx.is_paid ? (
-                          <><CheckCircle size={12} /> Paid</>
-                        ) : (
-                          <><Clock size={12} /> {tx.status}</>
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {activeTab === 'campaigns' && (
+        <div className="glass rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-midnight-700">
+            <h2 className="font-semibold flex items-center gap-2">
+              <Target size={18} />
+              Campaign Performance
+            </h2>
           </div>
-        )}
-      </div>
+          {dashboard?.campaigns?.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-midnight-400 border-b border-midnight-700">
+                    <th className="p-4">Campaign</th>
+                    <th className="p-4 text-right">Clicks</th>
+                    <th className="p-4 text-right">Transactions</th>
+                    <th className="p-4 text-right">Sales</th>
+                    <th className="p-4 text-right">Earnings</th>
+                    <th className="p-4 text-right">EPC</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-midnight-800">
+                  {dashboard.campaigns.map((campaign, idx) => (
+                    <tr key={idx} className="hover:bg-midnight-800/30">
+                      <td className="p-4">
+                        <div className="font-medium">{campaign.campaign_name}</div>
+                        <div className="text-xs text-midnight-500">ID: {campaign.campaign_id}</div>
+                      </td>
+                      <td className="p-4 text-right text-blue-400">{campaign.clicks.toLocaleString()}</td>
+                      <td className="p-4 text-right text-purple-400">{campaign.transactions}</td>
+                      <td className="p-4 text-right">${campaign.sales.toFixed(2)}</td>
+                      <td className="p-4 text-right text-green-400 font-medium">${campaign.earnings.toFixed(2)}</td>
+                      <td className="p-4 text-right text-cyan-400">${campaign.epc.toFixed(4)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-midnight-400 text-center py-12">No campaign data available</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'clicks' && (
+        <div className="glass rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-midnight-700">
+            <h2 className="font-semibold flex items-center gap-2">
+              <MousePointer size={18} />
+              Recent Clicks
+            </h2>
+          </div>
+          {dashboard?.clickDetails?.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-midnight-400 border-b border-midnight-700">
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Campaign</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Device</th>
+                    <th className="p-4">Country</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-midnight-800">
+                  {dashboard.clickDetails.slice(0, 50).map((click, idx) => (
+                    <tr key={idx} className="hover:bg-midnight-800/30">
+                      <td className="p-4 whitespace-nowrap">
+                        {click.click_date ? new Date(click.click_date).toLocaleString('he-IL') : '-'}
+                      </td>
+                      <td className="p-4">{click.campaign_name || click.campaign_id || '-'}</td>
+                      <td className="p-4">{click.category || '-'}</td>
+                      <td className="p-4">{click.device || '-'}</td>
+                      <td className="p-4">{click.country || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-midnight-400 text-center py-12">No click data available</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'transactions' && (
+        <div className="glass rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-midnight-700 flex items-center justify-between">
+            <h2 className="font-semibold flex items-center gap-2">
+              <DollarSign size={18} />
+              Transactions ({stats.total_transactions || 0})
+            </h2>
+            <button onClick={() => setShowAddModal(true)} className="btn-outline flex items-center gap-2 text-sm">
+              <Plus size={14} />
+              Add Manual
+            </button>
+          </div>
+          
+          {data?.transactions?.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-midnight-400 mb-4">No transactions yet</p>
+              <a 
+                href="https://partner.ebay.com/secure/mediapartner/report/viewReport.report?handle=ebay_partner_transaction_detail" 
+                target="_blank" 
+                rel="noopener"
+                className="btn-gold inline-flex items-center gap-2"
+              >
+                <ExternalLink size={14} />
+                View on eBay Partner Network
+              </a>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-midnight-400 border-b border-midnight-700">
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Item</th>
+                    <th className="p-4">Price</th>
+                    <th className="p-4">Commission</th>
+                    <th className="p-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-midnight-800">
+                  {data?.transactions?.map(tx => (
+                    <tr key={tx.id} className="hover:bg-midnight-800/30">
+                      <td className="p-4 whitespace-nowrap">
+                        {new Date(tx.transaction_date).toLocaleDateString('he-IL')}
+                      </td>
+                      <td className="p-4">
+                        <div className="max-w-xs">
+                          <p className="truncate font-medium">{tx.item_title}</p>
+                          <p className="text-xs text-midnight-500">ID: {tx.item_id}</p>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-white">${tx.item_price?.toFixed(2)}</span>
+                        {tx.quantity > 1 && <span className="text-midnight-500"> x{tx.quantity}</span>}
+                      </td>
+                      <td className="p-4">
+                        <div className="text-green-400 font-medium">${tx.commission_amount?.toFixed(2)}</div>
+                        <div className="text-xs text-midnight-500">{tx.commission_percent?.toFixed(1)}%</div>
+                      </td>
+                      <td className="p-4">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                          tx.is_paid 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : tx.status === 'confirmed'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : tx.status === 'cancelled'
+                                ? 'bg-red-500/20 text-red-400'
+                                : 'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {tx.is_paid ? <><CheckCircle size={12} /> Paid</> : <><Clock size={12} /> {tx.status}</>}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {showAddModal && (
         <AddTransactionModal 
           onClose={() => setShowAddModal(false)} 
-          onSave={() => { setShowAddModal(false); loadEarnings(); }} 
+          onSave={() => { setShowAddModal(false); loadAllData(); }} 
         />
       )}
     </div>
   );
 }
-

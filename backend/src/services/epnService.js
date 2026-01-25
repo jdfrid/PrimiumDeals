@@ -213,6 +213,166 @@ class EPNService {
       throw error;
     }
   }
+
+  // Get click details report
+  async fetchClickDetails(startDate, endDate) {
+    if (!this.isConfigured()) {
+      throw new Error('EPN API not configured');
+    }
+
+    const start = startDate || this.getDateDaysAgo(7);
+    const end = endDate || this.getDateDaysAgo(0);
+
+    const url = this.buildUrl('ebay_partner_click_detail', {
+      START_DATE: start,
+      END_DATE: end
+    });
+
+    console.log(`📊 Fetching EPN click details: ${url}`);
+
+    try {
+      const response = await fetch(url, {
+        headers: { 
+          'Authorization': this.getAuthHeader(),
+          'Accept': 'application/json' 
+        }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`EPN API error: ${response.status} - ${text.substring(0, 100)}`);
+      }
+
+      const data = await response.json();
+      return this.parseClickDetails(data);
+    } catch (error) {
+      console.error('EPN click details error:', error.message);
+      throw error;
+    }
+  }
+
+  parseClickDetails(data) {
+    const results = Array.isArray(data) ? data : (data.results || data.clicks || []);
+    
+    return results.map(item => ({
+      click_id: item.EpnClickId || item.ClickId || '',
+      click_date: item.ClickTimestamp || item.EventDate || '',
+      campaign_id: item.CampaignId || '',
+      campaign_name: item.CampaignName || '',
+      item_id: item.ItemId || '',
+      category: item.MetaCategoryName || item.Category || '',
+      device: item.DeviceType || 'Unknown',
+      country: item.UserCountry || item.CheckoutSite || '',
+      referrer: item.OriginalReferrer || ''
+    }));
+  }
+
+  // Get performance by campaign v2
+  async fetchCampaignPerformanceV2(startDate, endDate) {
+    if (!this.isConfigured()) {
+      throw new Error('EPN API not configured');
+    }
+
+    const start = startDate || this.getDateDaysAgo(30);
+    const end = endDate || this.getDateDaysAgo(0);
+
+    const url = this.buildUrl('ebay_partner_perf_by_campaign_v2', {
+      START_DATE: start,
+      END_DATE: end
+    });
+
+    console.log(`📊 Fetching EPN campaign performance v2: ${url}`);
+
+    try {
+      const response = await fetch(url, {
+        headers: { 
+          'Authorization': this.getAuthHeader(),
+          'Accept': 'application/json' 
+        }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`EPN API error: ${response.status} - ${text.substring(0, 100)}`);
+      }
+
+      const data = await response.json();
+      return this.parseCampaignPerformance(data);
+    } catch (error) {
+      console.error('EPN campaign v2 error:', error.message);
+      throw error;
+    }
+  }
+
+  parseCampaignPerformance(data) {
+    const results = Array.isArray(data) ? data : (data.results || data.campaigns || []);
+    
+    return results.map(item => ({
+      campaign_id: item.CampaignId || '',
+      campaign_name: item.CampaignName || 'Unknown Campaign',
+      clicks: parseInt(item.Clicks || item.TotalClicks || 0),
+      ebay_traffic: parseInt(item.EbayTraffic || 0),
+      transactions: parseInt(item.Transactions || item.Orders || 0),
+      sales: parseFloat(item.Sales || item.Revenue || 0),
+      earnings: parseFloat(item.Earnings || item.Commission || 0),
+      epc: parseFloat(item.EPC || 0), // Earnings Per Click
+      conversion_rate: parseFloat(item.ConversionRate || 0)
+    }));
+  }
+
+  // Get comprehensive dashboard data
+  async fetchDashboardData(days = 30) {
+    if (!this.isConfigured()) {
+      return {
+        configured: false,
+        error: 'EPN API not configured. Set EPN_ACCOUNT_SID and EPN_AUTH_TOKEN in environment variables.'
+      };
+    }
+
+    const startDate = this.getDateDaysAgo(days);
+    const endDate = this.getDateDaysAgo(0);
+
+    const results = {
+      configured: true,
+      dateRange: { start: startDate, end: endDate },
+      campaigns: null,
+      dailyPerformance: null,
+      clickDetails: null,
+      transactions: null,
+      errors: []
+    };
+
+    // Fetch all reports in parallel
+    const promises = [
+      this.fetchCampaignPerformanceV2(startDate, endDate)
+        .then(data => { results.campaigns = data; })
+        .catch(err => { results.errors.push({ report: 'campaigns', error: err.message }); }),
+      
+      this.fetchPerformanceByDay(startDate, endDate)
+        .then(data => { results.dailyPerformance = data; })
+        .catch(err => { results.errors.push({ report: 'daily', error: err.message }); }),
+      
+      this.fetchClickDetails(startDate, endDate)
+        .then(data => { results.clickDetails = data; })
+        .catch(err => { results.errors.push({ report: 'clicks', error: err.message }); }),
+      
+      this.fetchTransactions(startDate, endDate)
+        .then(data => { results.transactions = data; })
+        .catch(err => { results.errors.push({ report: 'transactions', error: err.message }); })
+    ];
+
+    await Promise.all(promises);
+
+    // Calculate summary
+    results.summary = {
+      totalClicks: results.campaigns?.reduce((sum, c) => sum + c.clicks, 0) || 0,
+      totalTransactions: results.campaigns?.reduce((sum, c) => sum + c.transactions, 0) || 0,
+      totalSales: results.campaigns?.reduce((sum, c) => sum + c.sales, 0) || 0,
+      totalEarnings: results.campaigns?.reduce((sum, c) => sum + c.earnings, 0) || 0
+    };
+
+    return results;
+  }
 }
 
 export default new EPNService();
