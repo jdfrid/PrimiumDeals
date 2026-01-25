@@ -58,8 +58,9 @@ class EbayService {
 
   // Generate cache key from search parameters
   getCacheKey(params) {
-    const { keywords = '', categoryId = '', minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
-    return `browse|${keywords}|${categoryId}|${minPrice}|${maxPrice}|${minDiscount}|${limit}`;
+    const { keywords = '', categoryIds = [], minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
+    const catKey = Array.isArray(categoryIds) ? categoryIds.join('-') : categoryIds;
+    return `browse|${keywords}|${catKey}|${minPrice}|${maxPrice}|${minDiscount}|${limit}`;
   }
 
   // Check if cached result is still valid
@@ -99,7 +100,7 @@ class EbayService {
   }
 
   async searchItems(params) {
-    const { keywords = '', categoryId = '', minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
+    const { keywords = '', categoryIds = [], minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
 
     // Check cache first
     const cacheKey = this.getCacheKey(params);
@@ -113,9 +114,13 @@ class EbayService {
       return cachedResult;
     }
 
+    // Normalize categoryIds to array
+    const catArray = Array.isArray(categoryIds) ? categoryIds : (categoryIds ? [categoryIds] : []);
+
     console.log(`\n${'='.repeat(50)}`);
     console.log(`🔍 eBay Browse API CALL at ${new Date().toISOString()}`);
     console.log(`🔍 Keywords: "${keywords}", Price: $${minPrice}-$${maxPrice}`);
+    console.log(`📂 Categories: ${catArray.length > 0 ? catArray.join(', ') : 'All'}`);
     console.log(`📊 Cache size: ${cache.size} entries`);
     console.log(`${'='.repeat(50)}`);
     
@@ -133,13 +138,24 @@ class EbayService {
       searchParams.set('q', keywords || 'luxury watch');
       searchParams.set('limit', Math.min(limit, 200).toString()); // Browse API max is 200
       
-      // Price filter
+      // Add category filter if specified
+      if (catArray.length > 0) {
+        searchParams.set('category_ids', catArray.join(','));
+        console.log(`📂 Filtering by categories: ${catArray.join(',')}`);
+      }
+      
+      // Build filter string
+      const filters = [];
       if (minPrice > 0 || maxPrice < 10000) {
-        searchParams.set('filter', `price:[${minPrice}..${maxPrice}],priceCurrency:USD`);
+        filters.push(`price:[${minPrice}..${maxPrice}]`);
+        filters.push('priceCurrency:USD');
+      }
+      if (filters.length > 0) {
+        searchParams.set('filter', filters.join(','));
       }
 
       const url = `${BROWSE_API_BASE}?${searchParams.toString()}`;
-      console.log(`🌐 Browse API URL: ${BROWSE_API_BASE}?q=${keywords}&limit=${limit}`);
+      console.log(`🌐 Browse API URL: ${url.substring(0, 200)}...`);
 
       const response = await fetch(url, {
         headers: {

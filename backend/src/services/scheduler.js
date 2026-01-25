@@ -71,12 +71,16 @@ class Scheduler {
       if (ebayEnabled) {
         console.log(`🔍 Searching eBay for ${keywords.length} keywords...`);
         
+        // Parse category IDs from rule
+        const categoryIds = rule.ebay_category_ids ? rule.ebay_category_ids.split(',').map(c => c.trim()).filter(c => c) : [];
+        console.log(`📂 Category IDs: ${categoryIds.length > 0 ? categoryIds.join(', ') : 'All categories'}`);
+        
         for (const keyword of keywords) {
           try {
             console.log(`  → eBay: "${keyword}"`);
             const items = await ebayService.searchItems({ 
               keywords: keyword, 
-              categoryId: '', 
+              categoryIds: categoryIds,
               minPrice: rule.min_price || 0, 
               maxPrice: rule.max_price || 10000, 
               minDiscount: rule.min_discount || 10,
