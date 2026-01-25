@@ -69,22 +69,29 @@ class Scheduler {
 
       // === EBAY SEARCH ===
       if (ebayEnabled) {
-        console.log(`🔍 Searching eBay for ${keywords.length} keywords...`);
+        console.log(`\n${'🔍'.repeat(25)}`);
+        console.log(`🔍 EBAY SEARCH - ${keywords.length} keywords to search`);
+        console.log(`📋 Keywords list: ${keywords.slice(0, 10).join(', ')}${keywords.length > 10 ? '...' : ''}`);
         
         // Parse category IDs from rule
         const categoryIds = rule.ebay_category_ids ? rule.ebay_category_ids.split(',').map(c => c.trim()).filter(c => c) : [];
-        console.log(`📂 Category IDs: ${categoryIds.length > 0 ? categoryIds.join(', ') : 'All categories'}`);
+        console.log(`📂 Category IDs: ${categoryIds.length > 0 ? categoryIds.join(', ') : 'ALL CATEGORIES'}`);
+        console.log(`💰 Price filter: $${rule.min_price || 0} - $${rule.max_price || 10000}`);
+        console.log(`📉 Min discount: ${rule.min_discount || 10}%`);
+        console.log(`${'🔍'.repeat(25)}\n`);
         
+        let keywordIndex = 0;
         for (const keyword of keywords) {
+          keywordIndex++;
           try {
-            console.log(`  → eBay: "${keyword}"`);
+            console.log(`\n[${keywordIndex}/${keywords.length}] 🔎 Searching: "${keyword}"`);
             const items = await ebayService.searchItems({ 
               keywords: keyword, 
               categoryIds: categoryIds,
               minPrice: rule.min_price || 0, 
               maxPrice: rule.max_price || 10000, 
               minDiscount: rule.min_discount || 10,
-              limit: 50
+              limit: 100  // Increased from 50 to 100
             });
             
             for (const item of items) {

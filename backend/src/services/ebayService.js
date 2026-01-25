@@ -99,6 +99,14 @@ class EbayService {
     };
   }
 
+  // Clear all cache entries
+  clearCache() {
+    const size = cache.size;
+    cache.clear();
+    console.log(`🧹 Cleared ${size} cache entries`);
+    return size;
+  }
+
   async searchItems(params) {
     const { keywords = '', categoryIds = [], minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
 

@@ -2064,6 +2064,54 @@ router.get('/seo/page-data', (req, res) => {
   }
 });
 
+// Clear eBay cache (useful for testing)
+router.get('/debug/clear-cache', authenticateToken, async (req, res) => {
+  try {
+    const ebayService = (await import('../services/ebayService.js')).default;
+    ebayService.clearCache();
+    res.json({ success: true, message: 'eBay cache cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test eBay search with specific parameters
+router.get('/debug/test-ebay-search', authenticateToken, async (req, res) => {
+  try {
+    const ebayService = (await import('../services/ebayService.js')).default;
+    const { keyword = 'Rolex', categories = '', minPrice = 0, maxPrice = 5000, minDiscount = 20 } = req.query;
+    
+    const categoryIds = categories ? categories.split(',').map(c => c.trim()).filter(c => c) : [];
+    
+    console.log(`\n🧪 TEST SEARCH: "${keyword}"`);
+    console.log(`📂 Categories: ${categoryIds.length > 0 ? categoryIds.join(', ') : 'All'}`);
+    
+    const items = await ebayService.searchItems({
+      keywords: keyword,
+      categoryIds: categoryIds,
+      minPrice: parseFloat(minPrice),
+      maxPrice: parseFloat(maxPrice),
+      minDiscount: parseFloat(minDiscount),
+      limit: 50
+    });
+    
+    res.json({
+      keyword,
+      categories: categoryIds,
+      filters: { minPrice, maxPrice, minDiscount },
+      resultsCount: items.length,
+      sampleItems: items.slice(0, 5).map(i => ({
+        title: i.title?.substring(0, 60),
+        price: i.currentPrice,
+        discount: i.discountPercent,
+        category: i.categoryName
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Database status check
 router.get('/debug/db-status', (req, res) => {
   try {
