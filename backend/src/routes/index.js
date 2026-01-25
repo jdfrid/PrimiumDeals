@@ -2064,8 +2064,8 @@ router.get('/seo/page-data', (req, res) => {
   }
 });
 
-// Clear eBay cache (useful for testing)
-router.get('/debug/clear-cache', authenticateToken, async (req, res) => {
+// Clear eBay cache (useful for testing) - public for debugging
+router.get('/debug/clear-cache', async (req, res) => {
   try {
     const ebayService = (await import('../services/ebayService.js')).default;
     ebayService.clearCache();
@@ -2075,8 +2075,8 @@ router.get('/debug/clear-cache', authenticateToken, async (req, res) => {
   }
 });
 
-// Test eBay search with specific parameters
-router.get('/debug/test-ebay-search', authenticateToken, async (req, res) => {
+// Test eBay search with specific parameters - public for debugging
+router.get('/debug/test-ebay-search', async (req, res) => {
   try {
     const ebayService = (await import('../services/ebayService.js')).default;
     const { keyword = 'Rolex', categories = '', minPrice = 0, maxPrice = 5000, minDiscount = 20 } = req.query;
