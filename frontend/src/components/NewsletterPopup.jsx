@@ -1,72 +1,106 @@
 import { useState, useEffect } from 'react';
-import { X, Gift, Bell, Mail } from 'lucide-react';
+import { X, Mail, Gift, Bell, Check } from 'lucide-react';
+import api from '../services/api';
 
 export default function NewsletterPopup() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Check if user already saw the popup
-    const hasSeenPopup = localStorage.getItem('newsletter_popup_seen');
+    // Check if user has already seen/dismissed the popup
+    const dismissed = localStorage.getItem('newsletter_dismissed');
+    const subscribed = localStorage.getItem('newsletter_subscribed');
     
-    if (!hasSeenPopup) {
-      // Show popup after 5 seconds delay
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
+    if (dismissed || subscribed) return;
+    
+    // Show popup after 15 seconds or 30% scroll
+    const timer = setTimeout(() => {
+      setIsOpen(true);
+    }, 15000);
+    
+    const handleScroll = () => {
+      const scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+      if (scrollPercent > 30 && !isOpen) {
+        setIsOpen(true);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const handleClose = () => {
-    setIsVisible(false);
-    // Mark as seen in localStorage
-    localStorage.setItem('newsletter_popup_seen', 'true');
+    setIsOpen(false);
+    localStorage.setItem('newsletter_dismissed', Date.now().toString());
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return;
     
-    setIsSubmitting(true);
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email');
+      return;
+    }
     
-    // Simulate API call (replace with real API if needed)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(true);
+    setError('');
     
-    // Mark as seen and submitted
-    localStorage.setItem('newsletter_popup_seen', 'true');
-    localStorage.setItem('newsletter_subscribed', email);
-    
-    setSubmitted(true);
-    setIsSubmitting(false);
-    
-    // Close after showing success
-    setTimeout(() => {
-      setIsVisible(false);
-    }, 2000);
+    try {
+      const response = await api.request('/newsletter/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          email,
+          source: 'popup'
+        })
+      });
+      
+      if (response.success) {
+        setSuccess(true);
+        localStorage.setItem('newsletter_subscribed', 'true');
+        
+        // GA4: Track subscription
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'subscribe', {
+            method: 'popup',
+            email_domain: email.split('@')[1]
+          });
+        }
+        
+        // Close after 3 seconds
+        setTimeout(() => {
+          setIsOpen(false);
+        }, 3000);
+      }
+    } catch (err) {
+      setError('Failed to subscribe. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!isVisible) return null;
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div 
-        className="relative bg-white rounded-2xl overflow-hidden max-w-md w-full shadow-2xl animate-slide-up"
-        style={{ animationDuration: '0.3s' }}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-5 text-white">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white relative">
           <button 
             onClick={handleClose}
-            className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+          
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
               <Gift size={24} />
             </div>
             <div>
@@ -75,38 +109,40 @@ export default function NewsletterPopup() {
             </div>
           </div>
         </div>
-
+        
         {/* Content */}
         <div className="p-6">
-          {submitted ? (
+          {success ? (
             <div className="text-center py-4">
-              <div className="text-5xl mb-3">🎉</div>
-              <h3 className="text-xl font-bold text-gray-800">You're in!</h3>
-              <p className="text-gray-500">Check your email for exclusive deals.</p>
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check size={32} className="text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">You're In! 🎉</h3>
+              <p className="text-gray-600">Check your inbox for the best deals.</p>
             </div>
           ) : (
             <>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-center gap-3 text-gray-700">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Bell size={16} className="text-red-500" />
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bell size={16} className="text-orange-600" />
                   </div>
-                  <span>Daily alerts on luxury deals up to 70% off</span>
-                </li>
-                <li className="flex items-center gap-3 text-gray-700">
+                  <span className="text-gray-700 text-sm">Daily alerts on luxury deals up to 70% off</span>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Gift size={16} className="text-green-500" />
+                    <Gift size={16} className="text-green-600" />
                   </div>
-                  <span>Exclusive subscriber-only discounts</span>
-                </li>
-                <li className="flex items-center gap-3 text-gray-700">
+                  <span className="text-gray-700 text-sm">Exclusive subscriber-only discounts</span>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Mail size={16} className="text-blue-500" />
+                    <Mail size={16} className="text-blue-600" />
                   </div>
-                  <span>Weekly top 10 deals curated for you</span>
-                </li>
-              </ul>
-
+                  <span className="text-gray-700 text-sm">Weekly top 10 deals curated for you</span>
+                </div>
+              </div>
+              
               <form onSubmit={handleSubmit}>
                 <div className="flex gap-2">
                   <input
@@ -114,27 +150,46 @@ export default function NewsletterPopup() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    required
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                    disabled={loading}
                   />
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-600 transition-all disabled:opacity-50"
+                    disabled={loading}
+                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-medium hover:from-orange-600 hover:to-red-600 transition-all disabled:opacity-50 whitespace-nowrap"
                   >
-                    {isSubmitting ? '...' : 'Subscribe'}
+                    {loading ? '...' : 'Subscribe'}
                   </button>
                 </div>
+                
+                {error && (
+                  <p className="text-red-500 text-sm mt-2">{error}</p>
+                )}
               </form>
-
-              <p className="text-center text-gray-400 text-xs mt-4">
+              
+              <p className="text-center text-xs text-gray-400 mt-4">
                 No spam, unsubscribe anytime. We respect your privacy.
               </p>
             </>
           )}
         </div>
       </div>
+      
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.3s ease-out; }
+      `}</style>
     </div>
   );
 }
+
+
 

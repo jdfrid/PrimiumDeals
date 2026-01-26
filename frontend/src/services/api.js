@@ -166,6 +166,14 @@ class ApiService {
   async getLogs() {
     return this.request('/logs');
   }
+
+  async getProviders() {
+    return this.request('/providers');
+  }
+
+  async saveProviders(providers) {
+    return this.request('/providers', { method: 'POST', body: JSON.stringify({ providers }) });
+  }
 }
 
 export default new ApiService();

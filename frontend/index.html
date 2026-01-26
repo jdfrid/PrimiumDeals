@@ -4,10 +4,147 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Premium Deals - Luxury at Unbeatable Prices</title>
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>Dealsluxy | Luxury Brands Up to 70% Off - Designer Sale 2024</title>
+    <meta name="title" content="Dealsluxy | Luxury Brands Up to 70% Off - Designer Sale 2024" />
+    <meta name="description" content="Discover exclusive deals on luxury brands. Designer handbags, watches, jewelry & accessories at up to 70% off. Authentic products from trusted sellers with worldwide shipping." />
+    <meta name="keywords" content="luxury deals, designer sale, discount handbags, luxury watches sale, designer bags, jewelry sale, premium deals, outlet prices" />
+    <meta name="author" content="Dealsluxy" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://dealsluxy.com/" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dealsluxy.com/" />
+    <meta property="og:title" content="Dealsluxy | Luxury Brands Up to 70% Off" />
+    <meta property="og:description" content="Discover exclusive deals on luxury brands. Designer handbags, watches, jewelry & accessories at up to 70% off." />
+    <meta property="og:image" content="https://dealsluxy.com/og-image.jpg" />
+    <meta property="og:site_name" content="Dealsluxy" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://dealsluxy.com/" />
+    <meta property="twitter:title" content="Dealsluxy | Luxury Brands Up to 70% Off" />
+    <meta property="twitter:description" content="Discover exclusive deals on luxury brands. Designer handbags, watches, jewelry & accessories at up to 70% off." />
+    <meta property="twitter:image" content="https://dealsluxy.com/og-image.jpg" />
+    
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#f97316" />
+    <meta name="msapplication-TileColor" content="#f97316" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Performance: DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://api.ebay.com" />
+    <link rel="dns-prefetch" href="https://i.ebayimg.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    
+    <!-- Fonts with display=swap for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Critical CSS for above-the-fold content -->
+    <style>
+      /* Critical styles for initial render */
+      body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+      #root { min-height: 100vh; }
+      .loading-spinner {
+        position: fixed; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px; height: 40px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #f97316;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    </style>
+    
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Dealsluxy",
+      "url": "https://dealsluxy.com",
+      "description": "Discover exclusive deals on luxury brands at up to 70% off",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://dealsluxy.com/?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Dealsluxy",
+      "url": "https://dealsluxy.com",
+      "logo": "https://dealsluxy.com/logo.png",
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "email": "support@dealsluxy.com"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Today's Best Luxury Deals",
+      "description": "Curated selection of luxury brand deals with significant discounts",
+      "itemListOrder": "https://schema.org/ItemListOrderDescending",
+      "numberOfItems": "1000+"
+    }
+    </script>
+    
+    <!-- Google Analytics + Google Ads -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-07H9H3Q3M9"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      // GA4 Configuration
+      gtag('config', 'G-07H9H3Q3M9', {
+        'send_page_view': true,
+        'cookie_flags': 'SameSite=None;Secure'
+      });
+      
+      // Google Ads Configuration (uncomment and add your conversion ID)
+      // gtag('config', 'AW-XXXXXXXXXX');
+      
+      // Enhanced conversions for better tracking
+      gtag('set', 'user_properties', {
+        'site_version': '2.0',
+        'user_type': 'visitor'
+      });
+    </script>
+    
+    <!-- Google Ads Remarketing Tag -->
+    <script>
+      // Remarketing parameters - will be updated dynamically
+      window.google_remarketing_params = {
+        ecomm_prodid: '',
+        ecomm_pagetype: 'home',
+        ecomm_totalvalue: 0
+      };
+      
+      // Update remarketing on deal view
+      window.updateRemarketing = function(type, data) {
+        window.google_remarketing_params = {
+          ecomm_pagetype: type,
+          ecomm_prodid: data.prodId || '',
+          ecomm_totalvalue: data.value || 0,
+          ecomm_category: data.category || ''
+        };
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -93,26 +93,74 @@ export const toggleDealActive = (req, res) => {
 };
 
 export const getPublicDeals = (req, res) => {
-  const { page = 1, limit = 24, category, sort = 'discount' } = req.query;
+  const { page = 1, limit = 50, category, search, sort = 'random', seed, source } = req.query;
   const offset = (page - 1) * limit;
-  const minDiscount = 30;
+  const minDiscount = 10; // Show deals with 10%+ discount
 
-  let sql = 'SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent, d.currency, d.condition, d.ebay_url, c.name as category_name, c.icon as category_icon FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?';
-  let countSql = 'SELECT COUNT(*) as count FROM deals d WHERE d.is_active = 1 AND d.discount_percent >= ?';
+  // Include source field in SELECT
+  let sql = `SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent, d.currency, d.condition, d.ebay_url, d.source, c.name as category_name, c.icon as category_icon FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?`;
+  let countSql = 'SELECT COUNT(*) as count FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?';
   const params = [minDiscount];
 
-  if (category) { sql += ' AND d.category_id = ?'; countSql += ' AND d.category_id = ?'; params.push(category); }
+  // Support both category ID (number) and category name (string)
+  if (category) { 
+    const isNumeric = /^\d+$/.test(category);
+    if (isNumeric) {
+      sql += ' AND d.category_id = ?'; 
+      countSql += ' AND d.category_id = ?'; 
+      params.push(parseInt(category));
+    } else {
+      // Category name passed - look it up
+      sql += ' AND c.name = ?'; 
+      countSql += ' AND c.name = ?'; 
+      params.push(category);
+    }
+  }
+  
+  // Search by keywords in title
+  if (search) {
+    const searchTerms = search.split(' ').filter(t => t.length > 2);
+    if (searchTerms.length > 0) {
+      const searchConditions = searchTerms.map(() => 'd.title LIKE ?').join(' OR ');
+      sql += ` AND (${searchConditions})`;
+      countSql += ` AND (${searchConditions})`;
+      searchTerms.forEach(term => params.push(`%${term}%`));
+    }
+  }
+  
+  // Filter by source if specified
+  if (source && source !== 'all') {
+    sql += ' AND d.source = ?';
+    countSql += ' AND d.source = ?';
+    params.push(source);
+  }
+  
   const { count } = prepare(countSql).get(...params);
 
+  // Default to random to mix sources together
   switch (sort) {
     case 'price_asc': sql += ' ORDER BY d.current_price ASC'; break;
     case 'price_desc': sql += ' ORDER BY d.current_price DESC'; break;
     case 'newest': sql += ' ORDER BY d.created_at DESC'; break;
-    default: sql += ' ORDER BY d.discount_percent DESC';
+    case 'discount': sql += ' ORDER BY d.discount_percent DESC, d.id DESC'; break;
+    case 'random': 
+    default:
+      // Use a seeded random based on deal ID for consistent pagination
+      // This mixes eBay and Banggood products randomly
+      const randomSeed = seed || Math.floor(Math.random() * 1000000);
+      sql += ` ORDER BY (d.id * ${randomSeed}) % 997`; 
+      break;
   }
   sql += ' LIMIT ? OFFSET ?';
   params.push(parseInt(limit), offset);
   const deals = prepare(sql).all(...params);
 
-  res.json({ deals, pagination: { page: parseInt(page), limit: parseInt(limit), total: count, pages: Math.ceil(count / limit) } });
+  // Generate a seed for random sorting if not provided
+  const responseSeed = (sort === 'random' || !sort) ? (seed || Math.floor(Math.random() * 1000000)) : undefined;
+
+  res.json({ 
+    deals, 
+    pagination: { page: parseInt(page), limit: parseInt(limit), total: count, pages: Math.ceil(count / limit) },
+    seed: responseSeed
+  });
 };

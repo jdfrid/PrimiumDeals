@@ -1,6 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import HomePage from './pages/HomePage';
+import TermsPage from './pages/TermsPage';
+import ContactPage from './pages/ContactPage';
+import LandingPage from './pages/LandingPage';
+import BrandPage from './pages/BrandPage';
+import CategoryPage from './pages/CategoryPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import TodaysDealsPage from './pages/TodaysDealsPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -9,6 +16,14 @@ import CategoriesManager from './pages/admin/CategoriesManager';
 import UsersManager from './pages/admin/UsersManager';
 import RulesManager from './pages/admin/RulesManager';
 import LogsViewer from './pages/admin/LogsViewer';
+import ProvidersManager from './pages/admin/ProvidersManager';
+import AnalyticsPage from './pages/admin/AnalyticsPage';
+import SettingsPage from './pages/admin/SettingsPage';
+import MessagesPage from './pages/admin/MessagesPage';
+import EarningsPage from './pages/admin/EarningsPage';
+import BannersGallery from './pages/admin/BannersGallery';
+import SocialHub from './pages/admin/SocialHub';
+import TelegramChannels from './pages/admin/TelegramChannels';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -37,6 +52,17 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/designer-sale" element={<LandingPage />} />
+        <Route path="/luxury-watches-sale" element={<LandingPage />} />
+        <Route path="/designer-bags-sale" element={<LandingPage />} />
+        <Route path="/brand/:brandSlug" element={<BrandPage />} />
+        <Route path="/category/:categorySlug" element={<CategoryPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/about" element={<HowItWorksPage />} />
+        <Route path="/todays-deals" element={<TodaysDealsPage />} />
+        <Route path="/new" element={<TodaysDealsPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
@@ -45,6 +71,14 @@ function App() {
           <Route path="users" element={<ProtectedRoute roles={['admin']}><UsersManager /></ProtectedRoute>} />
           <Route path="rules" element={<ProtectedRoute roles={['admin']}><RulesManager /></ProtectedRoute>} />
           <Route path="logs" element={<ProtectedRoute roles={['admin']}><LogsViewer /></ProtectedRoute>} />
+          <Route path="providers" element={<ProtectedRoute roles={['admin']}><ProvidersManager /></ProtectedRoute>} />
+          <Route path="analytics" element={<ProtectedRoute roles={['admin']}><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute roles={['admin']}><SettingsPage /></ProtectedRoute>} />
+          <Route path="messages" element={<ProtectedRoute roles={['admin']}><MessagesPage /></ProtectedRoute>} />
+          <Route path="earnings" element={<ProtectedRoute roles={['admin']}><EarningsPage /></ProtectedRoute>} />
+          <Route path="banners" element={<ProtectedRoute roles={['admin']}><BannersGallery /></ProtectedRoute>} />
+          <Route path="social" element={<ProtectedRoute roles={['admin']}><SocialHub /></ProtectedRoute>} />
+          <Route path="telegram" element={<ProtectedRoute roles={['admin']}><TelegramChannels /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
