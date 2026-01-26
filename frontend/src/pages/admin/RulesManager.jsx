@@ -25,63 +25,16 @@ function RuleModal({ rule, onClose, onSave }) {
           <button onClick={onClose} className="p-2 hover:bg-midnight-700 rounded-lg"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-midnight-300 mb-2">Rule Name</label>
-            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="input-dark w-full" />
+          <div><label className="block text-sm font-medium text-midnight-300 mb-2">Rule Name</label><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="input-dark w-full" /></div>
+          <div><label className="block text-sm font-medium text-midnight-300 mb-2">Keywords (comma-separated)</label><textarea value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} rows={2} className="input-dark w-full resize-none" placeholder="luxury watch, designer bag" /></div>
+          <div><label className="block text-sm font-medium text-midnight-300 mb-2">eBay Category IDs</label><input type="text" value={form.ebay_category_ids} onChange={(e) => setForm({ ...form, ebay_category_ids: e.target.value })} className="input-dark w-full" placeholder="31387, 169291" /></div>
+          <div className="grid grid-cols-3 gap-4">
+            <div><label className="block text-sm font-medium text-midnight-300 mb-2">Min $</label><input type="number" value={form.min_price} onChange={(e) => setForm({ ...form, min_price: parseFloat(e.target.value) })} className="input-dark w-full" /></div>
+            <div><label className="block text-sm font-medium text-midnight-300 mb-2">Max $</label><input type="number" value={form.max_price} onChange={(e) => setForm({ ...form, max_price: parseFloat(e.target.value) })} className="input-dark w-full" /></div>
+            <div><label className="block text-sm font-medium text-midnight-300 mb-2">Min %</label><input type="number" value={form.min_discount} onChange={(e) => setForm({ ...form, min_discount: parseFloat(e.target.value) })} className="input-dark w-full" /></div>
           </div>
-          
-          {/* Keywords - Main Search Section */}
-          <div className="bg-midnight-800/50 rounded-lg p-4 border border-gold-500/30">
-            <label className="block text-sm font-medium text-gold-400 mb-2">🔍 Search Keywords</label>
-            <textarea 
-              value={form.keywords} 
-              onChange={(e) => setForm({ ...form, keywords: e.target.value })} 
-              rows={3} 
-              className="input-dark w-full resize-none" 
-              placeholder="luxury watch, designer bag, jewelry, handbag, rolex, gucci"
-            />
-            <p className="text-xs text-midnight-500 mt-2">Separate multiple keywords with commas. Each keyword will be searched separately.</p>
-          </div>
-          
-          {/* Price & Discount Section */}
-          <div className="bg-midnight-800/50 rounded-lg p-4">
-            <label className="block text-sm font-medium text-midnight-300 mb-3">💰 Price & Discount Filters</label>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-midnight-400 mb-1">Min Price ($)</label>
-                <input type="number" value={form.min_price} onChange={(e) => setForm({ ...form, min_price: parseFloat(e.target.value) })} className="input-dark w-full" />
-              </div>
-              <div>
-                <label className="block text-xs text-midnight-400 mb-1">Max Price ($)</label>
-                <input type="number" value={form.max_price} onChange={(e) => setForm({ ...form, max_price: parseFloat(e.target.value) })} className="input-dark w-full" />
-              </div>
-              <div>
-                <label className="block text-xs text-midnight-400 mb-1">Min Discount (%)</label>
-                <input type="number" value={form.min_discount} onChange={(e) => setForm({ ...form, min_discount: parseFloat(e.target.value) })} className="input-dark w-full" min="0" max="90" />
-              </div>
-            </div>
-            <p className="text-xs text-midnight-500 mt-2">Only items with this discount or higher will be imported.</p>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-midnight-300 mb-2">eBay Category IDs (optional)</label>
-            <input type="text" value={form.ebay_category_ids} onChange={(e) => setForm({ ...form, ebay_category_ids: e.target.value })} className="input-dark w-full" placeholder="31387, 169291" />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-midnight-300 mb-2">Schedule</label>
-            <select value={form.schedule_cron} onChange={(e) => setForm({ ...form, schedule_cron: e.target.value })} className="input-dark w-full">
-              <option value="0 * * * *">Every hour</option>
-              <option value="0 */6 * * *">Every 6 hours</option>
-              <option value="0 */12 * * *">Every 12 hours</option>
-              <option value="0 0 * * *">Daily (midnight)</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <input type="checkbox" id="active" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked ? 1 : 0 })} className="w-5 h-5" />
-            <label htmlFor="active">Active</label>
-          </div>
+          <div><label className="block text-sm font-medium text-midnight-300 mb-2">Schedule</label><select value={form.schedule_cron} onChange={(e) => setForm({ ...form, schedule_cron: e.target.value })} className="input-dark w-full"><option value="0 * * * *">Every hour</option><option value="0 */6 * * *">Every 6 hours</option><option value="0 */12 * * *">Every 12 hours</option><option value="0 0 * * *">Daily (midnight)</option></select></div>
+          <div className="flex items-center gap-3"><input type="checkbox" id="active" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked ? 1 : 0 })} className="w-5 h-5" /><label htmlFor="active">Active</label></div>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
             <button type="submit" disabled={loading} className="btn-gold flex-1 flex items-center justify-center gap-2">{loading ? <div className="w-5 h-5 border-2 border-midnight-950 border-t-transparent rounded-full animate-spin" /> : <><Save size={18} />Save</>}</button>
@@ -102,22 +55,7 @@ export default function RulesManager() {
   useEffect(() => { loadRules(); }, []);
 
   const loadRules = async () => { try { setRules(await api.getRules()); } catch (e) { console.error(e); } finally { setLoading(false); } };
-  const executeRule = async (id) => { 
-    setExecuting(id); 
-    try { 
-      const r = await api.executeRule(id); 
-      if (r.error) {
-        alert(`❌ Error: ${r.error}`);
-      } else {
-        alert(`✅ Found: ${r.itemsFound}, Added: ${r.itemsAdded}`); 
-      }
-      loadRules(); 
-    } catch (e) { 
-      alert(`❌ Error: ${e.message}`); 
-    } finally { 
-      setExecuting(null); 
-    } 
-  };
+  const executeRule = async (id) => { setExecuting(id); try { const r = await api.executeRule(id); alert(`Found: ${r.itemsFound}, Added: ${r.itemsAdded}`); loadRules(); } catch (e) { alert(e.message); } finally { setExecuting(null); } };
   const deleteRule = async (id) => { if (confirm('Delete this rule?')) { await api.deleteRule(id); loadRules(); } };
   const openModal = (rule = null) => { setEditingRule(rule); setShowModal(true); };
   const closeModal = () => { setEditingRule(null); setShowModal(false); };

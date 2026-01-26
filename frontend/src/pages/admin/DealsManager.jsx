@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Trash2, Eye, EyeOff, ExternalLink, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Search, Trash2, Eye, EyeOff, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 
 export default function DealsManager() {
@@ -8,7 +8,6 @@ export default function DealsManager() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { loadDeals(); }, [page, search]);
 
@@ -26,33 +25,11 @@ export default function DealsManager() {
 
   const toggleActive = async (id) => { await api.toggleDealActive(id); loadDeals(); };
   const deleteDeal = async (id) => { if (confirm('Delete this deal?')) { await api.deleteDeal(id); loadDeals(); } };
-  
-  const deleteAllDeals = async () => {
-    if (!confirm('⚠️ Are you sure you want to delete ALL deals?\n\nThis cannot be undone!\n\nAfter deleting, go to Query Rules and click "Run" to fetch fresh deals.')) return;
-    setDeleting(true);
-    try {
-      const response = await api.request('/debug/clear-deals');
-      alert(`✅ Deleted ${response.deleted} deals!\n\nNow go to Query Rules → Run to fetch fresh deals.`);
-      loadDeals();
-    } catch (error) {
-      alert('❌ Failed to delete deals: ' + error.message);
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div><h1 className="text-2xl font-bold mb-1">Deals Manager</h1><p className="text-midnight-400">Manage all your eBay deals</p></div>
-        <button 
-          onClick={deleteAllDeals} 
-          disabled={deleting}
-          className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <AlertTriangle size={18} />
-          {deleting ? 'Deleting...' : 'Delete All Deals'}
-        </button>
       </div>
       <div className="mb-6">
         <div className="relative max-w-md">
@@ -63,9 +40,9 @@ export default function DealsManager() {
       <div className="glass rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="table-dark">
-            <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Discount</th><th>Created</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
+            <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Discount</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
             <tbody>
-              {loading ? [...Array(5)].map((_, i) => <tr key={i}><td colSpan="7"><div className="h-16 shimmer rounded" /></td></tr>) : deals.length === 0 ? <tr><td colSpan="7" className="text-center py-12 text-midnight-400">No deals found</td></tr> : deals.map(deal => (
+              {loading ? [...Array(5)].map((_, i) => <tr key={i}><td colSpan="6"><div className="h-16 shimmer rounded" /></td></tr>) : deals.length === 0 ? <tr><td colSpan="6" className="text-center py-12 text-midnight-400">No deals found</td></tr> : deals.map(deal => (
                 <tr key={deal.id}>
                   <td>
                     <div className="flex items-center gap-3">
@@ -76,7 +53,6 @@ export default function DealsManager() {
                   <td><span className="text-sm text-midnight-300">{deal.category_name || 'Uncategorized'}</span></td>
                   <td><div><p className="text-gold-400 font-semibold">${deal.current_price}</p><p className="text-xs text-midnight-500 line-through">${deal.original_price}</p></div></td>
                   <td><span className="badge-discount">-{deal.discount_percent}%</span></td>
-                  <td><span className="text-xs text-midnight-400 whitespace-nowrap">{deal.created_at ? new Date(deal.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</span></td>
                   <td><span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${deal.is_active ? 'bg-green-500/20 text-green-400' : 'bg-midnight-700 text-midnight-400'}`}>{deal.is_active ? <Eye size={12} /> : <EyeOff size={12} />}{deal.is_active ? 'Active' : 'Hidden'}</span></td>
                   <td>
                     <div className="flex items-center justify-end gap-2">

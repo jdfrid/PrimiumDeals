@@ -3,7 +3,7 @@ services:
     name: primium-deals
     runtime: node
     plan: free
-    buildCommand: "cd frontend && npm install && npx --yes vite build && cd ../backend && npm install"
+    buildCommand: "npm install && cd frontend && npm install && npm run build && cd ../backend && npm install"
     startCommand: "node backend/src/index.js"
     envVars:
       - key: NODE_VERSION
@@ -12,18 +12,17 @@ services:
         value: production
       - key: PORT
         value: "10000"
-      # Secret values - set these in Render Dashboard, not here!
       - key: JWT_SECRET
-        sync: false
+        value: my-super-secret-key-2024
       - key: EBAY_APP_ID
-        sync: false
+        value: davidde-PrimiumD-PRD-26e774d48-9c51a1cc
       - key: EBAY_DEV_ID
-        sync: false
+        value: 062ae1a6-8695-4af1-9b66-9df03d5a1f
       - key: EBAY_CERT_ID
-        sync: false
+        value: davidade-PrimiumD-PRD-26e774d48-9c51a1cc
       - key: EBAY_CAMPAIGN_ID
-        sync: false
+        value: "5339243279"
       - key: ADMIN_EMAIL
-        sync: false
+        value: admin@example.com
       - key: ADMIN_PASSWORD
-        sync: false
+        value: admin123
