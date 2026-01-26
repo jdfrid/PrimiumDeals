@@ -75,34 +75,53 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
 
+  // Load categories only once on mount
   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await api.getPublicCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      }
+    };
     loadCategories();
+  }, []);
+
+  // Load deals with race condition protection
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const loadDeals = async () => {
+      setLoading(true);
+      try {
+        const params = { page, sort: sortBy };
+        if (selectedCategory) params.category = selectedCategory;
+        const data = await api.getPublicDeals(params);
+        
+        // Only update state if this request wasn't cancelled
+        if (!isCancelled) {
+          setDeals(data.deals);
+          setPagination(data.pagination);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error('Failed to load deals:', error);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    
     loadDeals();
+    
+    // Cleanup function - cancels outdated requests
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedCategory, sortBy, page]);
-
-  const loadCategories = async () => {
-    try {
-      const data = await api.getPublicCategories();
-      setCategories(data);
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-    }
-  };
-
-  const loadDeals = async () => {
-    setLoading(true);
-    try {
-      const params = { page, sort: sortBy };
-      if (selectedCategory) params.category = selectedCategory;
-      const data = await api.getPublicDeals(params);
-      setDeals(data.deals);
-      setPagination(data.pagination);
-    } catch (error) {
-      console.error('Failed to load deals:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen">
