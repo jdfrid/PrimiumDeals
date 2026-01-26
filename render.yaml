@@ -7,7 +7,7 @@ services:
     startCommand: "node backend/src/index.js"
     envVars:
       - key: NODE_VERSION
-        value: "18.19.0"
+        value: "20.11.0"
       - key: NODE_ENV
         value: production
       - key: PORT
