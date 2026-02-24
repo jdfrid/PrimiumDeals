@@ -2,10 +2,8 @@
 
 ## שלב 1: העלאה ל-GitHub
 
-ודא שהפרויקט מועלה ל-GitHub (כולל תיקיית `investment-engine`):
-
 ```bash
-cd c:\Users\jdfri\ebay-deals
+cd investment-engine
 git add .
 git commit -m "Add investment engine for deployment"
 git push origin main
@@ -17,9 +15,9 @@ git push origin main
 2. התחבר עם חשבון GitHub
 3. לחץ על **"New app"**
 4. מלא:
-   - **Repository:** `YOUR_USERNAME/ebay-deals` (או שם הריפו שלך)
+   - **Repository:** `YOUR_USERNAME/investment-engine`
    - **Branch:** `main`
-   - **Main file path:** `investment-engine/app.py`
+   - **Main file path:** `app.py`
    - **Advanced settings** (אופציונלי):
      - **Python version:** 3.11 (ברירת מחדל)
 5. לחץ **"Deploy!"**

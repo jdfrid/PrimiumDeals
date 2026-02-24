@@ -4,14 +4,17 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# הוספת נתיב הפרויקט – נדרש ל-Streamlit Cloud
+_ROOT = Path(__file__).resolve().parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-from src.backtest.runner import run_backtest
+from src.backtest.runner import run_backtest, run_optimization
 from src.config.symbols import DEFAULT_SYMBOLS
 
 
@@ -51,15 +54,19 @@ with st.sidebar:
 
     st.divider()
     st.subheader("כלל Stop-Loss")
-    stop_loss = st.slider("מכור כשהמחיר ירד ב-%", 5, 50, 20) / 100
+    stop_loss = st.slider("מכור כשהמחיר ירד ב-%", 5, 50, 25) / 100
 
     st.subheader("כלל Take-Profit")
     take_profit = st.slider("מכור רווח כשהמחיר עלה ב-%", 5, 50, 20) / 100
+
+    st.subheader("Re-Entry")
+    re_entry_days = st.slider("ממתין ימים לפני כניסה מחדש אחרי Stop-Loss", 1, 30, 3)
 
     st.divider()
     use_cache = st.checkbox("שימוש ב-cache (מהיר יותר)", value=True)
 
     run_btn = st.button("▶️ הרץ Backtest", type="primary", use_container_width=True)
+    optimize_btn = st.button("🎯 אופטימיזציה – מצא פרמטרים אופטימליים", use_container_width=True)
     if st.button("🗑️ נקה תוצאות", use_container_width=True):
         for k in list(st.session_state.keys()):
             if k.startswith("last_"):
@@ -68,6 +75,32 @@ with st.sidebar:
 
 
 # --- Main: תוצאות ---
+if optimize_btn:
+    if not symbols:
+        st.error("❌ יש להזין לפחות מניה אחת")
+    else:
+        with st.spinner("מריץ אופטימיזציה על 27 קומבינציות... (2–5 דקות)"):
+            try:
+                best_params, best_metrics = run_optimization(
+                    symbols=symbols,
+                    start=start_date.strftime("%Y-%m-%d"),
+                    end=end_date.strftime("%Y-%m-%d"),
+                    initial_cash=float(initial_cash),
+                    use_cache=use_cache,
+                )
+                st.session_state["last_metrics"] = best_metrics
+                st.session_state["best_params"] = best_params
+                st.session_state["optimized"] = True
+                st.success("✅ אופטימיזציה הושלמה! פרמטרים אופטימליים:")
+                st.json({
+                    "Stop-Loss": f"{int(best_params.get('stop_loss_pct', 0)*100)}%",
+                    "Take-Profit": f"{int(best_params.get('take_profit_pct', 0)*100)}%",
+                    "Re-Entry ימים": best_params.get("re_entry_days", 5),
+                })
+            except Exception as e:
+                st.error(f"❌ שגיאה: {e}")
+                st.exception(e)
+
 if run_btn:
     if not symbols:
         st.error("❌ יש להזין לפחות מניה אחת")
@@ -81,12 +114,14 @@ if run_btn:
                     initial_cash=float(initial_cash),
                     stop_loss_pct=stop_loss,
                     take_profit_pct=take_profit,
+                    re_entry_days=re_entry_days,
                     allocation_per_asset=1.0 / len(symbols),
                     use_cache=use_cache,
                 )
                 st.session_state["last_metrics"] = metrics
                 st.session_state["last_results"] = results
                 st.session_state["last_cerebro"] = cerebro
+                st.session_state["optimized"] = False
                 st.success("✅ Backtest הושלם בהצלחה!")
             except Exception as e:
                 st.error(f"❌ שגיאה: {e}")
@@ -94,6 +129,9 @@ if run_btn:
 
 if "last_metrics" in st.session_state:
     metrics = st.session_state["last_metrics"]
+
+    if st.session_state.get("optimized"):
+        st.info("🎯 **פרמטרים אופטימליים:** " + str(st.session_state.get("best_params", {})))
 
     st.header("📊 תוצאות")
 
@@ -139,8 +177,61 @@ if "last_metrics" in st.session_state:
         fig.update_layout(height=400, margin=dict(l=0, r=0))
         st.plotly_chart(fig, use_container_width=True)
 
+    # פירוט עסקאות
+    trades_detail = metrics.get("trades_detail", [])
+    if trades_detail:
+        st.subheader("📋 פירוט עסקאות")
+        df_trades = pd.DataFrame(trades_detail)
+        # מיפוי עמודות לעברית
+        col_map = {
+            "symbol": "מוצר",
+            "entry_price": "מחיר קניה",
+            "exit_price": "מחיר מכירה",
+            "qty": "כמות",
+            "cost_buy": "עלות קניה",
+            "cost_sell": "עלות מכירה",
+            "pnl": "רווח/הפסד",
+            "pct": "אחוז",
+            "trend": "מגמה",
+            "type": "סוג",
+            "entry_date": "תאריך קניה",
+            "exit_date": "תאריך מכירה",
+        }
+        df_display = df_trades.rename(columns=col_map)
+        # סדר עמודות מועדף – כולל תאריכים
+        display_cols = ["מוצר", "תאריך קניה", "תאריך מכירה", "מחיר קניה", "מחיר מכירה", "כמות", "עלות קניה", "עלות מכירה", "אחוז", "רווח/הפסד", "מגמה", "סוג"]
+        display_cols = [c for c in display_cols if c in df_display.columns]
+        df_display = df_display[display_cols]
+        # צביעה באדום לערכים שליליים
+        def _color_negative(val):
+            if isinstance(val, (int, float)) and val < 0:
+                return "color: #dc3545"
+            return ""
+
+        styled = df_display.style.applymap(
+            _color_negative,
+            subset=["אחוז", "רווח/הפסד"],
+        )
+        st.dataframe(
+            styled,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "תאריך קניה": st.column_config.TextColumn(),
+                "תאריך מכירה": st.column_config.TextColumn(),
+                "מחיר קניה": st.column_config.NumberColumn(format="dollar"),
+                "מחיר מכירה": st.column_config.NumberColumn(format="dollar"),
+                "עלות קניה": st.column_config.NumberColumn(format="dollar"),
+                "עלות מכירה": st.column_config.NumberColumn(format="dollar"),
+                "אחוז": st.column_config.NumberColumn(format="%.1f%%"),
+                "רווח/הפסד": st.column_config.NumberColumn(format="dollar"),
+            },
+        )
+    else:
+        st.caption("אין פירוט עסקאות (לא בוצעו מכירות)")
+
 else:
     st.info("👈 בחר הגדרות ולחץ על **הרץ Backtest** כדי להתחיל")
 
 st.divider()
-st.caption("מנוע השקעות – Stop-Loss 20% | Take-Profit 20% | מדדים: SPY, QQQ, VOO, VTI")
+st.caption("מנוע השקעות – אופטימלי: Stop-Loss 25% | Take-Profit 20% | Re-Entry 3 ימים")
