@@ -32,7 +32,15 @@ class IndexRulesStrategy(bt.Strategy):
                 return dt_obj.strftime("%Y-%m-%d")
             except Exception:
                 pass
+            try:
+                from datetime import datetime as dt
+                if 700000 < d < 800000:  # ordinal (matplotlib/Excel)
+                    return dt.fromordinal(int(d)).strftime("%Y-%m-%d")
+            except Exception:
+                pass
         s = str(d)
+        if len(s) >= 10 and s[:10].replace("-", "").isdigit():
+            return s[:10]
         return s[:10] if len(s) >= 10 else s
 
     def __init__(self):
@@ -153,7 +161,7 @@ class IndexRulesStrategy(bt.Strategy):
                 entry_price = pending[0]
                 entry_date = pending[1] if len(pending) > 1 else ""
                 exit_price = order.executed.price
-                qty = order.executed.size
+                qty = abs(float(order.executed.size))
                 cost_buy = entry_price * qty
                 cost_sell = exit_price * qty
                 pnl = cost_sell - cost_buy
