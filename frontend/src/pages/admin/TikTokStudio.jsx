@@ -9,13 +9,15 @@ import {
   Copy,
   CheckCircle,
   AlertCircle,
-  Loader
+  Loader,
+  Share2
 } from 'lucide-react';
 import api from '../../services/api';
 
 const tabs = [
-  { id: 'dashboard', label: 'Run / status', icon: Play },
+  { id: 'dashboard', label: 'Create video', icon: Play },
   { id: 'library', label: 'Video library', icon: LayoutGrid },
+  { id: 'tiktok', label: 'TikTok (publish)', icon: Share2 },
   { id: 'config', label: 'Settings & keys', icon: Settings }
 ];
 
@@ -24,6 +26,8 @@ export default function TikTokStudio() {
   const [busy, setBusy] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [settings, setSettings] = useState({
+    video_engine_auto_enabled: 'false',
+    video_utm_source: 'short_video',
     tiktok_enabled: 'false',
     tiktok_openai_model: 'gpt-4o-mini',
     tiktok_tts_model: 'tts-1',
@@ -48,7 +52,7 @@ export default function TikTokStudio() {
   }, []);
 
   const loadStatus = useCallback(async () => {
-    const s = await api.getTikTokStatus();
+    const s = await api.getVideoEngineStatus();
     setBusy(!!s.busy);
   }, []);
 
@@ -73,7 +77,7 @@ export default function TikTokStudio() {
   }, [loadJobs, loadSettings, loadStatus]);
 
   useEffect(() => {
-    if (tab !== 'dashboard' && tab !== 'library') return undefined;
+    if (tab !== 'dashboard' && tab !== 'library' && tab !== 'tiktok') return undefined;
     const id = setInterval(() => {
       loadJobs().catch(() => {});
       loadStatus().catch(() => {});
@@ -92,7 +96,7 @@ export default function TikTokStudio() {
       await api.saveTikTokSettings(payload);
       setOpenaiKeyInput('');
       await loadSettings();
-      setMessage({ type: 'ok', text: 'TikTok settings saved.' });
+      setMessage({ type: 'ok', text: 'Settings saved.' });
     } catch (e) {
       setMessage({ type: 'error', text: e.message });
     } finally {
@@ -108,7 +112,7 @@ export default function TikTokStudio() {
         setMessage({ type: 'error', text: 'Deal ID must be a number' });
         return;
       }
-      const r = await api.runTikTokJob(dealId);
+      const r = await api.runVideoEngineJob(dealId);
       setMessage({ type: 'ok', text: `Job #${r.jobId} started. Polls below refresh every few seconds.` });
       setBusy(true);
       await loadJobs();
@@ -162,10 +166,15 @@ export default function TikTokStudio() {
         <div>
           <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
             <Video className="text-gold-400" size={28} />
-            TikTok video engine
+            Short-form video engine
           </h1>
           <p className="text-midnight-400">
-            Daily 9:16 MP4 + English script & voice (OpenAI). Keys live in settings below — not in the frontend bundle.
+            Create 9:16 MP4 + English voiceover here. That is separate from posting to TikTok — use the “TikTok (publish)” tab for that workflow.
+            OpenAI keys stay in Settings (server only).
+          </p>
+          <p className="text-sm text-midnight-300 mt-2 rounded-lg bg-midnight-800/60 border border-midnight-600/50 px-3 py-2" dir="rtl">
+            <strong className="text-gold-400">איפה מפעילים:</strong> טאב <strong>Create video</strong> (הרצה ידנית) או מעמוד{' '}
+            <a href="/admin/deals" className="text-gold-400 underline">Deals</a> — כפתור <strong>Make video</strong> ליד כל מוצר. אוטומציה יומית: טאב <strong>Settings</strong> ← סמן “Automatic daily video”.
           </p>
         </div>
         {busy && (
@@ -205,12 +214,27 @@ export default function TikTokStudio() {
         ))}
       </div>
 
+      {tab === 'tiktok' && (
+        <div className="glass rounded-xl p-6 max-w-2xl space-y-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Share2 className="text-gold-400" size={22} />
+            TikTok distribution
+          </h2>
+          <p className="text-sm text-midnight-300">
+            The app does <strong>not</strong> upload to TikTok automatically. You generate the asset in “Create video” or from <strong>Deals</strong> (film icon per row), then download the MP4 from the library and publish in TikTok yourself.
+          </p>
+          <p className="text-sm text-midnight-500">
+            A future step can add TikTok API / OAuth here without changing how videos are rendered.
+          </p>
+        </div>
+      )}
+
       {tab === 'dashboard' && (
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="glass rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Manual run</h2>
+            <h2 className="text-lg font-semibold">Manual video run</h2>
             <p className="text-sm text-midnight-400">
-              Leave deal empty for automatic pick (discount + image + anti-repeat). One job at a time.
+              Leave deal empty to auto-pick a strong listing (min discount + anti-repeat). Or enter a deal ID for <strong>that item only</strong> — no extra discount rule. You can also start from <strong>Deals</strong> with the film icon. One render at a time.
             </p>
             <div>
               <label className="block text-sm text-midnight-300 mb-1">Optional deal ID</label>
@@ -309,11 +333,27 @@ export default function TikTokStudio() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={settings.tiktok_enabled === 'true'}
-              onChange={e => setSettings({ ...settings, tiktok_enabled: e.target.checked ? 'true' : 'false' })}
+              checked={settings.video_engine_auto_enabled === 'true'}
+              onChange={e =>
+                setSettings({ ...settings, video_engine_auto_enabled: e.target.checked ? 'true' : 'false' })
+              }
             />
-            <span>Enable daily automated run (cron below)</span>
+            <span>Automatic daily video (one MP4 per run — generates only, does not post anywhere)</span>
           </label>
+          <p className="text-xs text-midnight-500 -mt-2">
+            Uses cron below, min discount, and anti-repeat. Manual runs and per-deal buttons work even when this is off.
+            If you previously used “tiktok enabled” only, turn this on — legacy <code className="text-midnight-400">tiktok_enabled=true</code> still enables automation until you set this explicitly.
+          </p>
+          <div>
+            <label className="block text-sm text-midnight-300 mb-1">UTM source for tracking links in captions</label>
+            <input
+              className="input-dark w-full font-mono max-w-md"
+              value={settings.video_utm_source || 'short_video'}
+              onChange={e => setSettings({ ...settings, video_utm_source: e.target.value })}
+              placeholder="short_video"
+            />
+            <p className="text-xs text-midnight-500 mt-1">Example: short_video, instagram, tiktok_manual — used in <code className="text-midnight-400">utm_source</code> on click tracking URLs.</p>
+          </div>
           <div>
             <label className="block text-sm text-midnight-300 mb-1">OpenAI API key</label>
             <p className="text-xs text-midnight-500 mb-1">
@@ -365,7 +405,7 @@ export default function TikTokStudio() {
               value={settings.tiktok_cron}
               onChange={e => setSettings({ ...settings, tiktok_cron: e.target.value })}
             />
-            <p className="text-xs text-midnight-500 mt-1">Example: 0 8 * * * — daily 08:00. Saved cron reapplies without restart.</p>
+            <p className="text-xs text-midnight-500 mt-1">Example: 0 8 * * * — daily 08:00 (server/UTC). Applies only when automatic daily video is enabled.</p>
           </div>
           <div>
             <label className="block text-sm text-midnight-300 mb-1">Public site base URL (UTM / track links)</label>
@@ -398,7 +438,7 @@ export default function TikTokStudio() {
             </div>
           </div>
           <button type="button" className="btn-gold" onClick={saveConfig} disabled={saving}>
-            {saving ? 'Saving…' : 'Save TikTok settings'}
+            {saving ? 'Saving…' : 'Save video engine settings'}
           </button>
         </div>
       )}

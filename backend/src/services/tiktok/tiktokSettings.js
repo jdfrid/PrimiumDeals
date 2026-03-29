@@ -1,6 +1,8 @@
 import { prepare } from '../../config/database.js';
 
 const KEYS = [
+  'video_engine_auto_enabled',
+  'video_utm_source',
   'tiktok_enabled',
   'tiktok_openai_api_key',
   'tiktok_openai_model',
@@ -11,6 +13,14 @@ const KEYS = [
   'tiktok_min_discount',
   'tiktok_repeat_days'
 ];
+
+/** Daily automation for MP4 generation only (not TikTok upload). */
+export function isVideoAutomationEnabled(settings) {
+  const v = (settings.video_engine_auto_enabled || '').trim();
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return (settings.tiktok_enabled || '').trim() === 'true';
+}
 
 export function getTikTokSettings() {
   const out = {};

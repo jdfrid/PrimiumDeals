@@ -14,9 +14,10 @@ function scoreDeal(deal) {
  * @param {object} opts
  * @param {number} opts.minDiscount
  * @param {number} opts.repeatDays
- * @param {number|null} opts.forcedDealId
+ * @param {number|null} opts.forcedDealId — manual pick: only needs active + image if skipMinDiscountWhenForced
+ * @param {boolean} [opts.skipMinDiscountWhenForced]
  */
-export function selectDealForTikTok({ minDiscount, repeatDays, forcedDealId }) {
+export function selectDealForTikTok({ minDiscount, repeatDays, forcedDealId, skipMinDiscountWhenForced = false }) {
   if (forcedDealId) {
     const deal = prepare(`
       SELECT d.*, c.name as category_name
@@ -26,7 +27,7 @@ export function selectDealForTikTok({ minDiscount, repeatDays, forcedDealId }) {
     `).get(forcedDealId);
     if (!deal) throw new Error('Deal not found or inactive');
     if (!deal.image_url || !String(deal.image_url).trim()) throw new Error('Deal has no image');
-    if ((Number(deal.discount_percent) || 0) < minDiscount) {
+    if (!skipMinDiscountWhenForced && (Number(deal.discount_percent) || 0) < minDiscount) {
       throw new Error(`Deal discount below minimum (${minDiscount}%)`);
     }
     return deal;

@@ -360,6 +360,8 @@ export async function initDatabase() {
     ['banggood_enabled', 'false'],
     ['banggood_app_key', ''],
     ['banggood_app_secret', ''],
+    ['video_engine_auto_enabled', 'false'],
+    ['video_utm_source', 'short_video'],
     ['tiktok_enabled', 'false'],
     ['tiktok_openai_api_key', ''],
     ['tiktok_openai_model', 'gpt-4o-mini'],

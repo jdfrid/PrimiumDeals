@@ -187,6 +187,10 @@ class ApiService {
     return this.request('/admin/tiktok/status');
   }
 
+  async getVideoEngineStatus() {
+    return this.request('/admin/video-engine/status');
+  }
+
   async getTikTokJobs(limit = 40) {
     return this.request(`/admin/tiktok/jobs?limit=${limit}`);
   }
@@ -196,9 +200,14 @@ class ApiService {
   }
 
   async runTikTokJob(dealId = null) {
-    return this.request('/admin/tiktok/run', {
+    return this.runVideoEngineJob(dealId);
+  }
+
+  /** Short-form MP4 only — does not post to TikTok or any network. */
+  async runVideoEngineJob(dealId = null) {
+    return this.request('/admin/video-engine/run', {
       method: 'POST',
-      body: JSON.stringify({ dealId: dealId || null })
+      body: JSON.stringify({ dealId: dealId != null && dealId !== '' ? dealId : null })
     });
   }
 

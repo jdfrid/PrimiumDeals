@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { prepare, getDataRoot } from '../../config/database.js';
-import { getTikTokSettings, getSiteBaseUrl } from './tiktokSettings.js';
+import { getTikTokSettings, getSiteBaseUrl, isVideoAutomationEnabled } from './tiktokSettings.js';
 import { selectDealForTikTok } from './tiktokDealSelector.js';
 import { generateTikTokScript } from './tiktokScriptService.js';
 import { synthesizeOpenAITts } from './tiktokTtsService.js';
@@ -10,6 +10,11 @@ import { renderTikTokVideo } from './tiktokVideoRenderer.js';
 let engineBusy = false;
 
 export function isTikTokEngineBusy() {
+  return engineBusy;
+}
+
+/** Alias: video pipeline shares one worker lock. */
+export function isVideoEngineBusy() {
   return engineBusy;
 }
 
@@ -27,23 +32,29 @@ function ensureDir(d) {
 
 /**
  * Create job row and return { jobId, dealId }.
+ * @param {number|null} dealId — optional; if set, creates video for that deal only (no discount rule).
+ * @param {{ autoPick?: boolean }} [opts] — autoPick true = daily/automatic selection (uses min discount + anti-repeat)
  */
-export async function startTikTokJob(dealId = null) {
+export async function startTikTokJob(dealId = null, opts = {}) {
   const settings = getTikTokSettings();
   const key = (settings.tiktok_openai_api_key || '').trim();
   if (!key) {
-    throw new Error('TikTok: set OpenAI API key in admin (TikTok settings)');
+    throw new Error('Video engine: add OpenAI API key in admin settings');
   }
 
   const minDiscount = Math.max(0, parseInt(settings.tiktok_min_discount || '15', 10) || 15);
   const repeatDays = Math.max(1, parseInt(settings.tiktok_repeat_days || '14', 10) || 14);
-  const forced = dealId ? parseInt(String(dealId), 10) : null;
-  if (forced && Number.isNaN(forced)) throw new Error('Invalid deal ID');
+  const forced = dealId != null && dealId !== '' ? parseInt(String(dealId), 10) : null;
+  if (forced != null && Number.isNaN(forced)) throw new Error('Invalid deal ID');
+
+  const autoPick = opts.autoPick === true;
+  const skipMinDiscountWhenForced = !autoPick && forced != null;
 
   const deal = selectDealForTikTok({
     minDiscount,
     repeatDays,
-    forcedDealId: forced
+    forcedDealId: forced,
+    skipMinDiscountWhenForced
   });
 
   const ins = prepare(`
@@ -116,7 +127,8 @@ export async function processTikTokJob(jobId) {
 
     const hashtags = Array.isArray(script.hashtags) ? script.hashtags.map(h => (h.startsWith('#') ? h : `#${h}`)).join(' ') : '';
     const caption = [script.caption || '', hashtags].filter(Boolean).join('\n\n');
-    const trackingUrl = `${siteBase}/api/track/click/${jobRow.deal_id}?utm_source=tiktok&utm_medium=video&utm_campaign=tiktok_engine&utm_content=job_${jobId}`;
+    const utmSource = encodeURIComponent((settings.video_utm_source || 'short_video').trim() || 'short_video');
+    const trackingUrl = `${siteBase}/api/track/click/${jobRow.deal_id}?utm_source=${utmSource}&utm_medium=video&utm_campaign=video_engine&utm_content=job_${jobId}`;
 
     prepare(
       `
@@ -197,44 +209,53 @@ export async function processTikTokJob(jobId) {
 }
 
 export async function runDailyTikTokIfEnabled() {
+  return runDailyVideoJobIfEnabled();
+}
+
+/** Scheduled: one automatic MP4 for a scored deal (no TikTok upload). */
+export async function runDailyVideoJobIfEnabled() {
   const s = getTikTokSettings();
-  if ((s.tiktok_enabled || '').trim() !== 'true') {
-    console.log('📲 TikTok daily: disabled (tiktok_enabled != true)');
+  if (!isVideoAutomationEnabled(s)) {
+    console.log('📹 Video auto-run: disabled (turn on "Automatic daily video" in admin)');
     return;
   }
   if (engineBusy) {
-    console.log('📲 TikTok daily: skipped (engine busy)');
+    console.log('📹 Video auto-run: skipped (engine busy)');
     return;
   }
   if (!(s.tiktok_openai_api_key || '').trim()) {
-    console.log('📲 TikTok daily: skipped (no API key)');
+    console.log('📹 Video auto-run: skipped (no OpenAI API key)');
     return;
   }
 
   engineBusy = true;
   try {
-    const { jobId } = await startTikTokJob(null);
+    const { jobId } = await startTikTokJob(null, { autoPick: true });
     await processTikTokJob(jobId);
-    console.log(`✅ TikTok daily job ${jobId} completed`);
+    console.log(`✅ Video auto job ${jobId} completed`);
   } catch (e) {
-    console.error('📲 TikTok daily failed:', e.message);
+    console.error('📹 Video auto-run failed:', e.message);
   } finally {
     engineBusy = false;
   }
 }
 
 /**
- * Manual run from admin: returns jobId immediately after enqueue.
+ * Manual / per-deal run: enqueue MP4 generation only (no platform upload).
  */
 export async function enqueueManualTikTokJob(dealId = null) {
+  return enqueueVideoJob(dealId);
+}
+
+export async function enqueueVideoJob(dealId = null) {
   if (engineBusy) {
-    throw new Error('TikTok engine is busy; wait for the current job to finish');
+    throw new Error('Video engine is busy; wait for the current job to finish');
   }
   engineBusy = true;
   try {
-    const { jobId } = await startTikTokJob(dealId);
+    const { jobId } = await startTikTokJob(dealId, { autoPick: !dealId });
     processTikTokJob(jobId)
-      .catch(e => console.error('TikTok background job error:', e))
+      .catch(e => console.error('Video engine background job error:', e))
       .finally(() => {
         engineBusy = false;
       });
@@ -248,7 +269,7 @@ export async function enqueueManualTikTokJob(dealId = null) {
 /** Re-run pipeline for an existing job in the background (same as manual run — avoids HTTP timeouts). */
 export async function retryTikTokJobBackground(jobId) {
   if (engineBusy) {
-    throw new Error('TikTok engine is busy; wait for the current job to finish');
+    throw new Error('Video engine is busy; wait for the current job to finish');
   }
   const id = parseInt(String(jobId), 10);
   const row = prepare(`SELECT id FROM tiktok_video_jobs WHERE id = ?`).get(id);
@@ -266,7 +287,7 @@ export async function retryTikTokJobBackground(jobId) {
 
   engineBusy = true;
   processTikTokJob(id)
-    .catch(e => console.error('TikTok retry job error:', e))
+    .catch(e => console.error('Video job retry error:', e))
     .finally(() => {
       engineBusy = false;
     });

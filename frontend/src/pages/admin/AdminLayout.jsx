@@ -15,7 +15,7 @@ const navItems = [
   { path: '/admin/banners', icon: Image, label: 'Banners', roles: ['admin'] },
   { path: '/admin/social', icon: Share2, label: 'Social Hub', roles: ['admin'] },
   { path: '/admin/telegram', icon: Send, label: 'Telegram', roles: ['admin'] },
-  { path: '/admin/tiktok', icon: Video, label: 'TikTok', roles: ['admin'] },
+  { path: '/admin/tiktok', icon: Video, label: 'Short videos (MP4)', roles: ['admin'] },
   { path: '/admin/messages', icon: Mail, label: 'Messages', roles: ['admin'] },
   { path: '/admin/settings', icon: Cog, label: 'Settings', roles: ['admin'] },
   { path: '/admin/logs', icon: FileText, label: 'Logs', roles: ['admin'] },

@@ -9,7 +9,12 @@ import * as categoriesController from '../controllers/categoriesController.js';
 import * as rulesController from '../controllers/rulesController.js';
 import { prepare, saveDatabase, getDataRoot } from '../config/database.js';
 import { getTikTokSettings } from '../services/tiktok/tiktokSettings.js';
-import { enqueueManualTikTokJob, isTikTokEngineBusy, retryTikTokJobBackground } from '../services/tiktok/tiktokEngine.js';
+import {
+  enqueueVideoJob,
+  isTikTokEngineBusy,
+  isVideoEngineBusy,
+  retryTikTokJobBackground
+} from '../services/tiktok/tiktokEngine.js';
 import scheduler from '../services/scheduler.js';
 
 const router = express.Router();
@@ -515,6 +520,8 @@ router.put('/admin/settings', authenticateToken, requireRole('admin'), (req, res
 });
 
 const TIKTOK_SETTING_KEYS = [
+  'video_engine_auto_enabled',
+  'video_utm_source',
   'tiktok_enabled',
   'tiktok_openai_api_key',
   'tiktok_openai_model',
@@ -577,6 +584,10 @@ router.get('/admin/tiktok/status', authenticateToken, requireRole('admin'), (req
   res.json({ busy: isTikTokEngineBusy() });
 });
 
+router.get('/admin/video-engine/status', authenticateToken, requireRole('admin'), (req, res) => {
+  res.json({ busy: isVideoEngineBusy() });
+});
+
 router.get('/admin/tiktok/jobs', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '40', 10)));
@@ -621,18 +632,25 @@ router.get('/admin/tiktok/jobs/:id', authenticateToken, requireRole('admin'), (r
   }
 });
 
-router.post('/admin/tiktok/run', authenticateToken, requireRole('admin'), async (req, res) => {
+const runVideoEngineHandler = async (req, res) => {
   try {
-    const dealId = req.body?.dealId != null && req.body.dealId !== '' ? parseInt(String(req.body.dealId), 10) : null;
+    const raw = req.body?.dealId;
+    const dealId =
+      raw != null && raw !== '' ? parseInt(String(raw), 10) : null;
     if (dealId !== null && Number.isNaN(dealId)) {
       return res.status(400).json({ error: 'Invalid dealId' });
     }
-    const { jobId } = await enqueueManualTikTokJob(dealId);
-    res.json({ jobId, status: 'started' });
+    const { jobId } = await enqueueVideoJob(dealId);
+    res.json({ jobId, status: 'started', mode: 'video_only' });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
-});
+};
+
+/** Generate MP4 + script only — no TikTok upload. */
+router.post('/admin/video-engine/run', authenticateToken, requireRole('admin'), runVideoEngineHandler);
+
+router.post('/admin/tiktok/run', authenticateToken, requireRole('admin'), runVideoEngineHandler);
 
 router.post('/admin/tiktok/jobs/:id/retry', authenticateToken, requireRole('admin'), async (req, res) => {
   try {

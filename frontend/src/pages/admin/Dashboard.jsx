@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Tags, Users, Percent, Clock, TrendingUp } from 'lucide-react';
+import { ShoppingBag, Tags, Users, Percent, Clock, TrendingUp, Video } from 'lucide-react';
 import api from '../../services/api';
 
 function StatCard({ icon: Icon, label, value, color }) {
@@ -45,7 +45,14 @@ export default function Dashboard() {
       </div>
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <a href="/admin/tiktok" className="glass rounded-xl p-4 ring-1 ring-gold-500/30 hover:bg-gold-500/10 transition-colors">
+            <Video className="text-gold-400 mb-2" size={24} />
+            <p className="font-medium text-gold-200">Short promo videos</p>
+            <p className="text-sm text-midnight-400 mt-1">
+              Create 9:16 MP4 (OpenAI + voice). <span className="text-midnight-300" dir="rtl">יצירת וידאו: כאן או מעמוד Deals (אייקון סרט).</span>
+            </p>
+          </a>
           <a href="/admin/deals" className="glass rounded-xl p-4 hover:bg-midnight-800/50 transition-colors">
             <ShoppingBag className="text-gold-400 mb-2" size={24} /><p className="font-medium">Manage Deals</p><p className="text-sm text-midnight-400">View and edit all deals</p>
           </a>
