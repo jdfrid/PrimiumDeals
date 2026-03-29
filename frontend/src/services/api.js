@@ -174,6 +174,55 @@ class ApiService {
   async saveProviders(providers) {
     return this.request('/providers', { method: 'POST', body: JSON.stringify({ providers }) });
   }
+
+  async getTikTokSettings() {
+    return this.request('/admin/tiktok/settings');
+  }
+
+  async saveTikTokSettings(data) {
+    return this.request('/admin/tiktok/settings', { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async getTikTokStatus() {
+    return this.request('/admin/tiktok/status');
+  }
+
+  async getTikTokJobs(limit = 40) {
+    return this.request(`/admin/tiktok/jobs?limit=${limit}`);
+  }
+
+  async getTikTokJob(id) {
+    return this.request(`/admin/tiktok/jobs/${id}`);
+  }
+
+  async runTikTokJob(dealId = null) {
+    return this.request('/admin/tiktok/run', {
+      method: 'POST',
+      body: JSON.stringify({ dealId: dealId || null })
+    });
+  }
+
+  async retryTikTokJob(jobId) {
+    return this.request(`/admin/tiktok/jobs/${jobId}/retry`, { method: 'POST', body: JSON.stringify({}) });
+  }
+
+  async downloadTikTokVideo(jobId) {
+    const headers = {
+      Authorization: `Bearer ${this.getToken()}`
+    };
+    const res = await fetch(`${API_BASE}/admin/tiktok/jobs/${jobId}/download`, { headers });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Download failed');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tiktok-job-${jobId}.mp4`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export default new ApiService();

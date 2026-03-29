@@ -278,6 +278,46 @@ export async function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // TikTok auto-video engine
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tiktok_video_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deal_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      angle_type TEXT,
+      template_id TEXT DEFAULT 'default',
+      hook_text TEXT,
+      body_text TEXT,
+      value_text TEXT,
+      cta_text TEXT,
+      narration_text TEXT,
+      screen_texts_json TEXT,
+      caption TEXT,
+      hashtags TEXT,
+      tracking_url TEXT,
+      openai_model TEXT,
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (deal_id) REFERENCES deals(id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tiktok_video_outputs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL UNIQUE,
+      file_path TEXT NOT NULL,
+      duration_sec REAL,
+      file_size_bytes INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (job_id) REFERENCES tiktok_video_jobs(id)
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tiktok_jobs_deal ON tiktok_video_jobs(deal_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tiktok_jobs_status_created ON tiktok_video_jobs(status, created_at)`);
   
   // Add source column to deals table if not exists
   try {
@@ -319,7 +359,16 @@ export async function initDatabase() {
     ['deals_per_page', '50'],
     ['banggood_enabled', 'false'],
     ['banggood_app_key', ''],
-    ['banggood_app_secret', '']
+    ['banggood_app_secret', ''],
+    ['tiktok_enabled', 'false'],
+    ['tiktok_openai_api_key', ''],
+    ['tiktok_openai_model', 'gpt-4o-mini'],
+    ['tiktok_tts_model', 'tts-1'],
+    ['tiktok_tts_voice', 'alloy'],
+    ['tiktok_cron', '0 8 * * *'],
+    ['tiktok_site_base_url', ''],
+    ['tiktok_min_discount', '15'],
+    ['tiktok_repeat_days', '14']
   ];
   for (const [key, value] of defaultSettings) {
     const existing = db.exec(`SELECT key FROM settings WHERE key = '${key}'`);
@@ -392,4 +441,9 @@ export function prepare(sql) {
   };
 }
 
-export default { initDatabase, getDb, prepare, saveDatabase };
+/** Resolved data directory (SQLite file lives here; also used for TikTok MP4 output). */
+export function getDataRoot() {
+  return dataDir;
+}
+
+export default { initDatabase, getDb, prepare, saveDatabase, getDataRoot };

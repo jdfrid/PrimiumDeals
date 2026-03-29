@@ -3,6 +3,30 @@ import socialAutomation from './socialAutomation.js';
 import { prepare, saveDatabase } from '../config/database.js';
 import ebayService from './ebayService.js';
 import banggoodService from './banggoodService.js';
+import { runDailyTikTokIfEnabled } from './tiktok/tiktokEngine.js';
+
+let tiktokCronJob = null;
+
+function refreshTikTokSchedule() {
+  const row = prepare(`SELECT value FROM settings WHERE key = 'tiktok_cron'`).get();
+  const expr = (row?.value || '0 8 * * *').trim();
+  if (tiktokCronJob) {
+    tiktokCronJob.stop();
+    tiktokCronJob = null;
+  }
+  if (!cron.validate(expr)) {
+    console.warn('⚠️ Invalid tiktok_cron expression:', expr);
+    return;
+  }
+  tiktokCronJob = cron.schedule(expr, async () => {
+    try {
+      await runDailyTikTokIfEnabled();
+    } catch (e) {
+      console.error('TikTok cron error:', e);
+    }
+  });
+  console.log(`📲 TikTok video cron: ${expr}`);
+}
 
 class Scheduler {
   constructor() {
@@ -38,7 +62,14 @@ class Scheduler {
       }
     });
     
-    console.log(`✅ Scheduled ${rules.length} query rules + social media + banner generation`);
+    refreshTikTokSchedule();
+
+    console.log(`✅ Scheduled ${rules.length} query rules + social media + banner generation + TikTok`);
+  }
+
+  /** Call after updating `tiktok_cron` in settings. */
+  rescheduleTikTok() {
+    refreshTikTokSchedule();
   }
 
   scheduleRule(rule) {
@@ -246,4 +277,5 @@ class Scheduler {
   }
 }
 
-export default new Scheduler();
+const scheduler = new Scheduler();
+export default scheduler;
