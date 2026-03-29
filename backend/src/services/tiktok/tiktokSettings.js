@@ -3,6 +3,11 @@ import { prepare } from '../../config/database.js';
 const KEYS = [
   'video_engine_auto_enabled',
   'video_utm_source',
+  'video_llm_provider',
+  'video_tts_provider',
+  'gemini_api_key',
+  'gemini_model',
+  'edge_tts_voice',
   'tiktok_enabled',
   'tiktok_openai_api_key',
   'tiktok_openai_model',

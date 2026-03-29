@@ -3,8 +3,8 @@ import path from 'path';
 import { prepare, getDataRoot } from '../../config/database.js';
 import { getTikTokSettings, getSiteBaseUrl, isVideoAutomationEnabled } from './tiktokSettings.js';
 import { selectDealForTikTok } from './tiktokDealSelector.js';
-import { generateTikTokScript } from './tiktokScriptService.js';
-import { synthesizeOpenAITts } from './tiktokTtsService.js';
+import { generateVideoScript } from './tiktokScriptService.js';
+import { synthesizeVideoTts } from './tiktokTtsService.js';
 import { renderTikTokVideo } from './tiktokVideoRenderer.js';
 
 let engineBusy = false;
@@ -30,6 +30,27 @@ function ensureDir(d) {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 }
 
+function assertVideoEngineReady(settings) {
+  const llm = (settings.video_llm_provider || 'template').trim().toLowerCase();
+  if (llm === 'openai' && !(settings.tiktok_openai_api_key || '').trim()) {
+    throw new Error('LLM is OpenAI — add an OpenAI API key in Short videos → Settings');
+  }
+  if (llm === 'gemini' && !(settings.gemini_api_key || '').trim()) {
+    throw new Error('LLM is Gemini — add a Gemini API key (free: Google AI Studio)');
+  }
+  const tts = (settings.video_tts_provider || 'edge').trim().toLowerCase();
+  if (tts === 'openai' && !(settings.tiktok_openai_api_key || '').trim()) {
+    throw new Error('TTS is OpenAI — add an OpenAI API key');
+  }
+}
+
+function llmModelLabel(settings) {
+  const llm = (settings.video_llm_provider || 'template').trim().toLowerCase();
+  if (llm === 'openai') return (settings.tiktok_openai_model || 'gpt-4o-mini').trim();
+  if (llm === 'gemini') return (settings.gemini_model || 'gemini-2.0-flash').trim();
+  return 'template';
+}
+
 /**
  * Create job row and return { jobId, dealId }.
  * @param {number|null} dealId — optional; if set, creates video for that deal only (no discount rule).
@@ -37,10 +58,7 @@ function ensureDir(d) {
  */
 export async function startTikTokJob(dealId = null, opts = {}) {
   const settings = getTikTokSettings();
-  const key = (settings.tiktok_openai_api_key || '').trim();
-  if (!key) {
-    throw new Error('Video engine: add OpenAI API key in admin settings');
-  }
+  assertVideoEngineReady(settings);
 
   const minDiscount = Math.max(0, parseInt(settings.tiktok_min_discount || '15', 10) || 15);
   const repeatDays = Math.max(1, parseInt(settings.tiktok_repeat_days || '14', 10) || 14);
@@ -71,10 +89,8 @@ export async function startTikTokJob(dealId = null, opts = {}) {
  */
 export async function processTikTokJob(jobId) {
   const settings = getTikTokSettings();
-  const key = (settings.tiktok_openai_api_key || '').trim();
-  const model = (settings.tiktok_openai_model || 'gpt-4o-mini').trim();
-  const ttsModel = (settings.tiktok_tts_model || 'tts-1').trim();
-  const ttsVoice = (settings.tiktok_tts_voice || 'alloy').trim();
+  assertVideoEngineReady(settings);
+  const modelTag = llmModelLabel(settings);
   const siteBase = getSiteBaseUrl(settings);
 
   const jobRow = prepare(`
@@ -119,11 +135,7 @@ export async function processTikTokJob(jobId) {
       category_name: jobRow.category_name
     };
 
-    const script = await generateTikTokScript({
-      apiKey: key,
-      model,
-      deal
-    });
+    const script = await generateVideoScript(settings, deal);
 
     const hashtags = Array.isArray(script.hashtags) ? script.hashtags.map(h => (h.startsWith('#') ? h : `#${h}`)).join(' ') : '';
     const caption = [script.caption || '', hashtags].filter(Boolean).join('\n\n');
@@ -161,19 +173,13 @@ export async function processTikTokJob(jobId) {
       caption,
       hashtags,
       trackingUrl,
-      model,
+      modelTag,
       jobId
     );
 
     await downloadToFile(deal.image_url, imagePath);
 
-    await synthesizeOpenAITts({
-      apiKey: key,
-      model: ttsModel,
-      voice: ttsVoice,
-      text: script.narration,
-      outPath: audioPath
-    });
+    await synthesizeVideoTts(settings, script.narration, audioPath);
 
     const { durationSec, sizeBytes } = await renderTikTokVideo({
       workDir,
@@ -223,8 +229,10 @@ export async function runDailyVideoJobIfEnabled() {
     console.log('📹 Video auto-run: skipped (engine busy)');
     return;
   }
-  if (!(s.tiktok_openai_api_key || '').trim()) {
-    console.log('📹 Video auto-run: skipped (no OpenAI API key)');
+  try {
+    assertVideoEngineReady(s);
+  } catch (e) {
+    console.log('📹 Video auto-run: skipped —', e.message);
     return;
   }
 

@@ -28,6 +28,10 @@ export default function TikTokStudio() {
   const [settings, setSettings] = useState({
     video_engine_auto_enabled: 'false',
     video_utm_source: 'short_video',
+    video_llm_provider: 'template',
+    video_tts_provider: 'edge',
+    gemini_model: 'gemini-2.0-flash',
+    edge_tts_voice: 'en-US-AriaNeural',
     tiktok_enabled: 'false',
     tiktok_openai_model: 'gpt-4o-mini',
     tiktok_tts_model: 'tts-1',
@@ -36,9 +40,11 @@ export default function TikTokStudio() {
     tiktok_site_base_url: '',
     tiktok_min_discount: '15',
     tiktok_repeat_days: '14',
-    tiktok_openai_key_configured: false
+    tiktok_openai_key_configured: false,
+    gemini_key_configured: false
   });
   const [openaiKeyInput, setOpenaiKeyInput] = useState('');
+  const [geminiKeyInput, setGeminiKeyInput] = useState('');
   const [dealIdInput, setDealIdInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,8 +99,12 @@ export default function TikTokStudio() {
       if (openaiKeyInput.trim()) {
         payload.tiktok_openai_api_key = openaiKeyInput.trim();
       }
+      if (geminiKeyInput.trim()) {
+        payload.gemini_api_key = geminiKeyInput.trim();
+      }
       await api.saveTikTokSettings(payload);
       setOpenaiKeyInput('');
+      setGeminiKeyInput('');
       await loadSettings();
       setMessage({ type: 'ok', text: 'Settings saved.' });
     } catch (e) {
@@ -169,8 +179,8 @@ export default function TikTokStudio() {
             Short-form video engine
           </h1>
           <p className="text-midnight-400">
-            Create 9:16 MP4 + English voiceover here. That is separate from posting to TikTok — use the “TikTok (publish)” tab for that workflow.
-            OpenAI keys stay in Settings (server only).
+            Create 9:16 MP4 + English voiceover here. Default mode uses a <strong>free template script</strong> and <strong>Edge TTS (no API key)</strong> — configure in Settings. Optional: Google Gemini (free API key) or OpenAI for richer copy.
+            Posting to TikTok remains separate — see “TikTok (publish)”.
           </p>
           <p className="text-sm text-midnight-300 mt-2 rounded-lg bg-midnight-800/60 border border-midnight-600/50 px-3 py-2" dir="rtl">
             <strong className="text-gold-400">איפה מפעילים:</strong> טאב <strong>Create video</strong> (הרצה ידנית) או מעמוד{' '}
@@ -354,49 +364,154 @@ export default function TikTokStudio() {
             />
             <p className="text-xs text-midnight-500 mt-1">Example: short_video, instagram, tiktok_manual — used in <code className="text-midnight-400">utm_source</code> on click tracking URLs.</p>
           </div>
-          <div>
-            <label className="block text-sm text-midnight-300 mb-1">OpenAI API key</label>
-            <p className="text-xs text-midnight-500 mb-1">
-              {settings.tiktok_openai_key_configured ? 'Key is stored. Paste a new key only to replace it.' : 'Not configured yet.'}
+
+          <div className="border border-midnight-600 rounded-lg p-4 space-y-4 bg-midnight-900/20">
+            <h3 className="text-sm font-semibold text-gold-300">Script (LLM) — no OpenAI required</h3>
+            <p className="text-xs text-midnight-400" dir="rtl">
+              ברירת מחדל: <strong>Template</strong> = תסריט אנגלית אוטומטי מהמחיר והכותרת (בלי API).
+              <strong> Gemini</strong> = טקסט חכם יותר עם מפתח חינמי מ־
+              <a href="https://aistudio.google.com/apikey" className="text-gold-400 underline" target="_blank" rel="noreferrer">Google AI Studio</a>.
             </p>
-            <input
-              type="password"
-              className="input-dark w-full font-mono text-sm"
-              value={openaiKeyInput}
-              onChange={e => setOpenaiKeyInput(e.target.value)}
-              placeholder="sk-…"
-              autoComplete="off"
-            />
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-midnight-300 mb-1">Chat model</label>
-              <input
-                className="input-dark w-full"
-                value={settings.tiktok_openai_model}
-                onChange={e => setSettings({ ...settings, tiktok_openai_model: e.target.value })}
-              />
+              <label className="block text-sm text-midnight-300 mb-1">Script source</label>
+              <select
+                className="input-dark w-full max-w-lg"
+                value={settings.video_llm_provider || 'template'}
+                onChange={e => setSettings({ ...settings, video_llm_provider: e.target.value })}
+              >
+                <option value="template">Template (free, no API)</option>
+                <option value="gemini">Google Gemini (free tier API key)</option>
+                <option value="openai">OpenAI</option>
+              </select>
             </div>
-            <div>
-              <label className="block text-sm text-midnight-300 mb-1">TTS model</label>
-              <input
-                className="input-dark w-full"
-                value={settings.tiktok_tts_model}
-                onChange={e => setSettings({ ...settings, tiktok_tts_model: e.target.value })}
-              />
-            </div>
+            {(settings.video_llm_provider || 'template') === 'gemini' && (
+              <>
+                <div>
+                  <label className="block text-sm text-midnight-300 mb-1">Gemini API key</label>
+                  <p className="text-xs text-midnight-500 mb-1">
+                    {settings.gemini_key_configured ? 'Key saved — paste only to replace.' : 'Not set.'}
+                  </p>
+                  <input
+                    type="password"
+                    className="input-dark w-full font-mono text-sm"
+                    value={geminiKeyInput}
+                    onChange={e => setGeminiKeyInput(e.target.value)}
+                    placeholder="AIza…"
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-midnight-300 mb-1">Gemini model id</label>
+                  <input
+                    className="input-dark w-full font-mono max-w-lg"
+                    value={settings.gemini_model || 'gemini-2.0-flash'}
+                    onChange={e => setSettings({ ...settings, gemini_model: e.target.value })}
+                    placeholder="gemini-2.0-flash"
+                  />
+                  <p className="text-xs text-midnight-500 mt-1">Try gemini-2.0-flash or gemini-1.5-flash if a model is unavailable in your region.</p>
+                </div>
+              </>
+            )}
+            {(settings.video_llm_provider || 'template') === 'openai' && (
+              <>
+                <div>
+                  <label className="block text-sm text-midnight-300 mb-1">OpenAI API key</label>
+                  <p className="text-xs text-midnight-500 mb-1">
+                    {settings.tiktok_openai_key_configured ? 'Key stored.' : 'Not configured.'}
+                  </p>
+                  <input
+                    type="password"
+                    className="input-dark w-full font-mono text-sm"
+                    value={openaiKeyInput}
+                    onChange={e => setOpenaiKeyInput(e.target.value)}
+                    placeholder="sk-…"
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-midnight-300 mb-1">OpenAI chat model</label>
+                  <input
+                    className="input-dark w-full max-w-md"
+                    value={settings.tiktok_openai_model}
+                    onChange={e => setSettings({ ...settings, tiktok_openai_model: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <div>
-            <label className="block text-sm text-midnight-300 mb-1">TTS voice</label>
-            <select
-              className="input-dark w-full max-w-md"
-              value={settings.tiktok_tts_voice}
-              onChange={e => setSettings({ ...settings, tiktok_tts_voice: e.target.value })}
-            >
-              {['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'].map(v => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
+
+          <div className="border border-midnight-600 rounded-lg p-4 space-y-4 bg-midnight-900/20">
+            <h3 className="text-sm font-semibold text-gold-300">Voice (TTS)</h3>
+            <p className="text-xs text-midnight-400" dir="rtl">
+              ברירת מחדל: <strong>Microsoft Edge TTS</strong> (ללא מפתח). לשימוש מסחרי בדוק את תנאי השירות של מיקרוסoft.
+            </p>
+            <div>
+              <label className="block text-sm text-midnight-300 mb-1">TTS engine</label>
+              <select
+                className="input-dark w-full max-w-lg"
+                value={settings.video_tts_provider || 'edge'}
+                onChange={e => setSettings({ ...settings, video_tts_provider: e.target.value })}
+              >
+                <option value="edge">Edge / Bing online (no API key)</option>
+                <option value="openai">OpenAI speech (needs OpenAI key)</option>
+              </select>
+            </div>
+            {(settings.video_tts_provider || 'edge') === 'edge' && (
+              <div>
+                <label className="block text-sm text-midnight-300 mb-1">Edge voice id (English)</label>
+                <select
+                  className="input-dark w-full max-w-lg font-mono text-sm"
+                  value={settings.edge_tts_voice || 'en-US-AriaNeural'}
+                  onChange={e => setSettings({ ...settings, edge_tts_voice: e.target.value })}
+                >
+                  {['en-US-AriaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural', 'en-GB-SoniaNeural', 'en-AU-NatashaNeural'].map(v => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {(settings.video_tts_provider || 'edge') === 'openai' && (
+              <div className="space-y-4">
+                {(settings.video_llm_provider || 'template') !== 'openai' && (
+                  <div>
+                    <label className="block text-sm text-midnight-300 mb-1">OpenAI API key (for TTS)</label>
+                    <p className="text-xs text-midnight-500 mb-1">
+                      {settings.tiktok_openai_key_configured ? 'Key stored — paste to replace.' : 'Required for OpenAI speech.'}
+                    </p>
+                    <input
+                      type="password"
+                      className="input-dark w-full font-mono text-sm"
+                      value={openaiKeyInput}
+                      onChange={e => setOpenaiKeyInput(e.target.value)}
+                      placeholder="sk-…"
+                      autoComplete="off"
+                    />
+                  </div>
+                )}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-midnight-300 mb-1">OpenAI TTS model</label>
+                    <input
+                      className="input-dark w-full"
+                      value={settings.tiktok_tts_model}
+                      onChange={e => setSettings({ ...settings, tiktok_tts_model: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-midnight-300 mb-1">OpenAI TTS voice</label>
+                    <select
+                      className="input-dark w-full"
+                      value={settings.tiktok_tts_voice}
+                      onChange={e => setSettings({ ...settings, tiktok_tts_voice: e.target.value })}
+                    >
+                      {['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'].map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm text-midnight-300 mb-1">Cron (server time)</label>

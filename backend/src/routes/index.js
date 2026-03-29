@@ -522,6 +522,11 @@ router.put('/admin/settings', authenticateToken, requireRole('admin'), (req, res
 const TIKTOK_SETTING_KEYS = [
   'video_engine_auto_enabled',
   'video_utm_source',
+  'video_llm_provider',
+  'video_tts_provider',
+  'gemini_api_key',
+  'gemini_model',
+  'edge_tts_voice',
   'tiktok_enabled',
   'tiktok_openai_api_key',
   'tiktok_openai_model',
@@ -537,9 +542,12 @@ router.get('/admin/tiktok/settings', authenticateToken, requireRole('admin'), (r
   try {
     const raw = getTikTokSettings();
     const openaiKey = (raw.tiktok_openai_api_key || '').trim();
+    const geminiKey = (raw.gemini_api_key || '').trim();
     const safe = { ...raw };
     delete safe.tiktok_openai_api_key;
+    delete safe.gemini_api_key;
     safe.tiktok_openai_key_configured = openaiKey.length > 0;
+    safe.gemini_key_configured = geminiKey.length > 0;
     res.json(safe);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -553,13 +561,13 @@ router.put('/admin/tiktok/settings', authenticateToken, requireRole('admin'), (r
     for (const key of TIKTOK_SETTING_KEYS) {
       if (body[key] === undefined) continue;
 
-      if (key === 'tiktok_openai_api_key') {
+      if (key === 'tiktok_openai_api_key' || key === 'gemini_api_key') {
         const v = String(body[key] || '').trim();
         if (!v) continue;
         prepare(`
-          INSERT INTO settings (key, value, updated_at) VALUES ('tiktok_openai_api_key', ?, CURRENT_TIMESTAMP)
+          INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
           ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
-        `).run(v);
+        `).run(key, v);
         continue;
       }
 
