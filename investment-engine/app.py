@@ -16,6 +16,19 @@ from datetime import datetime
 
 from src.backtest.runner import run_backtest, run_optimization
 from src.config.symbols import DEFAULT_SYMBOLS
+from src.config.apote_config import HIGH_RISK_SYMBOLS, MEDIUM_RISK_SYMBOLS, LOW_RISK_SYMBOLS
+
+
+def _symbol_to_level(symbol: str) -> str:
+    """מחזיר רמת סיכון לפי סימול"""
+    s = str(symbol).upper()
+    if s in HIGH_RISK_SYMBOLS:
+        return "סיכון גבוה"
+    if s in MEDIUM_RISK_SYMBOLS:
+        return "סיכון בינוני"
+    if s in LOW_RISK_SYMBOLS:
+        return "סיכון נמוך"
+    return "—"
 
 
 st.set_page_config(
@@ -27,6 +40,13 @@ st.set_page_config(
 
 st.title("📈 מנוע השקעות אוטומטי")
 st.subheader("Backtest – בדיקת אסטרטגיה על נתוני עבר")
+
+# תאריך ושעה מלאים – מתי הרצה אחרונה
+_run_time = st.session_state.get("last_run_timestamp")
+if _run_time:
+    st.caption(f"🕐 **רץ אחרון:** {_run_time}")
+else:
+    st.caption(f"🕐 **זמן עדכון:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # --- Sidebar: הגדרות ---
 with st.sidebar:
@@ -97,6 +117,7 @@ if optimize_btn:
                 st.session_state["last_metrics"] = best_metrics
                 st.session_state["best_params"] = best_params
                 st.session_state["optimized"] = True
+                st.session_state["last_run_timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.success("✅ אופטימיזציה הושלמה! פרמטרים אופטימליים:")
                 st.json({
                     "Stop-Loss": f"{int(best_params.get('stop_loss_pct', 0)*100)}%",
@@ -129,6 +150,7 @@ if run_btn:
                 st.session_state["last_results"] = results
                 st.session_state["last_cerebro"] = cerebro
                 st.session_state["optimized"] = False
+                st.session_state["last_run_timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.success("✅ Backtest הושלם בהצלחה!")
             except Exception as e:
                 st.error(f"❌ שגיאה: {e}")
@@ -188,6 +210,14 @@ if "last_metrics" in st.session_state:
     trades_detail = metrics.get("trades_detail", [])
     if trades_detail:
         st.subheader("📋 פירוט עסקאות")
+        # סיכום לפי רמה
+        _levels = [t.get("symbol") for t in trades_detail]
+        _level_counts = {}
+        for s in _levels:
+            lvl = _symbol_to_level(s)
+            _level_counts[lvl] = _level_counts.get(lvl, 0) + 1
+        if _level_counts:
+            st.caption(" | ".join([f"{k}: {v} עסקאות" for k, v in _level_counts.items()]))
         df_trades = pd.DataFrame(trades_detail)
 
         def _fix_date(val):
@@ -208,9 +238,26 @@ if "last_metrics" in st.session_state:
         if "exit_date" in df_trades.columns:
             df_trades["exit_date"] = df_trades["exit_date"].apply(_fix_date)
 
+        # הוספת רמת סיכון לכל עסקה
+        df_trades["level"] = df_trades["symbol"].apply(_symbol_to_level)
+
+        # הוספת "מה קרה" – מה באמת קרה בהיסטוריה: קניה/מכירה, שיא/שפל, תוצאה
+        if "what_happened" not in df_trades.columns:
+            def _build_what_happened(row):
+                ed = row.get("entry_date") or ""
+                exd = row.get("exit_date") or ""
+                ep = row.get("entry_price") or 0
+                exp = row.get("exit_price") or 0
+                pnl = row.get("pnl", 0) or 0
+                pct = row.get("pct", 0) or 0
+                return f"קניה {ed} ב-${ep:.2f} → מכירה {exd} ב-${exp:.2f}. תוצאה: {'רווח' if pnl >= 0 else 'הפסד'} ${abs(pnl):,.2f} ({pct:+.1f}%)"
+            df_trades["what_happened"] = df_trades.apply(_build_what_happened, axis=1)
+
         # מיפוי עמודות לעברית
         col_map = {
             "symbol": "מוצר",
+            "level": "רמה",
+            "what_happened": "מה קרה",
             "entry_price": "מחיר קניה",
             "exit_price": "מחיר מכירה",
             "qty": "כמות",
@@ -224,8 +271,8 @@ if "last_metrics" in st.session_state:
             "exit_date": "תאריך מכירה",
         }
         df_display = df_trades.rename(columns=col_map)
-        # סדר עמודות מועדף – כולל תאריכים
-        display_cols = ["מוצר", "תאריך קניה", "תאריך מכירה", "מחיר קניה", "מחיר מכירה", "כמות", "עלות קניה", "עלות מכירה", "אחוז", "רווח/הפסד", "מגמה", "סוג"]
+        # סדר עמודות מועדף – כולל "מה קרה"
+        display_cols = ["מוצר", "רמה", "מה קרה", "תאריך קניה", "תאריך מכירה", "מחיר קניה", "מחיר מכירה", "כמות", "עלות קניה", "עלות מכירה", "אחוז", "רווח/הפסד", "מגמה", "סוג"]
         display_cols = [c for c in display_cols if c in df_display.columns]
         df_display = df_display[display_cols]
 
