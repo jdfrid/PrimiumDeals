@@ -21,6 +21,24 @@ const tabs = [
   { id: 'config', label: 'Settings & keys', icon: Settings }
 ];
 
+/** Keys persisted by PUT /admin/tiktok/settings (must match backend). Never include *_configured or secrets from state. */
+const SETTINGS_PAYLOAD_KEYS = [
+  'video_engine_auto_enabled',
+  'video_utm_source',
+  'video_llm_provider',
+  'video_tts_provider',
+  'gemini_model',
+  'edge_tts_voice',
+  'tiktok_enabled',
+  'tiktok_openai_model',
+  'tiktok_tts_model',
+  'tiktok_tts_voice',
+  'tiktok_cron',
+  'tiktok_site_base_url',
+  'tiktok_min_discount',
+  'tiktok_repeat_days'
+];
+
 export default function TikTokStudio() {
   const [tab, setTab] = useState('dashboard');
   const [busy, setBusy] = useState(false);
@@ -95,12 +113,26 @@ export default function TikTokStudio() {
     setSaving(true);
     setMessage(null);
     try {
-      const payload = { ...settings };
+      const payload = {};
+      for (const k of SETTINGS_PAYLOAD_KEYS) {
+        const v = settings[k];
+        if (v === undefined || v === null) continue;
+        payload[k] = typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v);
+      }
       if (openaiKeyInput.trim()) {
         payload.tiktok_openai_api_key = openaiKeyInput.trim();
       }
       if (geminiKeyInput.trim()) {
         payload.gemini_api_key = geminiKeyInput.trim();
+      }
+      if (
+        (settings.video_llm_provider || 'template') === 'gemini' &&
+        !geminiKeyInput.trim() &&
+        !settings.gemini_key_configured
+      ) {
+        setMessage({ type: 'error', text: 'נא להדביק את מפתח ה-Gemini (AIza…) לפני שמירה.' });
+        setSaving(false);
+        return;
       }
       await api.saveTikTokSettings(payload);
       setOpenaiKeyInput('');
@@ -392,12 +424,15 @@ export default function TikTokStudio() {
                     {settings.gemini_key_configured ? 'Key saved — paste only to replace.' : 'Not set.'}
                   </p>
                   <input
-                    type="password"
+                    type="text"
                     className="input-dark w-full font-mono text-sm"
                     value={geminiKeyInput}
                     onChange={e => setGeminiKeyInput(e.target.value)}
                     placeholder="AIza…"
                     autoComplete="off"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    spellCheck={false}
                   />
                 </div>
                 <div>

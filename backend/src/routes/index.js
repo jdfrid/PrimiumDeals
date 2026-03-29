@@ -538,7 +538,7 @@ const TIKTOK_SETTING_KEYS = [
   'tiktok_repeat_days'
 ];
 
-router.get('/admin/tiktok/settings', authenticateToken, requireRole('admin'), (req, res) => {
+router.get('/admin/tiktok/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const raw = getTikTokSettings();
     const openaiKey = (raw.tiktok_openai_api_key || '').trim();
@@ -554,7 +554,7 @@ router.get('/admin/tiktok/settings', authenticateToken, requireRole('admin'), (r
   }
 });
 
-router.put('/admin/tiktok/settings', authenticateToken, requireRole('admin'), (req, res) => {
+router.put('/admin/tiktok/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const body = req.body || {};
     let cronChanged = false;
@@ -588,15 +588,15 @@ router.put('/admin/tiktok/settings', authenticateToken, requireRole('admin'), (r
   }
 });
 
-router.get('/admin/tiktok/status', authenticateToken, requireRole('admin'), (req, res) => {
+router.get('/admin/tiktok/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   res.json({ busy: isTikTokEngineBusy() });
 });
 
-router.get('/admin/video-engine/status', authenticateToken, requireRole('admin'), (req, res) => {
+router.get('/admin/video-engine/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   res.json({ busy: isVideoEngineBusy() });
 });
 
-router.get('/admin/tiktok/jobs', authenticateToken, requireRole('admin'), (req, res) => {
+router.get('/admin/tiktok/jobs', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '40', 10)));
     const rows = prepare(
@@ -618,7 +618,7 @@ router.get('/admin/tiktok/jobs', authenticateToken, requireRole('admin'), (req, 
   }
 });
 
-router.get('/admin/tiktok/jobs/:id', authenticateToken, requireRole('admin'), (req, res) => {
+router.get('/admin/tiktok/jobs/:id', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const row = prepare(
@@ -656,11 +656,11 @@ const runVideoEngineHandler = async (req, res) => {
 };
 
 /** Generate MP4 + script only — no TikTok upload. */
-router.post('/admin/video-engine/run', authenticateToken, requireRole('admin'), runVideoEngineHandler);
+router.post('/admin/video-engine/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
 
-router.post('/admin/tiktok/run', authenticateToken, requireRole('admin'), runVideoEngineHandler);
+router.post('/admin/tiktok/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
 
-router.post('/admin/tiktok/jobs/:id/retry', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/admin/tiktok/jobs/:id/retry', authenticateToken, requireRole('admin', 'editor'), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { jobId } = await retryTikTokJobBackground(id);
@@ -670,7 +670,7 @@ router.post('/admin/tiktok/jobs/:id/retry', authenticateToken, requireRole('admi
   }
 });
 
-router.get('/admin/tiktok/jobs/:id/download', authenticateToken, requireRole('admin'), (req, res) => {
+router.get('/admin/tiktok/jobs/:id/download', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const row = prepare(`SELECT file_path FROM tiktok_video_outputs WHERE job_id = ?`).get(id);
