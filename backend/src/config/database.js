@@ -439,11 +439,12 @@ export function prepare(sql) {
     },
     run: (...params) => {
       db.run(sql, params);
+      // Must read rowid/changes before saveDatabase(): db.export() reopens the connection
+      // and resets last_insert_rowid() / rows-modified on the new handle.
+      const lastInsertRowid = db.exec('SELECT last_insert_rowid()')[0]?.values[0][0];
+      const changes = db.getRowsModified();
       saveDatabase();
-      return { 
-        lastInsertRowid: db.exec("SELECT last_insert_rowid()")[0]?.values[0][0],
-        changes: db.getRowsModified()
-      };
+      return { lastInsertRowid, changes };
     }
   };
 }
