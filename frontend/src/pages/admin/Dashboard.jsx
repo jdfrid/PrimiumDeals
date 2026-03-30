@@ -46,7 +46,7 @@ export default function Dashboard() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          <a href="/admin/tiktok" className="glass rounded-xl p-4 ring-1 ring-gold-500/30 hover:bg-gold-500/10 transition-colors">
+          <a href="/admin/video-studio" className="glass rounded-xl p-4 ring-1 ring-gold-500/30 hover:bg-gold-500/10 transition-colors">
             <Video className="text-gold-400 mb-2" size={24} />
             <p className="font-medium text-gold-200">Short promo videos</p>
             <p className="text-sm text-midnight-400 mt-1">

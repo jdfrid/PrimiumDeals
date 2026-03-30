@@ -199,16 +199,17 @@ class ApiService {
     return this.request('/providers', { method: 'POST', body: JSON.stringify({ providers }) });
   }
 
+  /** Neutral path — some proxies/WAFs block URLs containing "tiktok". */
   async getTikTokSettings() {
-    return this.request('/admin/tiktok/settings');
+    return this.request('/admin/video-studio/settings');
   }
 
   async saveTikTokSettings(data) {
-    return this.request('/admin/tiktok/settings', { method: 'PUT', body: JSON.stringify(data) });
+    return this.request('/admin/video-studio/settings', { method: 'PUT', body: JSON.stringify(data) });
   }
 
   async getTikTokStatus() {
-    return this.request('/admin/tiktok/status');
+    return this.request('/admin/video-studio/status');
   }
 
   async getVideoEngineStatus() {
@@ -216,11 +217,11 @@ class ApiService {
   }
 
   async getTikTokJobs(limit = 40) {
-    return this.request(`/admin/tiktok/jobs?limit=${limit}`);
+    return this.request(`/admin/video-studio/jobs?limit=${limit}`);
   }
 
   async getTikTokJob(id) {
-    return this.request(`/admin/tiktok/jobs/${id}`);
+    return this.request(`/admin/video-studio/jobs/${id}`);
   }
 
   async runTikTokJob(dealId = null) {
@@ -236,14 +237,14 @@ class ApiService {
   }
 
   async retryTikTokJob(jobId) {
-    return this.request(`/admin/tiktok/jobs/${jobId}/retry`, { method: 'POST', body: JSON.stringify({}) });
+    return this.request(`/admin/video-studio/jobs/${jobId}/retry`, { method: 'POST', body: JSON.stringify({}) });
   }
 
   async downloadTikTokVideo(jobId) {
     const headers = {
       Authorization: `Bearer ${this.getToken()}`
     };
-    const res = await fetch(`${API_BASE}/admin/tiktok/jobs/${jobId}/download`, { headers });
+    const res = await fetch(`${API_BASE}/admin/video-studio/jobs/${jobId}/download`, { headers });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Download failed');

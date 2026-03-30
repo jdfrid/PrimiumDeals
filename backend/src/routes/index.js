@@ -542,7 +542,25 @@ const TIKTOK_SETTING_KEYS = [
   'tiktok_repeat_days'
 ];
 
-router.get('/admin/tiktok/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+const runVideoEngineHandler = async (req, res) => {
+  try {
+    const raw = req.body?.dealId;
+    const dealId =
+      raw != null && raw !== '' ? parseInt(String(raw), 10) : null;
+    if (dealId !== null && Number.isNaN(dealId)) {
+      return res.status(400).json({ error: 'Invalid dealId' });
+    }
+    const { jobId } = await enqueueVideoJob(dealId);
+    res.json({ jobId, status: 'started', mode: 'video_only' });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+};
+
+/** Short-form video admin JSON API. Mounted at /admin/tiktok (legacy) and /admin/video-studio (avoids some WAF/CDN blocks on "tiktok" in the path). */
+const videoStudioApi = express.Router();
+
+videoStudioApi.get('/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const raw = getTikTokSettings();
     const openaiKey = (raw.tiktok_openai_api_key || '').trim();
@@ -558,7 +576,7 @@ router.get('/admin/tiktok/settings', authenticateToken, requireRole('admin', 'ed
   }
 });
 
-router.put('/admin/tiktok/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+videoStudioApi.put('/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const body = req.body || {};
     let cronChanged = false;
@@ -592,15 +610,11 @@ router.put('/admin/tiktok/settings', authenticateToken, requireRole('admin', 'ed
   }
 });
 
-router.get('/admin/tiktok/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+videoStudioApi.get('/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   res.json({ busy: isTikTokEngineBusy() });
 });
 
-router.get('/admin/video-engine/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  res.json({ busy: isVideoEngineBusy() });
-});
-
-router.get('/admin/tiktok/jobs', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+videoStudioApi.get('/jobs', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '40', 10)));
     const rows = prepare(
@@ -622,7 +636,7 @@ router.get('/admin/tiktok/jobs', authenticateToken, requireRole('admin', 'editor
   }
 });
 
-router.get('/admin/tiktok/jobs/:id', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+videoStudioApi.get('/jobs/:id', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const row = prepare(
@@ -644,27 +658,9 @@ router.get('/admin/tiktok/jobs/:id', authenticateToken, requireRole('admin', 'ed
   }
 });
 
-const runVideoEngineHandler = async (req, res) => {
-  try {
-    const raw = req.body?.dealId;
-    const dealId =
-      raw != null && raw !== '' ? parseInt(String(raw), 10) : null;
-    if (dealId !== null && Number.isNaN(dealId)) {
-      return res.status(400).json({ error: 'Invalid dealId' });
-    }
-    const { jobId } = await enqueueVideoJob(dealId);
-    res.json({ jobId, status: 'started', mode: 'video_only' });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-};
+videoStudioApi.post('/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
 
-/** Generate MP4 + script only — no TikTok upload. */
-router.post('/admin/video-engine/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
-
-router.post('/admin/tiktok/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
-
-router.post('/admin/tiktok/jobs/:id/retry', authenticateToken, requireRole('admin', 'editor'), async (req, res) => {
+videoStudioApi.post('/jobs/:id/retry', authenticateToken, requireRole('admin', 'editor'), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { jobId } = await retryTikTokJobBackground(id);
@@ -674,7 +670,7 @@ router.post('/admin/tiktok/jobs/:id/retry', authenticateToken, requireRole('admi
   }
 });
 
-router.get('/admin/tiktok/jobs/:id/download', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+videoStudioApi.get('/jobs/:id/download', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const row = prepare(`SELECT file_path FROM tiktok_video_outputs WHERE job_id = ?`).get(id);
@@ -686,6 +682,16 @@ router.get('/admin/tiktok/jobs/:id/download', authenticateToken, requireRole('ad
     res.status(500).json({ error: e.message });
   }
 });
+
+router.use('/admin/tiktok', videoStudioApi);
+router.use('/admin/video-studio', videoStudioApi);
+
+router.get('/admin/video-engine/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+  res.json({ busy: isVideoEngineBusy() });
+});
+
+/** Generate MP4 + script only — no TikTok upload. */
+router.post('/admin/video-engine/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
 
 // Admin: View click analytics
 router.get('/analytics/clicks', authenticateToken, (req, res) => {

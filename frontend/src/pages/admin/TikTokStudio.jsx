@@ -21,7 +21,7 @@ const tabs = [
   { id: 'config', label: 'Settings & keys', icon: Settings }
 ];
 
-/** Keys persisted by PUT /admin/tiktok/settings (must match backend). Never include *_configured or secrets from state. */
+/** Keys persisted by PUT /admin/video-studio/settings (must match backend). Never include *_configured or secrets from state. */
 const SETTINGS_PAYLOAD_KEYS = [
   'video_engine_auto_enabled',
   'video_utm_source',

@@ -60,7 +60,7 @@ export default function DealsManager() {
         <div>
           <h1 className="text-2xl font-bold mb-1">Deals Manager</h1>
           <p className="text-midnight-400">Manage all your eBay deals</p>
-          <a href="/admin/tiktok" className="inline-flex items-center gap-1 text-sm text-gold-400 hover:text-gold-300 mt-2">
+          <a href="/admin/video-studio" className="inline-flex items-center gap-1 text-sm text-gold-400 hover:text-gold-300 mt-2">
             → Short promo videos (full studio + auto settings)
           </a>
         </div>
@@ -77,7 +77,7 @@ export default function DealsManager() {
         <strong className="text-gold-400">יצירת וידאו לפריט:</strong>{' '}
         לחץ על אייקון <span className="inline-flex align-middle text-gold-300"><Film size={14} className="inline" /></span>{' '}
         (סרט) בשורת הפעולות — או פתח{' '}
-        <a href="/admin/tiktok" className="text-gold-400 underline">Short videos</a>
+        <a href="/admin/video-studio" className="text-gold-400 underline">Short videos</a>
         {' '}למסך מלא, הרצה אוטומטית יומית והורדת MP4.
       </div>
       <div className="mb-6">
