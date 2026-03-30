@@ -415,6 +415,9 @@ export default function TikTokStudio() {
                 <option value="gemini">Google Gemini (free tier API key)</option>
                 <option value="openai">OpenAI</option>
               </select>
+              <p className="text-xs text-midnight-500 mt-1">
+                If Gemini or OpenAI returns a quota / rate limit (429), this run automatically uses the free Template script so the MP4 still renders.
+              </p>
             </div>
             {(settings.video_llm_provider || 'template') === 'gemini' && (
               <>

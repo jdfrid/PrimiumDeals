@@ -37,6 +37,18 @@ ${was && was > price ? `Original price: ${currency} ${was.toFixed(2)}\nDiscount:
 Choose the strongest angle for this product.`;
 }
 
+/** When Gemini/OpenAI returns 429 or quota errors, use template so the MP4 still completes. */
+function isLlmQuotaOrRateLimitError(err) {
+  const m = String(err?.message || err || '').toLowerCase();
+  return (
+    m.includes('429') ||
+    m.includes('quota') ||
+    m.includes('rate limit') ||
+    m.includes('too many requests') ||
+    m.includes('resource exhausted')
+  );
+}
+
 function parseScriptJson(raw, sourceLabel) {
   let parsed;
   try {
@@ -169,21 +181,37 @@ export async function generateVideoScript(settings, deal) {
   if (p === 'openai') {
     const key = (settings.tiktok_openai_api_key || '').trim();
     if (!key) throw new Error('OpenAI selected but no API key configured');
-    return generateScriptOpenAI({
-      apiKey: key,
-      model: settings.tiktok_openai_model,
-      deal
-    });
+    try {
+      return await generateScriptOpenAI({
+        apiKey: key,
+        model: settings.tiktok_openai_model,
+        deal
+      });
+    } catch (e) {
+      if (isLlmQuotaOrRateLimitError(e)) {
+        console.warn('[video] OpenAI quota/rate limit; using built-in template script for this job.');
+        return generateScriptTemplate({ deal });
+      }
+      throw e;
+    }
   }
 
   if (p === 'gemini') {
     const key = (settings.gemini_api_key || '').trim();
     if (!key) throw new Error('Gemini selected but no API key configured (get one free at Google AI Studio)');
-    return generateScriptGemini({
-      apiKey: key,
-      model: settings.gemini_model,
-      deal
-    });
+    try {
+      return await generateScriptGemini({
+        apiKey: key,
+        model: settings.gemini_model,
+        deal
+      });
+    } catch (e) {
+      if (isLlmQuotaOrRateLimitError(e)) {
+        console.warn('[video] Gemini quota/rate limit; using built-in template script for this job.');
+        return generateScriptTemplate({ deal });
+      }
+      throw e;
+    }
   }
 
   return generateScriptTemplate({ deal });
