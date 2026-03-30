@@ -1,6 +1,16 @@
 import fs from 'fs';
 import { ttsSave } from 'edge-tts/out/index.js';
 
+/** Edge TTS uses WSS to Microsoft; many cloud IPs get HTTP 403 on the socket handshake. */
+function isEdgeTtsConnectionBlockedError(err) {
+  const m = String(err?.message || err || '');
+  return (
+    m.includes('403') ||
+    m.includes('401') ||
+    m.toLowerCase().includes('unexpected server response')
+  );
+}
+
 export async function synthesizeOpenAITts({ apiKey, model, voice, text, outPath }) {
   const res = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
@@ -52,9 +62,28 @@ export async function synthesizeVideoTts(settings, text, outPath) {
     });
   }
 
-  return synthesizeEdgeTts({
-    text,
-    outPath,
-    voice: settings.edge_tts_voice
-  });
+  try {
+    return await synthesizeEdgeTts({
+      text,
+      outPath,
+      voice: settings.edge_tts_voice
+    });
+  } catch (e) {
+    if (!isEdgeTtsConnectionBlockedError(e)) throw e;
+    const key = (settings.tiktok_openai_api_key || '').trim();
+    if (key) {
+      console.warn('[video] Edge TTS blocked (403) from this host; using OpenAI TTS for this job.');
+      return synthesizeOpenAITts({
+        apiKey: key,
+        model: settings.tiktok_tts_model,
+        voice: settings.tiktok_tts_voice,
+        text,
+        outPath
+      });
+    }
+    throw new Error(
+      `${e.message || e} — Edge TTS is often blocked on cloud servers. ` +
+        'In Short videos → Settings, add an OpenAI API key and set Voice (TTS) to OpenAI, or run the backend from a network that can reach speech.platform.bing.com.'
+    );
+  }
 }

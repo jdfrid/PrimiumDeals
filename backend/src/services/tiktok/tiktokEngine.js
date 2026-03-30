@@ -19,7 +19,15 @@ export function isVideoEngineBusy() {
 }
 
 async function downloadToFile(url, dest) {
-  const r = await fetch(url, { redirect: 'follow' });
+  const r = await fetch(url, {
+    redirect: 'follow',
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      Referer: 'https://www.ebay.com/'
+    }
+  });
   if (!r.ok) throw new Error(`Image download failed (${r.status})`);
   const buf = Buffer.from(await r.arrayBuffer());
   if (buf.length < 500) throw new Error('Downloaded image too small');
