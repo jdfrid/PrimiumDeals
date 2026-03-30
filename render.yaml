@@ -6,6 +6,8 @@ services:
     buildCommand: "cd frontend && npm install && npx --yes vite build && cd ../backend && npm install"
     startCommand: "node backend/src/index.js"
     envVars:
+      # If the public site is served from another host (e.g. Cloudflare Pages) but API stays on Render,
+      # set VITE_API_URL=https://<this-service>.onrender.com so the SPA calls the real API (same value as custom domain pointing here is fine).
       - key: NODE_VERSION
         value: "18.19.0"
       - key: NODE_ENV

@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+/** Same convention as AdminLogin: optional full backend origin (no trailing slash). Required if the UI is hosted separately from the API. */
+const API_ORIGIN = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+const API_BASE = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 class ApiService {
   constructor() {
@@ -39,7 +41,20 @@ class ApiService {
       throw new Error('Unauthorized');
     }
 
-    const data = await response.json();
+    const raw = await response.text();
+    let data = {};
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        const hint = API_ORIGIN
+          ? `HTTP ${response.status}. The API base is ${API_BASE}.`
+          : `HTTP ${response.status}. The server returned HTML instead of JSON — often the browser hit the SPA or a CDN, not Node. Set VITE_API_URL at build time to your backend origin (e.g. https://your-service.onrender.com), rebuild, and redeploy.`;
+        throw new Error(
+          `Invalid JSON from API (${hint}) Snippet: ${raw.slice(0, 80).replace(/\s+/g, ' ')}`
+        );
+      }
+    }
 
     if (!response.ok) {
       throw new Error(data.error || 'Request failed');

@@ -50,8 +50,9 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+// Register API before static so POST /api/* never hits the SPA or a stray file under dist/.
 app.use('/api', routes);
+app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../../frontend/dist/index.html')));
 
 async function initializeAdmin() {
