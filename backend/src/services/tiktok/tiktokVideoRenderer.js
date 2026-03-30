@@ -73,9 +73,20 @@ function subtitlesFilterArg(assPath) {
   return `subtitles=${uri}`;
 }
 
+const FFPROBE_MS = 60000;
+const FFMPEG_ENCODE_MS = 600000;
+
 function runEncode({ imagePath, audioPath, outputPath, targetDur, videoFilters }) {
   return new Promise((resolve, reject) => {
-    ffmpeg()
+    let settled = false;
+    const finish = (ok, val) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(killTimer);
+      if (ok) resolve(val);
+      else reject(val);
+    };
+    const cmd = ffmpeg()
       .input(imagePath)
       .inputOptions(['-loop', '1'])
       .input(audioPath)
@@ -99,9 +110,17 @@ function runEncode({ imagePath, audioPath, outputPath, targetDur, videoFilters }
         '-shortest'
       ])
       .videoFilters(videoFilters)
-      .on('end', resolve)
-      .on('error', reject)
-      .save(outputPath);
+      .on('end', () => finish(true))
+      .on('error', err => finish(false, err));
+    const killTimer = setTimeout(() => {
+      try {
+        cmd.kill('SIGKILL');
+      } catch {
+        /* ignore */
+      }
+      finish(false, new Error(`FFmpeg encode timed out after ${FFMPEG_ENCODE_MS / 1000}s`));
+    }, FFMPEG_ENCODE_MS);
+    cmd.save(outputPath);
   });
 }
 
@@ -117,12 +136,17 @@ export async function renderTikTokVideo({
 }) {
   setBinaries();
 
-  const meta = await new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(audioPath, (err, data) => {
-      if (err) reject(err);
-      else resolve(data);
-    });
-  });
+  const meta = await Promise.race([
+    new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(audioPath, (err, data) => {
+        if (err) reject(err);
+        else resolve(data);
+      });
+    }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`ffprobe timed out after ${FFPROBE_MS / 1000}s`)), FFPROBE_MS)
+    )
+  ]);
   const audioDur = meta?.format?.duration ? Number(meta.format.duration) : 16;
   const targetDur = Math.min(25, Math.max(12, audioDur + 0.35));
 

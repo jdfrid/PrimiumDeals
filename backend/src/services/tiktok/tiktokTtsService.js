@@ -1,6 +1,9 @@
 import fs from 'fs';
 import { ttsSave } from 'edge-tts/out/index.js';
 
+const EDGE_TTS_MS = 150000;
+const GTX_FETCH_MS = 45000;
+
 const GTX_TTS_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -35,7 +38,10 @@ export async function synthesizeGoogleGtxTts({ text, outPath }) {
   for (let i = 0; i < chunks.length; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 180));
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=gtx&q=${encodeURIComponent(chunks[i])}&tl=en`;
-    const r = await fetch(url, { headers: { 'User-Agent': GTX_TTS_UA } });
+    const r = await fetch(url, {
+      headers: { 'User-Agent': GTX_TTS_UA },
+      signal: AbortSignal.timeout(GTX_FETCH_MS)
+    });
     if (!r.ok) throw new Error(`Google TTS HTTP ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.length < 80) throw new Error('Google TTS returned empty audio');
@@ -54,9 +60,17 @@ function isEdgeTtsConnectionBlockedError(err) {
   );
 }
 
+/** After Edge fails or hangs, try OpenAI / Google GTX. */
+function shouldFallbackAfterEdgeFailure(err) {
+  if (isEdgeTtsConnectionBlockedError(err)) return true;
+  const m = String(err?.message || err || '').toLowerCase();
+  return m.includes('timed out') || m.includes('timeout') || m.includes('aborted');
+}
+
 export async function synthesizeOpenAITts({ apiKey, model, voice, text, outPath }) {
   const res = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
+    signal: AbortSignal.timeout(120000),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
@@ -84,7 +98,12 @@ export async function synthesizeEdgeTts({ text, outPath, voice }) {
   const v = (voice || 'en-US-AriaNeural').trim();
   const safe = text.replace(/\s+/g, ' ').trim().slice(0, 2800);
   if (!safe) throw new Error('No narration text for TTS');
-  await ttsSave(safe, outPath, { voice: v });
+  await Promise.race([
+    ttsSave(safe, outPath, { voice: v }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Edge TTS timed out after ${EDGE_TTS_MS / 1000}s`)), EDGE_TTS_MS)
+    )
+  ]);
 }
 
 /**
@@ -112,7 +131,7 @@ export async function synthesizeVideoTts(settings, text, outPath) {
       voice: settings.edge_tts_voice
     });
   } catch (e) {
-    if (!isEdgeTtsConnectionBlockedError(e)) throw e;
+    if (!shouldFallbackAfterEdgeFailure(e)) throw e;
     const key = (settings.tiktok_openai_api_key || '').trim();
     if (key) {
       console.warn('[video] Edge TTS blocked (403) from this host; using OpenAI TTS for this job.');

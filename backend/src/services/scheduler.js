@@ -3,7 +3,7 @@ import socialAutomation from './socialAutomation.js';
 import { prepare, saveDatabase } from '../config/database.js';
 import ebayService from './ebayService.js';
 import banggoodService from './banggoodService.js';
-import { runDailyTikTokIfEnabled } from './tiktok/tiktokEngine.js';
+import { runDailyTikTokIfEnabled, recoverStuckVideoJobs } from './tiktok/tiktokEngine.js';
 
 let tiktokCronJob = null;
 
@@ -63,6 +63,14 @@ class Scheduler {
     });
     
     refreshTikTokSchedule();
+
+    cron.schedule('*/8 * * * *', () => {
+      try {
+        recoverStuckVideoJobs(30);
+      } catch (e) {
+        console.error('Video job stale recovery:', e);
+      }
+    });
 
     console.log(`✅ Scheduled ${rules.length} query rules + social media + banner generation + TikTok`);
   }

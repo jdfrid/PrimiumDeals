@@ -43,6 +43,7 @@ console.log(`📂 Data directory: ${dataDir}`);
 import { initDatabase, prepare } from './config/database.js';
 import routes from './routes/index.js';
 import scheduler from './services/scheduler.js';
+import { recoverStuckVideoJobs } from './services/tiktok/tiktokEngine.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -161,6 +162,7 @@ function initializeSampleDeals() {
 async function start() {
   try {
     await initDatabase();
+    recoverStuckVideoJobs();
     await initializeAdmin();
     initializeCategories();
     initializeDefaultRule();

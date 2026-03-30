@@ -21,6 +21,7 @@ export function isVideoEngineBusy() {
 async function downloadToFile(url, dest) {
   const r = await fetch(url, {
     redirect: 'follow',
+    signal: AbortSignal.timeout(120000),
     headers: {
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -220,6 +221,21 @@ export async function processTikTokJob(jobId) {
     } catch { /* ignore */ }
     throw err;
   }
+}
+
+/**
+ * Mark jobs stuck in processing/rendering as failed so the UI can Retry (e.g. hung network/FFmpeg or server restart).
+ */
+export function recoverStuckVideoJobs(staleMinutes = 30) {
+  const msg = `Stuck in rendering for over ${staleMinutes} minutes (timeout, hung TTS/FFmpeg, or server restart). Click Retry.`;
+  prepare(
+    `
+    UPDATE tiktok_video_jobs
+    SET status = 'failed', error_message = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE status IN ('processing', 'rendering')
+      AND datetime(updated_at) < datetime('now', ?)
+  `
+  ).run(msg, `-${staleMinutes} minutes`);
 }
 
 export async function runDailyTikTokIfEnabled() {
