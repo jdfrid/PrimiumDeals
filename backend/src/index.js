@@ -40,7 +40,7 @@ function getDataDir() {
 const dataDir = getDataDir();
 console.log(`📂 Data directory: ${dataDir}`);
 
-import { initDatabase, prepare } from './config/database.js';
+import { initDatabase, prepare, getDb, saveDatabase } from './config/database.js';
 import routes from './routes/index.js';
 import scheduler from './services/scheduler.js';
 import { recoverStuckVideoJobs } from './services/tiktok/tiktokEngine.js';
@@ -127,7 +127,8 @@ function initializeSampleDeals() {
 
   const categories = Object.keys(brands);
   let added = 0;
-  
+  const db = getDb();
+
   for (let i = 0; i < 1000; i++) {
     const category = categories[i % categories.length];
     const brandList = brands[category];
@@ -151,13 +152,40 @@ function initializeSampleDeals() {
     const ebayUrl = `${baseUrl}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`;
     const imageUrl = `https://images.unsplash.com/${image}?w=400`;
     
-    prepare('INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-      ebayItemId, title, imageUrl, originalPrice, currentPrice, discount, 'USD', 'New', ebayUrl, categoryId, 1
+    db.run(
+      'INSERT INTO deals (ebay_item_id, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        ebayItemId,
+        title,
+        imageUrl,
+        originalPrice,
+        currentPrice,
+        discount,
+        'USD',
+        'New',
+        ebayUrl,
+        categoryId,
+        1
+      ]
     );
     added++;
   }
-  
+
+  saveDatabase();
   console.log(`✅ Added ${added} sample deals`);
+}
+
+async function runDeferredInit() {
+  try {
+    await initializeAdmin();
+    initializeCategories();
+    initializeDefaultRule();
+    initializeSampleDeals();
+    scheduler.init();
+    console.log('✅ Deferred init (admin seed, scheduler) finished');
+  } catch (e) {
+    console.error('❌ Deferred init failed:', e);
+  }
 }
 
 async function start() {
@@ -168,16 +196,13 @@ async function start() {
     } catch (e) {
       console.warn('recoverStuckVideoJobs skipped:', e.message || e);
     }
-    await initializeAdmin();
-    initializeCategories();
-    initializeDefaultRule();
-    initializeSampleDeals();
-    scheduler.init();
+
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📊 Admin panel: http://localhost:${PORT}/admin`);
-      console.log(`🛍️ Public site: http://localhost:${PORT}`);
+      console.log(`🚀 Server listening on 0.0.0.0:${PORT}`);
+      console.log(`📊 Admin: /admin  ·  Health: /api/health`);
     });
+
+    void runDeferredInit();
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
