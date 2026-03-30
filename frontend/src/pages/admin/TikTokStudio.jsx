@@ -494,7 +494,7 @@ export default function TikTokStudio() {
                 <option value="openai">OpenAI speech (needs OpenAI key)</option>
               </select>
               <p className="text-xs text-midnight-500 mt-1">
-                On some cloud servers Edge TTS returns 403; if you save an OpenAI API key below, the backend uses it automatically when Edge is blocked.
+                On many hosts Edge TTS returns 403 — the backend then tries free Google Translate–style TTS (basic quality). For best reliability, save an OpenAI key; we use it automatically when Edge fails.
               </p>
             </div>
             {(settings.video_tts_provider || 'edge') === 'edge' && (

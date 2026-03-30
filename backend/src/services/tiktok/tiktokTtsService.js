@@ -1,6 +1,49 @@
 import fs from 'fs';
 import { ttsSave } from 'edge-tts/out/index.js';
 
+const GTX_TTS_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+/** Split narration for Google translate_tts GET (URL length limits). */
+function chunkTextForGtxTts(text, maxLen = 160) {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (!t.length) return [];
+  if (t.length <= maxLen) return [t];
+  const out = [];
+  let i = 0;
+  while (i < t.length) {
+    let end = Math.min(i + maxLen, t.length);
+    if (end < t.length) {
+      const space = t.lastIndexOf(' ', end);
+      if (space > i) end = space;
+    }
+    const piece = t.slice(i, end).trim();
+    if (piece) out.push(piece);
+    i = end < t.length ? end + 1 : t.length;
+  }
+  return out;
+}
+
+/**
+ * Unofficial Google Translate TTS (client=gtx). No API key; quality is basic. Fallback when Edge WSS is 403.
+ */
+export async function synthesizeGoogleGtxTts({ text, outPath }) {
+  const safe = text.replace(/\s+/g, ' ').trim().slice(0, 2800);
+  if (!safe) throw new Error('No narration text for TTS');
+  const chunks = chunkTextForGtxTts(safe);
+  const bufs = [];
+  for (let i = 0; i < chunks.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 180));
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=gtx&q=${encodeURIComponent(chunks[i])}&tl=en`;
+    const r = await fetch(url, { headers: { 'User-Agent': GTX_TTS_UA } });
+    if (!r.ok) throw new Error(`Google TTS HTTP ${r.status}`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length < 80) throw new Error('Google TTS returned empty audio');
+    bufs.push(buf);
+  }
+  fs.writeFileSync(outPath, Buffer.concat(bufs));
+}
+
 /** Edge TTS uses WSS to Microsoft; many cloud IPs get HTTP 403 on the socket handshake. */
 function isEdgeTtsConnectionBlockedError(err) {
   const m = String(err?.message || err || '');
@@ -81,9 +124,14 @@ export async function synthesizeVideoTts(settings, text, outPath) {
         outPath
       });
     }
-    throw new Error(
-      `${e.message || e} — Edge TTS is often blocked on cloud servers. ` +
-        'In Short videos → Settings, add an OpenAI API key and set Voice (TTS) to OpenAI, or run the backend from a network that can reach speech.platform.bing.com.'
-    );
+    try {
+      console.warn('[video] Edge TTS blocked; trying Google Translate TTS (no API key, unofficial endpoint).');
+      return await synthesizeGoogleGtxTts({ text, outPath });
+    } catch (gErr) {
+      throw new Error(
+        `${e.message || e} — Edge TTS is blocked on this host. Google TTS fallback failed: ${gErr.message || gErr}. ` +
+          'Add an OpenAI API key in Short videos → Settings (Voice can stay Edge; OpenAI is used when Edge fails), or choose OpenAI under Voice (TTS).'
+      );
+    }
   }
 }
