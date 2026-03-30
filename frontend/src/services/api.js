@@ -47,12 +47,21 @@ class ApiService {
       try {
         data = JSON.parse(raw);
       } catch {
-        const hint = API_ORIGIN
-          ? `HTTP ${response.status}. The API base is ${API_BASE}.`
-          : `HTTP ${response.status}. The server returned HTML instead of JSON — often the browser hit the SPA or a CDN, not Node. Set VITE_API_URL at build time to your backend origin (e.g. https://your-service.onrender.com), rebuild, and redeploy.`;
-        throw new Error(
-          `Invalid JSON from API (${hint}) Snippet: ${raw.slice(0, 80).replace(/\s+/g, ' ')}`
-        );
+        const st = response.status;
+        const snippet = raw.slice(0, 80).replace(/\s+/g, ' ');
+        let hint;
+        if (st === 502 || st === 503 || st === 504) {
+          hint =
+            `HTTP ${st}: proxy/gateway could not reach your Node app (Render sleep, crash, deploy, or OOM). Open Render → Logs and Events. ` +
+            'If you set VITE_API_URL in build env, it must be this backend’s live URL only — wrong URL also returns gateway HTML.';
+        } else if (API_ORIGIN) {
+          hint = `HTTP ${st}. Requests go to ${API_BASE}; if that host is wrong or down you get HTML error pages.`;
+        } else {
+          hint =
+            `HTTP ${st}: got HTML instead of JSON (often SPA index.html from CDN, or an error page). ` +
+            'If the UI is not served by the same Node service, set VITE_API_URL to your Render backend URL at vite build time, rebuild, redeploy.';
+        }
+        throw new Error(`Invalid JSON from API — ${hint} Snippet: ${snippet}`);
       }
     }
 

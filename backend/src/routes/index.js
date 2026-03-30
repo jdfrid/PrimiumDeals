@@ -19,6 +19,10 @@ import scheduler from '../services/scheduler.js';
 
 const router = express.Router();
 
+router.get('/health', (req, res) => {
+  res.json({ ok: true, service: 'primium-deals-api' });
+});
+
 // Public Auth
 router.post('/auth/login', authController.login);
 router.post('/auth/verify-2fa', authController.verifyTwoFactor);

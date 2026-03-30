@@ -163,13 +163,17 @@ function initializeSampleDeals() {
 async function start() {
   try {
     await initDatabase();
-    recoverStuckVideoJobs();
+    try {
+      recoverStuckVideoJobs();
+    } catch (e) {
+      console.warn('recoverStuckVideoJobs skipped:', e.message || e);
+    }
     await initializeAdmin();
     initializeCategories();
     initializeDefaultRule();
     initializeSampleDeals();
     scheduler.init();
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`📊 Admin panel: http://localhost:${PORT}/admin`);
       console.log(`🛍️ Public site: http://localhost:${PORT}`);

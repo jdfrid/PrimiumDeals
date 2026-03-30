@@ -3,11 +3,13 @@ services:
     name: primium-deals
     runtime: node
     plan: free
+    healthCheckPath: /api/health
     buildCommand: "cd frontend && npm install && npx --yes vite build && cd ../backend && npm install"
     startCommand: "node backend/src/index.js"
     envVars:
-      # If the public site is served from another host (e.g. Cloudflare Pages) but API stays on Render,
-      # set VITE_API_URL=https://<this-service>.onrender.com so the SPA calls the real API (same value as custom domain pointing here is fine).
+      # Leave VITE_API_URL unset when this service serves both API + static (same-origin /api). Set only if the UI
+      # is built elsewhere — use the live backend URL (e.g. https://primium-deals.onrender.com), no trailing slash.
+      # Wrong VITE_API_URL → dead host → 502 HTML from the CDN/proxy.
       - key: NODE_VERSION
         value: "18.19.0"
       - key: NODE_ENV
