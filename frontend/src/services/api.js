@@ -290,4 +290,13 @@ class ApiService {
 
 export default new ApiService();
 
+/** Shown in admin UI — compare with GET /api/health → thisOrigin */
+export function getClientApiDiagnostics() {
+  return {
+    pageOrigin: typeof window !== 'undefined' ? window.location.origin : '',
+    apiBase: API_BASE,
+    viteApiUrlAtBuild: (import.meta.env.VITE_API_URL || '').trim() || null
+  };
+}
+
 

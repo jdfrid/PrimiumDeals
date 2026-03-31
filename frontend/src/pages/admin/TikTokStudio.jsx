@@ -12,7 +12,7 @@ import {
   Loader,
   Share2
 } from 'lucide-react';
-import api from '../../services/api';
+import api, { getClientApiDiagnostics } from '../../services/api';
 
 const tabs = [
   { id: 'dashboard', label: 'Create video', icon: Play },
@@ -218,6 +218,39 @@ export default function TikTokStudio() {
             <strong className="text-gold-400">איפה מפעילים:</strong> טאב <strong>Create video</strong> (הרצה ידנית) או מעמוד{' '}
             <a href="/admin/deals" className="text-gold-400 underline">Deals</a> — כפתור <strong>Make video</strong> ליד כל מוצר. אוטומציה יומית: טאב <strong>Settings</strong> ← סמן “Automatic daily video”.
           </p>
+          <details className="mt-3 text-xs rounded-lg border border-midnight-600/60 bg-midnight-900/40 px-3 py-2">
+            <summary className="cursor-pointer text-midnight-400 select-none">Connection debug (למה 502?)</summary>
+            {(() => {
+              const d = getClientApiDiagnostics();
+              const mismatch =
+                d.viteApiUrlAtBuild &&
+                d.pageOrigin &&
+                !d.apiBase.startsWith(d.pageOrigin) &&
+                d.apiBase.startsWith('http');
+              return (
+                <div className="mt-2 space-y-1 font-mono text-midnight-500 break-all">
+                  <div>
+                    <span className="text-midnight-500">Page origin:</span> {d.pageOrigin || '—'}
+                  </div>
+                  <div>
+                    <span className="text-midnight-500">Fetch API base:</span> {d.apiBase}
+                  </div>
+                  <div>
+                    <span className="text-midnight-500">VITE_API_URL (בזמן build):</span>{' '}
+                    {d.viteApiUrlAtBuild || 'לא הוגדר — בקשות יחסיות לאותו דומיין'}
+                  </div>
+                  {mismatch ? (
+                    <p className="text-amber-400/90 pt-1">
+                      יש סיכוי גבוה לבעיה: הדף נטען מדומיין אחד אבל ה-API מופנה לדומיין אחר. ב-Render מחק/תקן VITE_API_URL ובצע build מחדש, או הגדר אותו ל-host של /api/health (שדה thisOrigin).
+                    </p>
+                  ) : null}
+                  <p className="text-midnight-500 pt-1">
+                    השוו ל-<code className="text-gold-500/90">GET /api/health</code> → <code className="text-gold-500/90">thisOrigin</code> חייב להתאים לבסיס שאליו ה-API אמור (או השאר הכל same-origin בלי VITE).
+                  </p>
+                </div>
+              );
+            })()}
+          </details>
         </div>
         {busy && (
           <div className="flex items-center gap-2 text-amber-400 text-sm">
