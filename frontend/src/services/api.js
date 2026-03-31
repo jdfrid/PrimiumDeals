@@ -21,6 +21,11 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    /** Render free cold starts often return 502 until Node is up; safe to retry read-only calls. */
+    const allowGatewayRetry = method === 'GET' || method === 'HEAD';
+    const maxAttempts = allowGatewayRetry ? 3 : 1;
+
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers
@@ -30,15 +35,35 @@ class ApiService {
       headers['Authorization'] = `Bearer ${this.getToken()}`;
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers
-    });
+    const url = `${API_BASE}${endpoint}`;
+    let response;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (attempt > 0) {
+        await new Promise(r => setTimeout(r, 1300 * attempt));
+      }
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers
+        });
+      } catch (netErr) {
+        if (!allowGatewayRetry || attempt === maxAttempts - 1) {
+          throw netErr;
+        }
+        continue;
+      }
 
-    if (response.status === 401) {
-      this.setToken(null);
-      window.location.href = '/admin/login';
-      throw new Error('Unauthorized');
+      if (response.status === 401) {
+        this.setToken(null);
+        window.location.href = '/admin/login';
+        throw new Error('Unauthorized');
+      }
+
+      const gateway = response.status === 502 || response.status === 503 || response.status === 504;
+      if (allowGatewayRetry && gateway && attempt < maxAttempts - 1) {
+        continue;
+      }
+      break;
     }
 
     const raw = await response.text();
