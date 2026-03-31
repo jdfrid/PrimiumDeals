@@ -94,11 +94,11 @@ function initializeDefaultRule() {
   }
 }
 
-function initializeSampleDeals() {
+async function initializeSampleDeals() {
   const existingDeals = prepare('SELECT COUNT(*) as count FROM deals').get();
   if (existingDeals.count > 0) return;
 
-  console.log('📦 Adding sample deals...');
+  console.log('📦 Adding sample deals (chunked so HTTP stays responsive)...');
   const campaignId = process.env.EBAY_CAMPAIGN_ID || '5339122678';
   
   const brands = {
@@ -169,6 +169,9 @@ function initializeSampleDeals() {
       ]
     );
     added++;
+    if (i % 40 === 39) {
+      await new Promise(r => setImmediate(r));
+    }
   }
 
   saveDatabase();
@@ -180,7 +183,7 @@ async function runDeferredInit() {
     await initializeAdmin();
     initializeCategories();
     initializeDefaultRule();
-    initializeSampleDeals();
+    await initializeSampleDeals();
     scheduler.init();
     console.log('✅ Deferred init (admin seed, scheduler) finished');
   } catch (e) {

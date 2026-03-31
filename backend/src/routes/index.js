@@ -20,7 +20,15 @@ import scheduler from '../services/scheduler.js';
 const router = express.Router();
 
 router.get('/health', (req, res) => {
-  res.json({ ok: true, service: 'primium-deals-api' });
+  const xfProto = req.get('x-forwarded-proto');
+  const proto = (xfProto || req.protocol || 'https').split(',')[0].trim();
+  const host = req.get('host') || '';
+  res.json({
+    ok: true,
+    service: 'primium-deals-api',
+    /** Helps debug: admin fetch() must target this same origin unless VITE_API_URL is exactly this base. */
+    thisOrigin: host ? `${proto}://${host}` : null
+  });
 });
 
 // Public Auth

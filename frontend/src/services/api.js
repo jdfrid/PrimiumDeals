@@ -86,7 +86,11 @@ class ApiService {
             `HTTP ${st}: got HTML instead of JSON (often SPA index.html from CDN, or an error page). ` +
             'If the UI is not served by the same Node service, set VITE_API_URL to your Render backend URL at vite build time, rebuild, redeploy.';
         }
-        throw new Error(`Invalid JSON from API — ${hint} Snippet: ${snippet}`);
+        throw new Error(
+          `Invalid JSON from API — ${hint} — Failed request: ${url} (API base: ${API_BASE}). ` +
+            'Open /api/health and check JSON field "thisOrigin": Vite build must use that same host (remove wrong VITE_API_URL or set it to thisOrigin). ' +
+            `Snippet: ${snippet}`
+        );
       }
     }
 
