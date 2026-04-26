@@ -49,7 +49,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json());
 // Register API before static so POST /api/* never hits the SPA or a stray file under dist/.
 app.use('/api', routes);
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));

@@ -25,7 +25,6 @@ import BannersGallery from './pages/admin/BannersGallery';
 import SocialHub from './pages/admin/SocialHub';
 import TelegramChannels from './pages/admin/TelegramChannels';
 import TikTokStudio from './pages/admin/TikTokStudio';
-import VoicePlanner from './pages/VoicePlanner';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -65,7 +64,6 @@ function App() {
         <Route path="/new" element={<TodaysDealsPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/voice-planner" element={<VoicePlanner />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
