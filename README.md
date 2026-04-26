@@ -38,6 +38,7 @@ npm run dev
 
 - **אתר ציבורי:** http://localhost:5173
 - **פאנל ניהול:** http://localhost:5173/admin
+- **Voice Planner:** http://localhost:5173/voice-planner
 - **API:** http://localhost:3001/api
 
 ### פרטי התחברות ברירת מחדל
@@ -91,7 +92,29 @@ EBAY_TOKEN=your-token
 # Admin
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin123
+
+# Voice Planner - שמירת פגישות ומשימות מהקלטה
+OPENAI_API_KEY=your-openai-key
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+# בפיתוח: http://localhost:3001/api/voice-planner/google/callback
+# בפרודקשן: https://your-domain.com/api/voice-planner/google/callback
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/voice-planner/google/callback
+# אופציונלי להגנה בסיסית על המסך הציבורי
+VOICE_PLANNER_ACCESS_KEY=
+# אופציונלי בפיתוח כדי שה-OAuth יחזור ל-Vite
+VOICE_PLANNER_APP_URL=http://localhost:5173/voice-planner
 ```
+
+## Voice Planner
+
+המסך נמצא ב-`/voice-planner` ופועל בלי משתמשי מערכת. בפעם הראשונה לוחצים "התחבר עם Google", מאשרים הרשאות ל-Calendar ול-Tasks, והטוקן נשמר בקובץ מקומי תחת `DATA_DIR`.
+
+ב-Google Cloud צריך ליצור OAuth Client מסוג Web Application ולהוסיף Redirect URI:
+`http://localhost:3001/api/voice-planner/google/callback` לפיתוח, או `https://your-domain.com/api/voice-planner/google/callback` לפרודקשן.
+
+פקודות קוליות צריכות להתחיל ב-`משימה` או `זימון`, למשל:
+`זימון פגישת עבודה ביום שלישי ב-10 בבוקר במשרד`.
 
 ---
 

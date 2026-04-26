@@ -286,6 +286,40 @@ class ApiService {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+
+  async voicePlannerRequest(endpoint, options = {}) {
+    const accessKey = localStorage.getItem('voicePlannerAccessKey');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(accessKey ? { 'x-voice-planner-key': accessKey } : {}),
+      ...options.headers
+    };
+    const response = await fetch(`${API_BASE}/voice-planner${endpoint}`, {
+      ...options,
+      headers
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Voice planner request failed');
+    }
+    return data;
+  }
+
+  async getVoicePlannerStatus() {
+    return this.voicePlannerRequest('/status');
+  }
+
+  async getVoicePlannerGoogleAuthUrl() {
+    return this.voicePlannerRequest('/google/auth-url');
+  }
+
+  async processVoicePlannerCommand(payload) {
+    return this.voicePlannerRequest('/process', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
 }
 
 export default new ApiService();

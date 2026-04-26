@@ -16,6 +16,7 @@ import {
   retryTikTokJobBackground
 } from '../services/tiktok/tiktokEngine.js';
 import scheduler from '../services/scheduler.js';
+import voicePlannerRoutes from './voicePlannerRoutes.js';
 
 const router = express.Router();
 
@@ -693,6 +694,7 @@ videoStudioApi.get('/jobs/:id/download', authenticateToken, requireRole('admin',
 
 router.use('/admin/tiktok', videoStudioApi);
 router.use('/admin/video-studio', videoStudioApi);
+router.use('/voice-planner', voicePlannerRoutes);
 
 router.get('/admin/video-engine/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
   res.json({ busy: isVideoEngineBusy() });

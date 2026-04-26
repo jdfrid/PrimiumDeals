@@ -33,3 +33,19 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Voice Planner (/voice-planner): Google Calendar/Tasks + OpenAI transcription/parsing
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Optional. If omitted, backend derives https://<host>/api/voice-planner/google/callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      # Optional lightweight gate for the public single-user page
+      - key: VOICE_PLANNER_ACCESS_KEY
+        sync: false
+      # Optional. Useful in local dev if callback should return to Vite at http://localhost:5173/voice-planner
+      - key: VOICE_PLANNER_APP_URL
+        sync: false
