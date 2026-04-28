@@ -10,9 +10,11 @@ import {
   ChevronLeft,
   Clock,
   CreditCard,
+  FileText,
   Gauge,
   Home,
   MapPin,
+  PlusCircle,
   MessageCircle,
   Navigation,
   RefreshCw,
@@ -21,6 +23,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Star,
+  TrendingUp,
   UserCheck,
   Wallet,
   XCircle,
@@ -255,6 +258,24 @@ function useShareChargeStore() {
       if (!station) return;
       Object.assign(station, patch);
       addEvent(draft, 'הספק עדכן פרטי עמדה');
+    }),
+    addStation: (stationData) => update((draft) => {
+      const host = draft.users.find((user) => user.id === stationData.hostId);
+      draft.stations.unshift({
+        id: createId('station'),
+        hostId: stationData.hostId,
+        name: stationData.name,
+        address: stationData.address,
+        distance: Number(stationData.distance || 1),
+        power: Number(stationData.power || 11),
+        plug: stationData.plug || 'Type 2',
+        pricePerKwh: Number(stationData.pricePerKwh || 1.25),
+        available: true,
+        rating: 5,
+        photos: 0,
+        createdAt: Date.now(),
+      });
+      addEvent(draft, `מנהל הוסיף עמדה חדשה${host ? ` עבור ${host.name}` : ''}`);
     }),
     openDispute: (bookingId, reason) => update((draft) => {
       if (draft.disputes.some((item) => item.bookingId === bookingId && item.status === 'open')) return;
@@ -641,10 +662,61 @@ function HostPage({ store }) {
 }
 
 function AdminPage({ store }) {
-  const { state, resolveDispute, toggleBlockUser, setCommission, reset } = store;
+  const { state, addStation, resolveDispute, toggleBlockUser, setCommission, reset } = store;
+  const hosts = state.users.filter((user) => user.role === 'host');
+  const [stationForm, setStationForm] = useState({
+    name: '',
+    address: '',
+    hostId: hosts[0]?.id || 'host-1',
+    plug: 'Type 2',
+    power: 22,
+    pricePerKwh: 1.35,
+    distance: 1,
+  });
   const totalVolume = state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
   const platformFees = state.transactions.reduce((sum, tx) => sum + tx.platformFee, 0);
+  const hostPayouts = state.transactions.reduce((sum, tx) => sum + tx.hostShare, 0);
+  const totalKwh = state.transactions.reduce((sum, tx) => sum + tx.kwh, 0);
   const openDisputes = state.disputes.filter((item) => item.status === 'open');
+  const completedBookings = state.bookings.filter((booking) => booking.status === 'completed');
+  const customerHistory = state.users
+    .filter((user) => user.role === 'driver')
+    .map((user) => {
+      const userBookings = state.bookings.filter((booking) => booking.driverId === user.id);
+      const userTransactions = state.transactions.filter((tx) => tx.driverId === user.id);
+      return {
+        ...user,
+        bookingsCount: userBookings.length,
+        completedCount: userBookings.filter((booking) => booking.status === 'completed').length,
+        totalSpend: userTransactions.reduce((sum, tx) => sum + tx.amount, 0),
+        lastActivity: userBookings[0]?.createdAt,
+      };
+    });
+  const revenueByStation = state.stations.map((station) => {
+    const stationTransactions = state.transactions.filter((tx) => tx.stationId === station.id);
+    return {
+      station,
+      volume: stationTransactions.reduce((sum, tx) => sum + tx.amount, 0),
+      platformFees: stationTransactions.reduce((sum, tx) => sum + tx.platformFee, 0),
+      hostShare: stationTransactions.reduce((sum, tx) => sum + tx.hostShare, 0),
+      count: stationTransactions.length,
+    };
+  }).sort((a, b) => b.volume - a.volume);
+
+  const handleAddStation = (event) => {
+    event.preventDefault();
+    if (!stationForm.name.trim() || !stationForm.address.trim()) return;
+    addStation(stationForm);
+    setStationForm({
+      name: '',
+      address: '',
+      hostId: stationForm.hostId,
+      plug: 'Type 2',
+      power: 22,
+      pricePerKwh: 1.35,
+      distance: 1,
+    });
+  };
 
   return (
     <AppFrame
@@ -667,6 +739,117 @@ function AdminPage({ store }) {
       </div>
 
       <Card>
+        <h3 className="mb-3 flex items-center gap-2 font-black"><PlusCircle size={19} className="text-emerald-500" /> הוספת עמדה</h3>
+        <form onSubmit={handleAddStation} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="col-span-2 text-sm font-bold text-slate-600">
+              שם עמדה
+              <input
+                value={stationForm.name}
+                onChange={(event) => setStationForm({ ...stationForm, name: event.target.value })}
+                placeholder="לדוגמה: עמדת חניון מרכזי"
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              />
+            </label>
+            <label className="col-span-2 text-sm font-bold text-slate-600">
+              כתובת
+              <input
+                value={stationForm.address}
+                onChange={(event) => setStationForm({ ...stationForm, address: event.target.value })}
+                placeholder="רחוב, עיר"
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              />
+            </label>
+            <label className="text-sm font-bold text-slate-600">
+              ספק
+              <select
+                value={stationForm.hostId}
+                onChange={(event) => setStationForm({ ...stationForm, hostId: event.target.value })}
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              >
+                {hosts.map((host) => <option key={host.id} value={host.id}>{host.name}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-bold text-slate-600">
+              סוג שקע
+              <select
+                value={stationForm.plug}
+                onChange={(event) => setStationForm({ ...stationForm, plug: event.target.value })}
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              >
+                <option>Type 2</option>
+                <option>CCS</option>
+                <option>CHAdeMO</option>
+              </select>
+            </label>
+            <label className="text-sm font-bold text-slate-600">
+              הספק kW
+              <input
+                type="number"
+                value={stationForm.power}
+                onChange={(event) => setStationForm({ ...stationForm, power: Number(event.target.value) })}
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              />
+            </label>
+            <label className="text-sm font-bold text-slate-600">
+              מחיר ₪/kWh
+              <input
+                type="number"
+                step="0.05"
+                value={stationForm.pricePerKwh}
+                onChange={(event) => setStationForm({ ...stationForm, pricePerKwh: Number(event.target.value) })}
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              />
+            </label>
+          </div>
+          <button className="w-full rounded-2xl bg-slate-950 py-3 font-black text-white">
+            הוסף עמדה למערכת
+          </button>
+        </form>
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 flex items-center gap-2 font-black"><TrendingUp size={19} className="text-emerald-500" /> דוחות הכנסות</h3>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <p className="text-xl font-black">{currency(hostPayouts)}</p>
+            <p className="text-xs text-slate-500">תשלומים לספקים</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <p className="text-xl font-black">{totalKwh.toFixed(1)}</p>
+            <p className="text-xs text-slate-500">kWh שנצרכו</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <p className="text-xl font-black">{completedBookings.length}</p>
+            <p className="text-xs text-slate-500">טעינות שהושלמו</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <p className="text-xl font-black">{state.stations.length}</p>
+            <p className="text-xs text-slate-500">עמדות במערכת</p>
+          </div>
+        </div>
+        <div className="mt-4 space-y-2">
+          {revenueByStation.slice(0, 5).map(({ station, volume, platformFees: fees, count }) => (
+            <div key={station.id} className="rounded-2xl bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="font-black">{station.name}</p>
+                  <p className="text-xs text-slate-500">{count} עסקאות · עמלה {currency(fees)}</p>
+                </div>
+                <strong>{currency(volume)}</strong>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-emerald-500"
+                  style={{ width: `${Math.min(100, totalVolume ? (volume / totalVolume) * 100 : 0)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
         <label className="text-sm font-bold text-slate-600">
           עמלת מיזם
           <div className="mt-2 flex items-center gap-3">
@@ -682,6 +865,28 @@ function AdminPage({ store }) {
             <span className="w-14 rounded-2xl bg-slate-100 py-2 text-center font-black">{state.settings.commission}%</span>
           </div>
         </label>
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 flex items-center gap-2 font-black"><FileText size={19} className="text-emerald-500" /> היסטוריית לקוחות</h3>
+        <div className="space-y-2">
+          {customerHistory.map((customer) => (
+            <div key={customer.id} className="rounded-2xl bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-black">{customer.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {customer.bookingsCount} הזמנות · {customer.completedCount} הושלמו · {customer.lastActivity ? `פעילות אחרונה ${shortTime(customer.lastActivity)}` : 'ללא פעילות'}
+                  </p>
+                </div>
+                <div className="text-left">
+                  <p className="font-black">{currency(customer.totalSpend)}</p>
+                  <p className="text-xs text-slate-500">הוצאה בדמו</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
 
       <Card>
