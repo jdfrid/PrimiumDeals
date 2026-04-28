@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
-import HomePage from './pages/HomePage';
+import ShareChargePage from './pages/ShareChargePage';
 import TermsPage from './pages/TermsPage';
 import ContactPage from './pages/ContactPage';
 import LandingPage from './pages/LandingPage';
@@ -53,7 +53,7 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<ShareChargePage />} />
         <Route path="/designer-sale" element={<LandingPage />} />
         <Route path="/luxury-watches-sale" element={<LandingPage />} />
         <Route path="/designer-bags-sale" element={<LandingPage />} />
