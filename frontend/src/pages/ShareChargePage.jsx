@@ -294,11 +294,11 @@ export default function ShareChargePage() {
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
-            <a href="#demo" className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 hover:border-emerald-300">
-              צפייה בדמו
+            <a href="/app/host" className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 hover:border-emerald-300">
+              אפליקציית ספק
             </a>
-            <a href="#booking" className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-950/15 hover:bg-emerald-600">
-              הזמן טעינה
+            <a href="/app/driver" className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-950/15 hover:bg-emerald-600">
+              פתח אפליקציה
             </a>
           </div>
 
@@ -351,8 +351,8 @@ export default function ShareChargePage() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                <a href="#app" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-7 py-4 font-black text-white shadow-xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-600">
-                  לראות את האפליקציה
+                <a href="/app/driver" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-7 py-4 font-black text-white shadow-xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-600">
+                  לפתוח את אפליקציית הנהג
                   <ArrowLeft size={20} />
                 </a>
                 <a href="#investors" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-4 font-black text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300">

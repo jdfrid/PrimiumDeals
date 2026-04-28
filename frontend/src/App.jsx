@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import ShareChargePage from './pages/ShareChargePage';
+import ShareChargeApp from './pages/ShareChargeApp';
 import TermsPage from './pages/TermsPage';
 import ContactPage from './pages/ContactPage';
 import LandingPage from './pages/LandingPage';
@@ -54,6 +55,8 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<ShareChargePage />} />
+        <Route path="/app" element={<Navigate to="/app/driver" replace />} />
+        <Route path="/app/:role" element={<ShareChargeApp />} />
         <Route path="/designer-sale" element={<LandingPage />} />
         <Route path="/luxury-watches-sale" element={<LandingPage />} />
         <Route path="/designer-bags-sale" element={<LandingPage />} />
