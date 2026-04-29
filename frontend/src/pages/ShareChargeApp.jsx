@@ -398,29 +398,34 @@ function RoleEntryScreen({ role, onEnter }) {
   const Icon = config.icon;
 
   return (
-    <div dir="rtl" className={`min-h-screen overflow-hidden bg-gradient-to-br ${config.gradient} p-4 text-white`}>
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between py-6">
-        <div className="flex items-center justify-between">
+    <div dir="rtl" className={`relative min-h-screen overflow-hidden bg-gradient-to-br ${config.gradient} text-white`}>
+      <div className="sharecharge-full-logo-stage absolute inset-0">
+        <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-full-logo-image" />
+        <div className="sharecharge-full-logo-glow" />
+      </div>
+
+      <div className="sharecharge-entry-shell relative z-10 mx-auto flex min-h-screen max-w-md flex-col justify-between p-4 py-6">
+        <div className="sharecharge-entry-delayed flex items-center justify-between">
           <Link to="/" className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-black backdrop-blur">
             ShareCharge
           </Link>
           <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-black backdrop-blur">דמו חי</div>
         </div>
 
-        <section className="relative my-8 rounded-[2rem] border border-white/20 bg-white/15 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
+        <section className="sharecharge-entry-delayed relative my-8 rounded-[2rem] border border-white/15 bg-slate-950/25 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
           <div className="absolute -left-10 top-12 h-32 w-32 rounded-full bg-white/20 blur-3xl" />
           <div className="absolute -right-12 bottom-10 h-40 w-40 rounded-full bg-emerald-300/25 blur-3xl" />
 
-          <div className="relative mx-auto mb-7 flex h-64 w-64 items-center justify-center">
+          <div className="relative mx-auto mb-7 flex h-36 w-36 items-center justify-center">
             <div className="sharecharge-orbit absolute inset-2 rounded-full border border-white/25" />
             <div className="sharecharge-orbit-reverse absolute inset-10 rounded-full border border-emerald-200/25" />
             <span className="sharecharge-spark absolute right-7 top-16 h-3 w-3 rounded-full bg-emerald-200 shadow-[0_0_22px_rgba(167,243,208,.9)]" />
             <span className="sharecharge-spark absolute bottom-12 left-10 h-2.5 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_22px_rgba(165,243,252,.9)]" />
             <span className="sharecharge-spark absolute left-12 top-9 h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,.9)]" />
-            <div className="sharecharge-logo-float sharecharge-logo-card relative z-10 flex h-52 w-52 items-center justify-center overflow-hidden rounded-[2rem] bg-white p-4 shadow-2xl">
+            <div className="sharecharge-logo-float sharecharge-logo-card relative z-10 flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white/10 shadow-2xl backdrop-blur">
               <span className="sharecharge-logo-shine" />
               <span className="sharecharge-energy-ring" />
-              <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-logo-image relative z-10 h-full w-full object-contain" />
+              <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-logo-image relative z-10 h-full w-full object-cover" />
               <span className="sharecharge-energy-dot sharecharge-energy-dot-a" />
               <span className="sharecharge-energy-dot sharecharge-energy-dot-b" />
               <span className="sharecharge-energy-dot sharecharge-energy-dot-c" />
@@ -446,7 +451,7 @@ function RoleEntryScreen({ role, onEnter }) {
           </div>
         </section>
 
-        <div className="space-y-3">
+        <div className="sharecharge-entry-delayed space-y-3">
           <button onClick={onEnter} className="w-full rounded-3xl bg-white px-6 py-4 text-lg font-black text-slate-950 shadow-2xl shadow-slate-950/20 transition active:scale-[0.98]">
             {config.cta}
           </button>
