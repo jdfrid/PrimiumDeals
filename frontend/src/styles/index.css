@@ -61,6 +61,42 @@ body {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes sharechargeLogoFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.025); }
+}
+
+@keyframes sharechargeOrbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sharechargeOrbitReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes sharechargeSpark {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+
+.sharecharge-logo-float {
+  animation: sharechargeLogoFloat 4.5s ease-in-out infinite;
+}
+
+.sharecharge-orbit {
+  animation: sharechargeOrbit 12s linear infinite;
+}
+
+.sharecharge-orbit-reverse {
+  animation: sharechargeOrbitReverse 9s linear infinite;
+}
+
+.sharecharge-spark {
+  animation: sharechargeSpark 2.4s ease-in-out infinite;
+}
+
 /* Admin Styles - Keep dark theme for admin */
 .admin-page {
   background: #0a0a0f;

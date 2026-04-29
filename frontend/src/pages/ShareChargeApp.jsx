@@ -104,6 +104,33 @@ const statusLabels = {
   cancelled: 'בוטל',
 };
 
+const roleEntryConfig = {
+  driver: {
+    title: 'כניסת נהג',
+    subtitle: 'מצא עמדה, הזמן, אמת OTP והתחל טעינה',
+    cta: 'כניסה כאפליקציית נהג',
+    icon: Navigation,
+    gradient: 'from-emerald-500 via-cyan-500 to-blue-600',
+    points: ['עמדות זמינות סביבך', 'ניווט והזמנה מהירה', 'חשבונית ותשלום דמה'],
+  },
+  host: {
+    title: 'כניסת ספק',
+    subtitle: 'נהל עמדה, אשר בקשות וסיים טעינה',
+    cta: 'כניסה כאפליקציית ספק',
+    icon: Home,
+    gradient: 'from-blue-600 via-indigo-500 to-emerald-500',
+    points: ['אישור/דחיית הזמנות', 'אימות OTP מול הנהג', 'ארנק והכנסות'],
+  },
+  admin: {
+    title: 'כניסת מנהל',
+    subtitle: 'שליטה בעמדות, לקוחות, עסקאות ודוחות',
+    cta: 'כניסה לסביבת מנהל',
+    icon: ShieldCheck,
+    gradient: 'from-slate-950 via-blue-800 to-emerald-600',
+    points: ['הוספת עמדות', 'היסטוריית לקוחות', 'דוחות הכנסות ומחלוקות'],
+  },
+};
+
 function currency(value) {
   return `₪${Number(value || 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
 }
@@ -302,7 +329,7 @@ function useShareChargeStore() {
   };
 }
 
-function AppFrame({ role, title, subtitle, children, actions }) {
+function AppFrame({ role, title, subtitle, children, actions, onExit }) {
   const nav = [
     { role: 'driver', label: 'נהג', icon: Navigation },
     { role: 'host', label: 'ספק', icon: Home },
@@ -322,7 +349,12 @@ function AppFrame({ role, title, subtitle, children, actions }) {
               <h1 className="truncate text-xl font-black">{title}</h1>
               <p className="truncate text-xs text-slate-500">{subtitle}</p>
             </div>
-            {actions}
+            <div className="flex items-center gap-2">
+              {actions}
+              <button onClick={onExit} className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                כניסה
+              </button>
+            </div>
           </div>
           <nav className="mt-3 grid grid-cols-3 gap-2">
             {nav.map((item) => {
@@ -361,7 +393,78 @@ function StatusPill({ status }) {
   );
 }
 
-function DriverPage({ store }) {
+function RoleEntryScreen({ role, onEnter }) {
+  const config = roleEntryConfig[role] || roleEntryConfig.driver;
+  const Icon = config.icon;
+
+  return (
+    <div dir="rtl" className={`min-h-screen overflow-hidden bg-gradient-to-br ${config.gradient} p-4 text-white`}>
+      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between py-6">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-black backdrop-blur">
+            ShareCharge
+          </Link>
+          <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-black backdrop-blur">דמו חי</div>
+        </div>
+
+        <section className="relative my-8 rounded-[2rem] border border-white/20 bg-white/15 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
+          <div className="absolute -left-10 top-12 h-32 w-32 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute -right-12 bottom-10 h-40 w-40 rounded-full bg-emerald-300/25 blur-3xl" />
+
+          <div className="relative mx-auto mb-7 flex h-64 w-64 items-center justify-center">
+            <div className="sharecharge-orbit absolute inset-2 rounded-full border border-white/25" />
+            <div className="sharecharge-orbit-reverse absolute inset-10 rounded-full border border-emerald-200/25" />
+            <span className="sharecharge-spark absolute right-7 top-16 h-3 w-3 rounded-full bg-emerald-200 shadow-[0_0_22px_rgba(167,243,208,.9)]" />
+            <span className="sharecharge-spark absolute bottom-12 left-10 h-2.5 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_22px_rgba(165,243,252,.9)]" />
+            <span className="sharecharge-spark absolute left-12 top-9 h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,.9)]" />
+            <div className="sharecharge-logo-float relative z-10 flex h-52 w-52 items-center justify-center overflow-hidden rounded-[2rem] bg-white p-4 shadow-2xl">
+              <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-contain" />
+            </div>
+          </div>
+
+          <div className="relative text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-950 shadow-xl">
+              <Icon size={30} />
+            </div>
+            <p className="text-sm font-black uppercase tracking-[0.28em] text-emerald-100">Welcome</p>
+            <h1 className="mt-2 text-4xl font-black">{config.title}</h1>
+            <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-white/80">{config.subtitle}</p>
+
+            <div className="mt-6 grid gap-2">
+              {config.points.map((point) => (
+                <div key={point} className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold backdrop-blur">
+                  <CheckCircle size={17} className="text-emerald-200" />
+                  <span>{point}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <div className="space-y-3">
+          <button onClick={onEnter} className="w-full rounded-3xl bg-white px-6 py-4 text-lg font-black text-slate-950 shadow-2xl shadow-slate-950/20 transition active:scale-[0.98]">
+            {config.cta}
+          </button>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(roleEntryConfig).map(([key, item]) => (
+              <Link
+                key={key}
+                to={`/app/${key}`}
+                className={`rounded-2xl px-3 py-3 text-center text-xs font-black backdrop-blur ${
+                  key === role ? 'bg-white text-slate-950' : 'bg-white/15 text-white'
+                }`}
+              >
+                {item.title.replace('כניסת ', '')}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DriverPage({ store, onExit }) {
   const { state, createBooking, markOnWay, driverStartCharge, openDispute } = store;
   const [query, setQuery] = useState('');
   const [durationHours, setDurationHours] = useState(2);
@@ -379,7 +482,7 @@ function DriverPage({ store }) {
   const stationFor = (booking) => state.stations.find((station) => station.id === booking.stationId);
 
   return (
-    <AppFrame role="driver" title="מציאת טעינה" subtitle="חיפוש, הזמנה, OTP ותשלום דמה">
+    <AppFrame role="driver" title="מציאת טעינה" subtitle="חיפוש, הזמנה, OTP ותשלום דמה" onExit={onExit}>
       <Card className="bg-slate-950 text-white">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-slate-950">
@@ -538,7 +641,7 @@ function DriverPage({ store }) {
   );
 }
 
-function HostPage({ store }) {
+function HostPage({ store, onExit }) {
   const { state, approveBooking, rejectBooking, verifyOtp, finishCharge, updateStation } = store;
   const [otpInputs, setOtpInputs] = useState({});
   const [finishKwh, setFinishKwh] = useState(18.4);
@@ -549,7 +652,7 @@ function HostPage({ store }) {
   const revenue = state.transactions.filter((tx) => tx.hostId === 'host-1').reduce((sum, tx) => sum + tx.hostShare, 0);
 
   return (
-    <AppFrame role="host" title="ניהול ספק" subtitle="בקשות, OTP, טעינה וארנק">
+    <AppFrame role="host" title="ניהול ספק" subtitle="בקשות, OTP, טעינה וארנק" onExit={onExit}>
       <Card className="bg-slate-950 text-white">
         <p className="text-sm text-white/60">יתרה זמינה למשיכה</p>
         <div className="mt-2 flex items-end justify-between">
@@ -661,7 +764,7 @@ function HostPage({ store }) {
   );
 }
 
-function AdminPage({ store }) {
+function AdminPage({ store, onExit }) {
   const { state, addStation, resolveDispute, toggleBlockUser, setCommission, reset } = store;
   const hosts = state.users.filter((user) => user.role === 'host');
   const [stationForm, setStationForm] = useState({
@@ -724,6 +827,7 @@ function AdminPage({ store }) {
       title="ניהול מערכת"
       subtitle="עסקאות, מחלוקות, עמלה ומשתמשים"
       actions={<button onClick={reset} className="rounded-2xl bg-slate-100 p-3" aria-label="איפוס דמו"><RefreshCw size={19} /></button>}
+      onExit={onExit}
     >
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-slate-950 text-white">
@@ -947,10 +1051,31 @@ export default function ShareChargeApp() {
   const { role } = useParams();
   const store = useShareChargeStore();
   const normalizedRole = useMemo(() => (['driver', 'host', 'admin'].includes(role) ? role : 'driver'), [role]);
+  const [enteredRoles, setEnteredRoles] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('sharecharge-entered-roles') || '{}');
+    } catch (error) {
+      console.error('Failed to load entry state', error);
+      return {};
+    }
+  });
+
+  const enterRole = () => {
+    const next = { ...enteredRoles, [normalizedRole]: true };
+    setEnteredRoles(next);
+    sessionStorage.setItem('sharecharge-entered-roles', JSON.stringify(next));
+  };
+
+  const exitRole = () => {
+    const next = { ...enteredRoles, [normalizedRole]: false };
+    setEnteredRoles(next);
+    sessionStorage.setItem('sharecharge-entered-roles', JSON.stringify(next));
+  };
 
   if (!role) return <Navigate to="/app/driver" replace />;
+  if (!enteredRoles[normalizedRole]) return <RoleEntryScreen role={normalizedRole} onEnter={enterRole} />;
 
-  if (normalizedRole === 'host') return <HostPage store={store} />;
-  if (normalizedRole === 'admin') return <AdminPage store={store} />;
-  return <DriverPage store={store} />;
+  if (normalizedRole === 'host') return <HostPage store={store} onExit={exitRole} />;
+  if (normalizedRole === 'admin') return <AdminPage store={store} onExit={exitRole} />;
+  return <DriverPage store={store} onExit={exitRole} />;
 }
