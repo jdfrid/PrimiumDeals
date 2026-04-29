@@ -417,8 +417,13 @@ function RoleEntryScreen({ role, onEnter }) {
             <span className="sharecharge-spark absolute right-7 top-16 h-3 w-3 rounded-full bg-emerald-200 shadow-[0_0_22px_rgba(167,243,208,.9)]" />
             <span className="sharecharge-spark absolute bottom-12 left-10 h-2.5 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_22px_rgba(165,243,252,.9)]" />
             <span className="sharecharge-spark absolute left-12 top-9 h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,.9)]" />
-            <div className="sharecharge-logo-float relative z-10 flex h-52 w-52 items-center justify-center overflow-hidden rounded-[2rem] bg-white p-4 shadow-2xl">
-              <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-contain" />
+            <div className="sharecharge-logo-float sharecharge-logo-card relative z-10 flex h-52 w-52 items-center justify-center overflow-hidden rounded-[2rem] bg-white p-4 shadow-2xl">
+              <span className="sharecharge-logo-shine" />
+              <span className="sharecharge-energy-ring" />
+              <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-logo-image relative z-10 h-full w-full object-contain" />
+              <span className="sharecharge-energy-dot sharecharge-energy-dot-a" />
+              <span className="sharecharge-energy-dot sharecharge-energy-dot-b" />
+              <span className="sharecharge-energy-dot sharecharge-energy-dot-c" />
             </div>
           </div>
 
