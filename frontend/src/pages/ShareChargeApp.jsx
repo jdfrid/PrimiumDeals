@@ -173,6 +173,20 @@ function useShareChargeStore() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  useEffect(() => {
+    const syncFromStorage = (event) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      try {
+        setState(JSON.parse(event.newValue));
+      } catch (error) {
+        console.error('Failed to sync ShareCharge state', error);
+      }
+    };
+
+    window.addEventListener('storage', syncFromStorage);
+    return () => window.removeEventListener('storage', syncFromStorage);
+  }, []);
+
   const update = (producer) => {
     setState((current) => {
       const next = structuredClone(current);
@@ -312,6 +326,20 @@ function useShareChargeStore() {
         createdAt: Date.now(),
       });
       addEvent(draft, `מנהל הוסיף עמדה חדשה${host ? ` עבור ${host.name}` : ''}`);
+    }),
+    addHost: (hostData) => update((draft) => {
+      const hostId = createId('host');
+      draft.users.unshift({
+        id: hostId,
+        name: hostData.name,
+        email: hostData.email,
+        role: 'host',
+        verified: true,
+        blocked: false,
+        revenue: 0,
+        createdAt: Date.now(),
+      });
+      addEvent(draft, `מנהל הוסיף ספק חדש: ${hostData.name}`);
     }),
     openDispute: (bookingId, reason) => update((draft) => {
       if (draft.disputes.some((item) => item.bookingId === bookingId && item.status === 'open')) return;
@@ -597,6 +625,8 @@ function DriverPage({ store, onExit }) {
   const [selectedTime, setSelectedTime] = useState('19:30');
   const [locationId, setLocationId] = useState('current');
   const [maxDistance, setMaxDistance] = useState(3);
+  const [hasLocated, setHasLocated] = useState(false);
+  const [lastLocatedAt, setLastLocatedAt] = useState(null);
   const driverBookings = state.bookings.filter((item) => item.driverId === 'driver-1');
   const activeBooking = driverBookings.find((item) => !['completed', 'rejected', 'cancelled'].includes(item.status));
   const completedBookings = driverBookings.filter((item) => item.status === 'completed');
@@ -612,6 +642,12 @@ function DriverPage({ store, onExit }) {
     .sort((a, b) => getDistance(a) - getDistance(b));
 
   const stationFor = (booking) => state.stations.find((station) => station.id === booking.stationId);
+  const locatedStations = hasLocated ? filteredStations : [];
+
+  const locateStations = () => {
+    setHasLocated(true);
+    setLastLocatedAt(Date.now());
+  };
 
   return (
     <AppFrame role="driver" title="מציאת טעינה" subtitle="חיפוש, הזמנה, OTP ותשלום דמה" onExit={onExit}>
@@ -637,14 +673,17 @@ function DriverPage({ store, onExit }) {
         <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
           <select
             value={locationId}
-            onChange={(event) => setLocationId(event.target.value)}
+            onChange={(event) => {
+              setLocationId(event.target.value);
+              setHasLocated(false);
+            }}
             className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black outline-none"
           >
             {driverLocationProfiles.map((profile) => (
               <option key={profile.id} value={profile.id}>{profile.label}</option>
             ))}
           </select>
-          <button className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-black text-slate-950">
+          <button onClick={locateStations} className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-black text-slate-950">
             איתור
           </button>
         </div>
@@ -652,12 +691,20 @@ function DriverPage({ store, onExit }) {
           <span>{locationProfile.note}</span>
           <label className="flex items-center gap-2 font-bold">
             רדיוס
-            <select value={maxDistance} onChange={(event) => setMaxDistance(Number(event.target.value))} className="rounded-xl bg-white/10 px-2 py-1 outline-none">
+            <select value={maxDistance} onChange={(event) => {
+              setMaxDistance(Number(event.target.value));
+              setHasLocated(false);
+            }} className="rounded-xl bg-white/10 px-2 py-1 outline-none">
               <option value={1}>1 ק"מ</option>
               <option value={3}>3 ק"מ</option>
               <option value={5}>5 ק"מ</option>
             </select>
           </label>
+        </div>
+        <div className="mt-3 rounded-2xl bg-white/10 px-3 py-2 text-xs font-bold text-white/75">
+          {hasLocated
+            ? `נמצאו ${locatedStations.length} עמדות ברדיוס ${maxDistance} ק"מ${lastLocatedAt ? ` · ${shortTime(lastLocatedAt)}` : ''}`
+            : 'לחץ איתור כדי להציג עמדות זמינות סביב המיקום שנבחר'}
         </div>
       </Card>
 
@@ -749,13 +796,22 @@ function DriverPage({ store, onExit }) {
             </div>
           </Card>
 
-          {filteredStations.length === 0 && (
+          {!hasLocated && (
+            <Card>
+              <div className="text-center">
+                <MapPin className="mx-auto mb-3 text-emerald-500" size={28} />
+                <p className="text-sm font-bold text-slate-500">בחר מיקום ורדיוס ולחץ `איתור` כדי לראות עמדות.</p>
+              </div>
+            </Card>
+          )}
+
+          {hasLocated && locatedStations.length === 0 && (
             <Card>
               <p className="text-center text-sm font-bold text-slate-500">לא נמצאו עמדות ברדיוס הנבחר. נסה להגדיל רדיוס או להוסיף עמדה דרך מנהל המערכת.</p>
             </Card>
           )}
 
-          {filteredStations.map((station) => (
+          {locatedStations.map((station) => (
             <Card key={station.id}>
               <div className="flex items-start gap-3">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
@@ -808,71 +864,99 @@ function HostPage({ store, onExit }) {
   const { state, approveBooking, rejectBooking, verifyOtp, finishCharge, updateStation } = store;
   const [otpInputs, setOtpInputs] = useState({});
   const [finishKwh, setFinishKwh] = useState(18.4);
-  const hostStations = state.stations.filter((station) => station.hostId === 'host-1');
-  const hostBookings = state.bookings.filter((booking) => booking.hostId === 'host-1');
-  const station = hostStations[0];
-  const stationBookings = hostBookings.filter((booking) => booking.stationId === station.id);
-  const revenue = state.transactions.filter((tx) => tx.hostId === 'host-1').reduce((sum, tx) => sum + tx.hostShare, 0);
+  const hosts = state.users.filter((user) => user.role === 'host');
+  const [activeHostId, setActiveHostId] = useState(hosts[0]?.id || 'host-1');
+  const activeHost = hosts.find((host) => host.id === activeHostId) || hosts[0];
+  const hostStations = state.stations.filter((station) => station.hostId === activeHost?.id);
+  const hostBookings = state.bookings.filter((booking) => booking.hostId === activeHost?.id);
+  const revenue = state.transactions.filter((tx) => tx.hostId === activeHost?.id).reduce((sum, tx) => sum + tx.hostShare, 0);
+  const stationFor = (booking) => state.stations.find((station) => station.id === booking.stationId);
 
   return (
     <AppFrame role="host" title="ניהול ספק" subtitle="בקשות, OTP, טעינה וארנק" onExit={onExit}>
       <Card className="bg-slate-950 text-white">
+        <label className="mb-4 block text-sm font-bold text-white/70">
+          ספק פעיל
+          <select
+            value={activeHost?.id || ''}
+            onChange={(event) => setActiveHostId(event.target.value)}
+            className="mt-2 w-full rounded-2xl bg-white/10 px-3 py-3 font-black outline-none"
+          >
+            {hosts.map((host) => <option key={host.id} value={host.id}>{host.name}</option>)}
+          </select>
+        </label>
         <p className="text-sm text-white/60">יתרה זמינה למשיכה</p>
         <div className="mt-2 flex items-end justify-between">
-          <p className="text-4xl font-black">{currency(1840 + revenue)}</p>
+          <p className="text-4xl font-black">{currency((activeHost?.revenue || 0) + revenue)}</p>
           <Wallet className="text-emerald-300" size={30} />
         </div>
-        <p className="mt-3 text-sm text-white/55">משיכה לבנק מחייבת 2FA בדמו</p>
+        <p className="mt-3 text-sm text-white/55">{hostStations.length} עמדות · {hostBookings.length} הזמנות · משיכה לבנק מחייבת 2FA בדמו</p>
       </Card>
 
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="text-sm font-black text-emerald-600">העמדה שלי</p>
-            <h2 className="text-xl font-black">{station.name}</h2>
+            <p className="text-sm font-black text-emerald-600">העמדות שלי</p>
+            <h2 className="text-xl font-black">{activeHost?.name || 'ספק'}</h2>
           </div>
-          <button
-            onClick={() => updateStation(station.id, { available: !station.available })}
-            className={`rounded-2xl px-4 py-2 text-sm font-black ${station.available ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
-          >
-            {station.available ? 'זמינה' : 'לא זמינה'}
-          </button>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm font-bold text-slate-600">
-            מחיר לקוט"ש
-            <input
-              type="number"
-              step="0.05"
-              value={station.pricePerKwh}
-              onChange={(event) => updateStation(station.id, { pricePerKwh: Number(event.target.value) })}
-              className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
-            />
-          </label>
-          <label className="text-sm font-bold text-slate-600">
-            הספק kW
-            <input
-              type="number"
-              value={station.power}
-              onChange={(event) => updateStation(station.id, { power: Number(event.target.value) })}
-              className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
-            />
-          </label>
-        </div>
+        {hostStations.length === 0 ? (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">אין עדיין עמדות לספק הזה. אפשר להוסיף דרך סביבת מנהל.</p>
+        ) : (
+          <div className="space-y-3">
+            {hostStations.map((station) => (
+              <div key={station.id} className="rounded-3xl bg-slate-50 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-black">{station.name}</p>
+                    <p className="text-xs text-slate-500">{station.address}</p>
+                  </div>
+                  <button
+                    onClick={() => updateStation(station.id, { available: !station.available })}
+                    className={`rounded-2xl px-3 py-2 text-xs font-black ${station.available ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
+                  >
+                    {station.available ? 'זמינה' : 'לא זמינה'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-xs font-bold text-slate-600">
+                    מחיר לקוט"ש
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={station.pricePerKwh}
+                      onChange={(event) => updateStation(station.id, { pricePerKwh: Number(event.target.value) })}
+                      className="mt-1 w-full rounded-2xl bg-white px-3 py-2 font-black outline-none"
+                    />
+                  </label>
+                  <label className="text-xs font-bold text-slate-600">
+                    הספק kW
+                    <input
+                      type="number"
+                      value={station.power}
+                      onChange={(event) => updateStation(station.id, { power: Number(event.target.value) })}
+                      className="mt-1 w-full rounded-2xl bg-white px-3 py-2 font-black outline-none"
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card>
         <h3 className="mb-3 font-black">בקשות והזמנות</h3>
-        {stationBookings.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">עדיין אין בקשות. בצע הזמנה מעמוד הנהג כדי לראות אותה כאן.</p>
+        {hostBookings.length === 0 ? (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">עדיין אין בקשות לספק הנבחר. בצע הזמנה מעמוד הנהג לעמדה של ספק זה כדי לראות אותה כאן.</p>
         ) : (
           <div className="space-y-3">
-            {stationBookings.map((booking) => (
+            {hostBookings.map((booking) => (
               <div key={booking.id} className="rounded-3xl bg-slate-50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-black">דני לוי · {booking.startTime}</p>
-                    <p className="mt-1 text-sm text-slate-500">{booking.durationHours} שעות · נוצר ב-{shortTime(booking.createdAt)}</p>
+                    <p className="font-black">{stationFor(booking)?.name || 'עמדה'} · {booking.startTime}</p>
+                    <p className="mt-1 text-sm text-slate-500">דני לוי · {booking.durationHours} שעות · נוצר ב-{shortTime(booking.createdAt)}</p>
                   </div>
                   <StatusPill status={booking.status} />
                 </div>
@@ -928,8 +1012,12 @@ function HostPage({ store, onExit }) {
 }
 
 function AdminPage({ store, onExit }) {
-  const { state, addStation, resolveDispute, toggleBlockUser, setCommission, reset } = store;
+  const { state, addHost, addStation, resolveDispute, toggleBlockUser, setCommission, reset } = store;
   const hosts = state.users.filter((user) => user.role === 'host');
+  const [hostForm, setHostForm] = useState({
+    name: '',
+    email: '',
+  });
   const [stationForm, setStationForm] = useState({
     name: '',
     address: '',
@@ -984,6 +1072,13 @@ function AdminPage({ store, onExit }) {
     });
   };
 
+  const handleAddHost = (event) => {
+    event.preventDefault();
+    if (!hostForm.name.trim() || !hostForm.email.includes('@')) return;
+    addHost(hostForm);
+    setHostForm({ name: '', email: '' });
+  };
+
   return (
     <AppFrame
       role="admin"
@@ -1004,6 +1099,48 @@ function AdminPage({ store, onExit }) {
           <p className="text-xs text-white/80">עמלות מיזם</p>
         </Card>
       </div>
+
+      <Card>
+        <h3 className="mb-3 flex items-center gap-2 font-black"><UserCheck size={19} className="text-emerald-500" /> הוספת ספק</h3>
+        <form onSubmit={handleAddHost} className="space-y-3">
+          <label className="text-sm font-bold text-slate-600">
+            שם ספק
+            <input
+              value={hostForm.name}
+              onChange={(event) => setHostForm({ ...hostForm, name: event.target.value })}
+              placeholder="לדוגמה: יעל בעלת עמדה"
+              className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+            />
+          </label>
+          <label className="text-sm font-bold text-slate-600">
+            מייל ספק
+            <input
+              value={hostForm.email}
+              onChange={(event) => setHostForm({ ...hostForm, email: event.target.value })}
+              placeholder="host@example.com"
+              className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 text-left font-black outline-none"
+              dir="ltr"
+              inputMode="email"
+            />
+          </label>
+          <button className="w-full rounded-2xl bg-emerald-500 py-3 font-black text-white">
+            הוסף ספק למערכת
+          </button>
+        </form>
+        <div className="mt-3 space-y-2">
+          {hosts.map((host) => (
+            <div key={host.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 text-sm">
+              <div>
+                <p className="font-black">{host.name}</p>
+                <p className="text-xs text-slate-500">{host.email || 'host@sharecharge.app'}</p>
+              </div>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+                {state.stations.filter((station) => station.hostId === host.id).length} עמדות
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <Card>
         <h3 className="mb-3 flex items-center gap-2 font-black"><PlusCircle size={19} className="text-emerald-500" /> הוספת עמדה</h3>
