@@ -168,6 +168,46 @@ body {
   70% { opacity: 0.9; }
 }
 
+@keyframes sharechargeCleanLogoIntro {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.9);
+    filter: blur(6px) saturate(1);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0) scale(1.04);
+    filter: blur(0) saturate(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0) saturate(1.05);
+  }
+}
+
+@keyframes sharechargeCleanLogoFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.018); }
+}
+
+@keyframes sharechargeCleanRing {
+  0% { opacity: 0; transform: scale(0.82); }
+  35% { opacity: 0.5; }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+
+@keyframes sharechargeCleanReveal {
+  0%, 58% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .sharecharge-logo-float {
   animation: sharechargeLogoFloat 4.5s ease-in-out infinite;
 }
@@ -216,9 +256,38 @@ body {
   pointer-events: none;
 }
 
+.sharecharge-phone-entry {
+  isolation: isolate;
+}
+
+.sharecharge-phone-logo-stage {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 70px rgba(2, 6, 23, 0.18);
+}
+
+.sharecharge-phone-logo-stage::before {
+  content: '';
+  position: absolute;
+  inset: 10%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.35), transparent 62%);
+  filter: blur(28px);
+}
+
+.sharecharge-clean-ring {
+  animation: sharechargeCleanRing 2.4s ease-out infinite;
+}
+
+.sharecharge-clean-ring-delayed {
+  animation: sharechargeCleanRing 2.4s ease-out 0.65s infinite;
+}
+
+.sharecharge-entry-details {
+  animation: sharechargeCleanReveal 2.15s ease-out both;
+}
+
 .sharecharge-logo-image {
   transform-origin: center;
-  animation: sharechargeLogoPulse 3.2s ease-in-out infinite;
+  animation: sharechargeCleanLogoIntro 1.55s ease-out both, sharechargeCleanLogoFloat 4.2s ease-in-out 1.55s infinite;
   will-change: transform, filter;
 }
 

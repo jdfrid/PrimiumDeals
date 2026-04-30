@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -130,6 +130,12 @@ const roleEntryConfig = {
     points: ['הוספת עמדות', 'היסטוריית לקוחות', 'דוחות הכנסות ומחלוקות'],
   },
 };
+
+const driverLocationProfiles = [
+  { id: 'current', label: 'המיקום שלי עכשיו', distanceOffset: 0, note: 'GPS פעיל' },
+  { id: 'office', label: 'משרד בתל אביב', distanceOffset: 0.6, note: 'סימולציית מיקום' },
+  { id: 'home', label: 'בית ברמת השרון', distanceOffset: -0.3, note: 'סימולציית מיקום' },
+];
 
 function currency(value) {
   return `₪${Number(value || 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
@@ -398,41 +404,29 @@ function RoleEntryScreen({ role, onEnter }) {
   const Icon = config.icon;
 
   return (
-    <div dir="rtl" className={`relative min-h-screen overflow-hidden bg-gradient-to-br ${config.gradient} text-white`}>
-      <div className="sharecharge-full-logo-stage absolute inset-0">
-        <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-full-logo-image" />
-        <div className="sharecharge-full-logo-glow" />
-      </div>
-
-      <div className="sharecharge-entry-shell relative z-10 mx-auto flex min-h-screen max-w-md flex-col justify-between p-4 py-6">
-        <div className="sharecharge-entry-delayed flex items-center justify-between">
+    <div dir="rtl" className={`min-h-screen overflow-hidden bg-slate-100 text-white`}>
+      <div className={`sharecharge-phone-entry relative mx-auto flex min-h-screen max-w-md flex-col justify-between overflow-hidden bg-gradient-to-br ${config.gradient} p-4 py-6 shadow-2xl shadow-slate-400/60`}>
+        <div className="flex items-center justify-between">
           <Link to="/" className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-black backdrop-blur">
             ShareCharge
           </Link>
           <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-black backdrop-blur">דמו חי</div>
         </div>
 
-        <section className="sharecharge-entry-delayed relative my-8 rounded-[2rem] border border-white/15 bg-slate-950/25 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
+        <section className="relative my-6 rounded-[2rem] border border-white/15 bg-slate-950/20 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
           <div className="absolute -left-10 top-12 h-32 w-32 rounded-full bg-white/20 blur-3xl" />
           <div className="absolute -right-12 bottom-10 h-40 w-40 rounded-full bg-emerald-300/25 blur-3xl" />
 
-          <div className="relative mx-auto mb-7 flex h-36 w-36 items-center justify-center">
-            <div className="sharecharge-orbit absolute inset-2 rounded-full border border-white/25" />
-            <div className="sharecharge-orbit-reverse absolute inset-10 rounded-full border border-emerald-200/25" />
-            <span className="sharecharge-spark absolute right-7 top-16 h-3 w-3 rounded-full bg-emerald-200 shadow-[0_0_22px_rgba(167,243,208,.9)]" />
-            <span className="sharecharge-spark absolute bottom-12 left-10 h-2.5 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_22px_rgba(165,243,252,.9)]" />
-            <span className="sharecharge-spark absolute left-12 top-9 h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,.9)]" />
-            <div className="sharecharge-logo-float sharecharge-logo-card relative z-10 flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white/10 shadow-2xl backdrop-blur">
+          <div className="sharecharge-phone-logo-stage relative mx-auto mb-7 flex h-72 max-h-[38vh] w-full items-center justify-center overflow-hidden rounded-[1.75rem] bg-black/20">
+            <div className="sharecharge-clean-ring absolute h-56 w-56 rounded-full border border-white/25" />
+            <div className="sharecharge-clean-ring-delayed absolute h-44 w-44 rounded-full border border-emerald-200/25" />
+            <div className="sharecharge-logo-card relative z-10 flex h-64 w-64 max-w-[88%] items-center justify-center overflow-hidden">
               <span className="sharecharge-logo-shine" />
-              <span className="sharecharge-energy-ring" />
-              <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-logo-image relative z-10 h-full w-full object-cover" />
-              <span className="sharecharge-energy-dot sharecharge-energy-dot-a" />
-              <span className="sharecharge-energy-dot sharecharge-energy-dot-b" />
-              <span className="sharecharge-energy-dot sharecharge-energy-dot-c" />
+              <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-logo-image relative z-10 h-full w-full object-contain" />
             </div>
           </div>
 
-          <div className="relative text-center">
+          <div className="sharecharge-entry-details relative text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-950 shadow-xl">
               <Icon size={30} />
             </div>
@@ -451,7 +445,7 @@ function RoleEntryScreen({ role, onEnter }) {
           </div>
         </section>
 
-        <div className="sharecharge-entry-delayed space-y-3">
+        <div className="sharecharge-entry-details space-y-3">
           <button onClick={onEnter} className="w-full rounded-3xl bg-white px-6 py-4 text-lg font-black text-slate-950 shadow-2xl shadow-slate-950/20 transition active:scale-[0.98]">
             {config.cta}
           </button>
@@ -474,20 +468,67 @@ function RoleEntryScreen({ role, onEnter }) {
   );
 }
 
+function RoleSelectScreen() {
+  return (
+    <div dir="rtl" className="min-h-screen bg-slate-100 text-slate-950">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between bg-slate-950 px-4 py-6 text-white shadow-2xl shadow-slate-400/60">
+        <div className="text-center">
+          <div className="mx-auto mb-5 h-40 overflow-hidden rounded-[2rem] bg-black/30">
+            <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-cover" />
+          </div>
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">ShareCharge Workspace</p>
+          <h1 className="mt-3 text-4xl font-black">בחר סביבת עבודה</h1>
+          <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-white/65">
+            מערכת דמו עובדת: מנהל מוסיף עמדות, נהג מאתר ומזמין, ספק מאשר ומסכם טעינה לתשלום דמה.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {Object.entries(roleEntryConfig).map(([key, item]) => {
+            const Icon = item.icon;
+            return (
+              <Link key={key} to={`/app/${key}`} className="flex items-center gap-4 rounded-3xl bg-white p-4 text-slate-950 shadow-xl transition active:scale-[0.98]">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white`}>
+                  <Icon size={25} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-black">{item.title}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{item.subtitle}</p>
+                </div>
+                <ChevronLeft size={22} className="text-slate-400" />
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm leading-7 text-white/70">
+          כל המידע נשמר בדפדפן באמצעות localStorage, לכן אפשר להדגים תהליך מלא בלי סליקה אמיתית ובלי backend.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DriverPage({ store, onExit }) {
   const { state, createBooking, markOnWay, driverStartCharge, openDispute } = store;
   const [query, setQuery] = useState('');
   const [durationHours, setDurationHours] = useState(2);
   const [selectedTime, setSelectedTime] = useState('19:30');
+  const [locationId, setLocationId] = useState('current');
+  const [maxDistance, setMaxDistance] = useState(3);
   const driverBookings = state.bookings.filter((item) => item.driverId === 'driver-1');
   const activeBooking = driverBookings.find((item) => !['completed', 'rejected', 'cancelled'].includes(item.status));
   const completedBookings = driverBookings.filter((item) => item.status === 'completed');
+  const locationProfile = driverLocationProfiles.find((item) => item.id === locationId) || driverLocationProfiles[0];
+  const getDistance = (station) => Math.max(0.1, Number(station.distance || 1) + locationProfile.distanceOffset);
 
-  const filteredStations = state.stations.filter((station) => {
-    const term = query.trim();
-    if (!term) return station.available;
-    return station.available && `${station.name} ${station.address} ${station.plug}`.includes(term);
-  });
+  const filteredStations = state.stations
+    .filter((station) => {
+      const term = query.trim();
+      const matchesSearch = !term || `${station.name} ${station.address} ${station.plug}`.includes(term);
+      return station.available && matchesSearch && getDistance(station) <= maxDistance;
+    })
+    .sort((a, b) => getDistance(a) - getDistance(b));
 
   const stationFor = (booking) => state.stations.find((station) => station.id === booking.stationId);
 
@@ -511,6 +552,31 @@ function DriverPage({ store, onExit }) {
             placeholder="חפש לפי עיר, שקע או שם עמדה"
             className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-white/40"
           />
+        </div>
+        <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+          <select
+            value={locationId}
+            onChange={(event) => setLocationId(event.target.value)}
+            className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black outline-none"
+          >
+            {driverLocationProfiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>{profile.label}</option>
+            ))}
+          </select>
+          <button className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-black text-slate-950">
+            איתור
+          </button>
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2 text-xs text-white/70">
+          <span>{locationProfile.note}</span>
+          <label className="flex items-center gap-2 font-bold">
+            רדיוס
+            <select value={maxDistance} onChange={(event) => setMaxDistance(Number(event.target.value))} className="rounded-xl bg-white/10 px-2 py-1 outline-none">
+              <option value={1}>1 ק"מ</option>
+              <option value={3}>3 ק"מ</option>
+              <option value={5}>5 ק"מ</option>
+            </select>
+          </label>
         </div>
       </Card>
 
@@ -602,6 +668,12 @@ function DriverPage({ store, onExit }) {
             </div>
           </Card>
 
+          {filteredStations.length === 0 && (
+            <Card>
+              <p className="text-center text-sm font-bold text-slate-500">לא נמצאו עמדות ברדיוס הנבחר. נסה להגדיל רדיוס או להוסיף עמדה דרך מנהל המערכת.</p>
+            </Card>
+          )}
+
           {filteredStations.map((station) => (
             <Card key={station.id}>
               <div className="flex items-start gap-3">
@@ -617,7 +689,7 @@ function DriverPage({ store, onExit }) {
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
-                <div className="rounded-2xl bg-slate-50 p-2"><p className="font-black">{station.distance} ק"מ</p><p className="text-slate-500">מרחק</p></div>
+                <div className="rounded-2xl bg-slate-50 p-2"><p className="font-black">{getDistance(station).toFixed(1)} ק"מ</p><p className="text-slate-500">מרחק</p></div>
                 <div className="rounded-2xl bg-slate-50 p-2"><p className="font-black">{station.power}kW</p><p className="text-slate-500">הספק</p></div>
                 <div className="rounded-2xl bg-slate-50 p-2"><p className="font-black">{station.plug}</p><p className="text-slate-500">שקע</p></div>
                 <div className="rounded-2xl bg-slate-50 p-2"><p className="font-black">{station.pricePerKwh}</p><p className="text-slate-500">₪/kWh</p></div>
@@ -915,6 +987,16 @@ function AdminPage({ store, onExit }) {
                 className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
               />
             </label>
+            <label className="text-sm font-bold text-slate-600">
+              מרחק התחלתי מהלקוח
+              <input
+                type="number"
+                step="0.1"
+                value={stationForm.distance}
+                onChange={(event) => setStationForm({ ...stationForm, distance: Number(event.target.value) })}
+                className="mt-2 w-full rounded-2xl bg-slate-100 px-3 py-3 font-black outline-none"
+              />
+            </label>
           </div>
           <button className="w-full rounded-2xl bg-slate-950 py-3 font-black text-white">
             הוסף עמדה למערכת
@@ -1082,7 +1164,7 @@ export default function ShareChargeApp() {
     sessionStorage.setItem('sharecharge-entered-roles', JSON.stringify(next));
   };
 
-  if (!role) return <Navigate to="/app/driver" replace />;
+  if (!role) return <RoleSelectScreen />;
   if (!enteredRoles[normalizedRole]) return <RoleEntryScreen role={normalizedRole} onEnter={enterRole} />;
 
   if (normalizedRole === 'host') return <HostPage store={store} onExit={exitRole} />;

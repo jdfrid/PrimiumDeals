@@ -1,14 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
-import ShareChargePage from './pages/ShareChargePage';
 import ShareChargeApp from './pages/ShareChargeApp';
-import TermsPage from './pages/TermsPage';
-import ContactPage from './pages/ContactPage';
-import LandingPage from './pages/LandingPage';
-import BrandPage from './pages/BrandPage';
-import CategoryPage from './pages/CategoryPage';
-import HowItWorksPage from './pages/HowItWorksPage';
-import TodaysDealsPage from './pages/TodaysDealsPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -26,7 +18,6 @@ import BannersGallery from './pages/admin/BannersGallery';
 import SocialHub from './pages/admin/SocialHub';
 import TelegramChannels from './pages/admin/TelegramChannels';
 import TikTokStudio from './pages/admin/TikTokStudio';
-import VoicePlanner from './pages/VoicePlanner';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -54,21 +45,9 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<ShareChargePage />} />
-        <Route path="/app" element={<Navigate to="/app/driver" replace />} />
+        <Route path="/" element={<Navigate to="/app" replace />} />
+        <Route path="/app" element={<ShareChargeApp />} />
         <Route path="/app/:role" element={<ShareChargeApp />} />
-        <Route path="/designer-sale" element={<LandingPage />} />
-        <Route path="/luxury-watches-sale" element={<LandingPage />} />
-        <Route path="/designer-bags-sale" element={<LandingPage />} />
-        <Route path="/brand/:brandSlug" element={<BrandPage />} />
-        <Route path="/category/:categorySlug" element={<CategoryPage />} />
-        <Route path="/how-it-works" element={<HowItWorksPage />} />
-        <Route path="/about" element={<HowItWorksPage />} />
-        <Route path="/todays-deals" element={<TodaysDealsPage />} />
-        <Route path="/new" element={<TodaysDealsPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/voice-planner" element={<VoicePlanner />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
