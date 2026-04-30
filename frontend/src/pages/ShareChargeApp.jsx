@@ -109,6 +109,7 @@ const roleEntryConfig = {
     title: 'כניסת נהג',
     subtitle: 'מצא עמדה, הזמן, אמת OTP והתחל טעינה',
     cta: 'כניסה כאפליקציית נהג',
+    email: 'driver@sharecharge.app',
     icon: Navigation,
     gradient: 'from-emerald-500 via-cyan-500 to-blue-600',
     points: ['עמדות זמינות סביבך', 'ניווט והזמנה מהירה', 'חשבונית ותשלום דמה'],
@@ -117,6 +118,7 @@ const roleEntryConfig = {
     title: 'כניסת ספק',
     subtitle: 'נהל עמדה, אשר בקשות וסיים טעינה',
     cta: 'כניסה כאפליקציית ספק',
+    email: 'host@sharecharge.app',
     icon: Home,
     gradient: 'from-blue-600 via-indigo-500 to-emerald-500',
     points: ['אישור/דחיית הזמנות', 'אימות OTP מול הנהג', 'ארנק והכנסות'],
@@ -125,6 +127,7 @@ const roleEntryConfig = {
     title: 'כניסת מנהל',
     subtitle: 'שליטה בעמדות, לקוחות, עסקאות ודוחות',
     cta: 'כניסה לסביבת מנהל',
+    email: 'admin@sharecharge.app',
     icon: ShieldCheck,
     gradient: 'from-slate-950 via-blue-800 to-emerald-600',
     points: ['הוספת עמדות', 'היסטוריית לקוחות', 'דוחות הכנסות ומחלוקות'],
@@ -402,6 +405,38 @@ function StatusPill({ status }) {
 function RoleEntryScreen({ role, onEnter }) {
   const config = roleEntryConfig[role] || roleEntryConfig.driver;
   const Icon = config.icon;
+  const [email, setEmail] = useState(config.email);
+  const [sentOtp, setSentOtp] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [sentAt, setSentAt] = useState(null);
+
+  const sendEmailOtp = () => {
+    if (!email.includes('@')) {
+      setAuthError('יש להזין כתובת מייל תקינה');
+      return;
+    }
+
+    setSentOtp(createOtp());
+    setOtpInput('');
+    setAuthError('');
+    setSentAt(Date.now());
+  };
+
+  const verifyEmailOtp = () => {
+    if (!sentOtp) {
+      setAuthError('קודם יש לשלוח קוד למייל');
+      return;
+    }
+
+    if (otpInput.trim() !== sentOtp) {
+      setAuthError('קוד שגוי. נסה שוב או שלח קוד חדש');
+      return;
+    }
+
+    setAuthError('');
+    onEnter(email);
+  };
 
   return (
     <div dir="rtl" className={`min-h-screen overflow-hidden bg-slate-100 text-white`}>
@@ -446,9 +481,55 @@ function RoleEntryScreen({ role, onEnter }) {
         </section>
 
         <div className="sharecharge-entry-details space-y-3">
-          <button onClick={onEnter} className="w-full rounded-3xl bg-white px-6 py-4 text-lg font-black text-slate-950 shadow-2xl shadow-slate-950/20 transition active:scale-[0.98]">
-            {config.cta}
-          </button>
+          <div className="rounded-[2rem] border border-white/15 bg-white/10 p-4 backdrop-blur-2xl">
+            <p className="mb-3 text-sm font-black text-emerald-100">הזדהות במייל עם OTP</p>
+            <label className="text-xs font-bold text-white/70">
+              כתובת מייל
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-right text-sm font-black text-slate-950 outline-none"
+                inputMode="email"
+                dir="ltr"
+              />
+            </label>
+            <button onClick={sendEmailOtp} className="mt-3 w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg active:scale-[0.98]">
+              שלח קוד OTP למייל
+            </button>
+
+            {sentOtp && (
+              <div className="mt-3 rounded-2xl border border-emerald-200/30 bg-slate-950/45 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-white/55">תיבת מייל דמו</p>
+                    <p className="text-sm font-black">{email}</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-300 px-3 py-1 text-xs font-black text-slate-950">
+                    נשלח {sentAt ? shortTime(sentAt) : ''}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs text-white/55">קוד הכניסה שלך ל־ShareCharge:</p>
+                <p className="mt-1 font-mono text-4xl font-black tracking-[0.32em] text-emerald-200">{sentOtp}</p>
+              </div>
+            )}
+
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <input
+                value={otpInput}
+                onChange={(event) => setOtpInput(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="קוד OTP"
+                className="rounded-2xl bg-white px-4 py-3 text-center font-mono text-xl font-black tracking-[0.2em] text-slate-950 outline-none"
+                inputMode="numeric"
+                maxLength={4}
+                dir="ltr"
+              />
+              <button onClick={verifyEmailOtp} className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-lg active:scale-[0.98]">
+                אימות
+              </button>
+            </div>
+
+            {authError && <p className="mt-2 text-sm font-bold text-red-100">{authError}</p>}
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {Object.entries(roleEntryConfig).map(([key, item]) => (
               <Link
@@ -502,7 +583,7 @@ function RoleSelectScreen() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm leading-7 text-white/70">
-          כל המידע נשמר בדפדפן באמצעות localStorage, לכן אפשר להדגים תהליך מלא בלי סליקה אמיתית ובלי backend.
+          כל כניסה דורשת OTP במייל דמו. המידע נשמר בדפדפן באמצעות localStorage, לכן אפשר להדגים תהליך מלא בלי סליקה אמיתית ובלי backend.
         </div>
       </div>
     </div>
@@ -1143,29 +1224,37 @@ export default function ShareChargeApp() {
   const { role } = useParams();
   const store = useShareChargeStore();
   const normalizedRole = useMemo(() => (['driver', 'host', 'admin'].includes(role) ? role : 'driver'), [role]);
-  const [enteredRoles, setEnteredRoles] = useState(() => {
+  const [authSessions, setAuthSessions] = useState(() => {
     try {
-      return JSON.parse(sessionStorage.getItem('sharecharge-entered-roles') || '{}');
+      return JSON.parse(sessionStorage.getItem('sharecharge-auth-sessions') || '{}');
     } catch (error) {
       console.error('Failed to load entry state', error);
       return {};
     }
   });
 
-  const enterRole = () => {
-    const next = { ...enteredRoles, [normalizedRole]: true };
-    setEnteredRoles(next);
-    sessionStorage.setItem('sharecharge-entered-roles', JSON.stringify(next));
+  const enterRole = (email) => {
+    const next = {
+      ...authSessions,
+      [normalizedRole]: {
+        verified: true,
+        email,
+        verifiedAt: Date.now(),
+      },
+    };
+    setAuthSessions(next);
+    sessionStorage.setItem('sharecharge-auth-sessions', JSON.stringify(next));
   };
 
   const exitRole = () => {
-    const next = { ...enteredRoles, [normalizedRole]: false };
-    setEnteredRoles(next);
-    sessionStorage.setItem('sharecharge-entered-roles', JSON.stringify(next));
+    const next = { ...authSessions };
+    delete next[normalizedRole];
+    setAuthSessions(next);
+    sessionStorage.setItem('sharecharge-auth-sessions', JSON.stringify(next));
   };
 
   if (!role) return <RoleSelectScreen />;
-  if (!enteredRoles[normalizedRole]) return <RoleEntryScreen role={normalizedRole} onEnter={enterRole} />;
+  if (!authSessions[normalizedRole]?.verified) return <RoleEntryScreen role={normalizedRole} onEnter={enterRole} />;
 
   if (normalizedRole === 'host') return <HostPage store={store} onExit={exitRole} />;
   if (normalizedRole === 'admin') return <AdminPage store={store} onExit={exitRole} />;
