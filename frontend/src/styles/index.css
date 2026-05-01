@@ -357,6 +357,79 @@ body {
   animation: sharechargeSpark 2.4s ease-in-out infinite;
 }
 
+.app-workspace-bg {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(16, 185, 129, 0.18), transparent 34%),
+    radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.16), transparent 32%),
+    linear-gradient(135deg, #e8fff5 0%, #eef7ff 42%, #f8fafc 100%);
+}
+
+.app-phone-shell {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.98) 48%, rgba(241, 245, 249, 0.98) 100%);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.16);
+}
+
+.app-phone-shell::before {
+  content: '';
+  position: absolute;
+  inset: -140px -90px auto auto;
+  height: 260px;
+  width: 260px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22), transparent 68%);
+  pointer-events: none;
+}
+
+.app-phone-shell::after {
+  content: '';
+  position: absolute;
+  inset: auto auto -160px -90px;
+  height: 300px;
+  width: 300px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
+.app-topbar {
+  border-bottom: 1px solid rgba(226, 232, 240, 0.78);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.app-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.86);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9));
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+}
+
+.app-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), transparent 36%, rgba(14, 165, 233, 0.06));
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.app-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-card.bg-slate-950,
+.app-card.bg-emerald-500 {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.22);
+}
+
 /* Admin Styles - Keep dark theme for admin */
 .admin-page {
   background: #0a0a0f;

@@ -104,6 +104,17 @@ const statusLabels = {
   cancelled: 'בוטל',
 };
 
+const statusStyles = {
+  pending: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
+  approved: 'bg-blue-100 text-blue-800 ring-1 ring-blue-200',
+  on_way: 'bg-cyan-100 text-cyan-800 ring-1 ring-cyan-200',
+  otp_verified: 'bg-violet-100 text-violet-800 ring-1 ring-violet-200',
+  charging: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
+  completed: 'bg-slate-900 text-white ring-1 ring-slate-800',
+  rejected: 'bg-red-100 text-red-800 ring-1 ring-red-200',
+  cancelled: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+};
+
 const roleEntryConfig = {
   driver: {
     title: 'כניסת נהג',
@@ -374,26 +385,26 @@ function AppFrame({ role, title, subtitle, children, actions, onExit }) {
   ];
 
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-100 text-slate-950">
-      <div className="mx-auto min-h-screen max-w-md bg-white shadow-2xl shadow-slate-300/60">
-        <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/95 px-4 py-3 backdrop-blur">
+    <div dir="rtl" className="app-workspace-bg min-h-screen text-slate-950">
+      <div className="app-phone-shell mx-auto min-h-screen max-w-md">
+        <header className="app-topbar sticky top-0 z-30 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
-            <Link to="/" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-emerald-300" aria-label="בית">
+            <Link to="/" className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-gradient-to-br from-slate-950 via-blue-900 to-emerald-500 text-white shadow-lg shadow-emerald-900/20" aria-label="בית">
               <Zap size={23} />
             </Link>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black text-emerald-600">ShareCharge App</p>
-              <h1 className="truncate text-xl font-black">{title}</h1>
-              <p className="truncate text-xs text-slate-500">{subtitle}</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">ShareCharge</p>
+              <h1 className="truncate text-xl font-black tracking-tight">{title}</h1>
+              <p className="truncate text-xs font-bold text-slate-500">{subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
               {actions}
-              <button onClick={onExit} className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+              <button onClick={onExit} className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white shadow-sm">
                 כניסה
               </button>
             </div>
           </div>
-          <nav className="mt-3 grid grid-cols-3 gap-2">
+          <nav className="mt-3 grid grid-cols-3 gap-2 rounded-[1.4rem] bg-slate-100/80 p-1 shadow-inner">
             {nav.map((item) => {
               const Icon = item.icon;
               const active = item.role === role;
@@ -401,8 +412,8 @@ function AppFrame({ role, title, subtitle, children, actions, onExit }) {
                 <Link
                   key={item.role}
                   to={`/app/${item.role}`}
-                  className={`flex items-center justify-center gap-1 rounded-2xl px-3 py-2 text-sm font-black ${
-                    active ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'
+                  className={`flex items-center justify-center gap-1 rounded-[1.1rem] px-3 py-2 text-sm font-black transition ${
+                    active ? 'bg-white text-slate-950 shadow-md shadow-slate-200/80' : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   <Icon size={16} />
@@ -412,19 +423,19 @@ function AppFrame({ role, title, subtitle, children, actions, onExit }) {
             })}
           </nav>
         </header>
-        <main className="space-y-4 px-4 py-4 pb-24">{children}</main>
+        <main className="space-y-4 px-4 py-5 pb-24">{children}</main>
       </div>
     </div>
   );
 }
 
 function Card({ children, className = '' }) {
-  return <section className={`rounded-3xl border border-slate-100 bg-white p-4 shadow-sm ${className}`}>{children}</section>;
+  return <section className={`app-card rounded-[1.75rem] p-4 ${className}`}>{children}</section>;
 }
 
 function StatusPill({ status }) {
   return (
-    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+    <span className={`rounded-full px-3 py-1 text-xs font-black ${statusStyles[status] || 'bg-slate-100 text-slate-700'}`}>
       {statusLabels[status] || status}
     </span>
   );
@@ -579,25 +590,27 @@ function RoleEntryScreen({ role, onEnter }) {
 
 function RoleSelectScreen() {
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-100 text-slate-950">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between bg-slate-950 px-4 py-6 text-white shadow-2xl shadow-slate-400/60">
+    <div dir="rtl" className="app-workspace-bg min-h-screen text-slate-950">
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col justify-between overflow-hidden bg-slate-950 px-4 py-6 text-white shadow-2xl shadow-slate-400/60">
+        <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-emerald-400/25 blur-3xl" />
+        <div className="absolute -left-24 bottom-24 h-72 w-72 rounded-full bg-blue-500/25 blur-3xl" />
         <div className="text-center">
-          <div className="mx-auto mb-5 h-40 overflow-hidden rounded-[2rem] bg-black/30">
+          <div className="relative mx-auto mb-5 h-44 overflow-hidden rounded-[2rem] border border-white/10 bg-black/30 shadow-2xl shadow-emerald-950/30">
             <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-cover" />
           </div>
           <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">ShareCharge Workspace</p>
-          <h1 className="mt-3 text-4xl font-black">בחר סביבת עבודה</h1>
+          <h1 className="mt-3 text-4xl font-black tracking-tight">בחר סביבת עבודה</h1>
           <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-white/65">
             מערכת דמו עובדת: מנהל מוסיף עמדות, נהג מאתר ומזמין, ספק מאשר ומסכם טעינה לתשלום דמה.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="relative space-y-3">
           {Object.entries(roleEntryConfig).map(([key, item]) => {
             const Icon = item.icon;
             return (
-              <Link key={key} to={`/app/${key}`} className="flex items-center gap-4 rounded-3xl bg-white p-4 text-slate-950 shadow-xl transition active:scale-[0.98]">
-                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white`}>
+              <Link key={key} to={`/app/${key}`} className="group flex items-center gap-4 rounded-[1.75rem] border border-white/70 bg-white/95 p-4 text-slate-950 shadow-xl shadow-slate-950/20 backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98]">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-lg transition group-hover:scale-105`}>
                   <Icon size={25} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -610,7 +623,7 @@ function RoleSelectScreen() {
           })}
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm leading-7 text-white/70">
+        <div className="relative rounded-3xl border border-white/10 bg-white/10 p-4 text-sm leading-7 text-white/70 backdrop-blur">
           כל כניסה דורשת OTP במייל דמו. המידע נשמר בדפדפן באמצעות localStorage, לכן אפשר להדגים תהליך מלא בלי סליקה אמיתית ובלי backend.
         </div>
       </div>
