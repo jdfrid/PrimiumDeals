@@ -495,6 +495,89 @@ body {
   width: min(92vw, 390px);
 }
 
+/* Light mobile-app redesign inspired by polished consumer apps */
+.app-stage {
+  background: #edf4ff;
+}
+
+.app-device {
+  background: #f7faff;
+  box-shadow: 0 24px 80px rgba(75, 120, 190, 0.22);
+}
+
+.app-hero {
+  color: #162033 !important;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(82, 139, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(29, 201, 183, 0.16), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #eef6ff 100%) !important;
+  border-bottom-left-radius: 2.25rem;
+  border-bottom-right-radius: 2.25rem;
+  box-shadow: 0 22px 56px rgba(75, 120, 190, 0.16);
+}
+
+.app-hero a[aria-label="בית"] {
+  background: #4f86f7 !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 28px rgba(79, 134, 247, 0.28);
+}
+
+.app-hero p,
+.app-hero h1 {
+  color: inherit;
+}
+
+.app-hero p.text-white\/70,
+.app-hero p.text-white\/75 {
+  color: #6d7f99 !important;
+}
+
+.app-hero .bg-white\/16,
+.app-hero .bg-white\/14 {
+  background: #ffffff !important;
+  color: #162033;
+  border: 1px solid #e7eef9;
+  box-shadow: 0 12px 26px rgba(75, 120, 190, 0.1);
+}
+
+.app-hero .text-white\/65 {
+  color: #7b8ca8 !important;
+}
+
+.premium-card {
+  border: 1px solid #e7eef9;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(75, 120, 190, 0.12);
+}
+
+.premium-card::before {
+  background: linear-gradient(135deg, rgba(79, 134, 247, 0.055), transparent 42%, rgba(29, 201, 183, 0.055));
+}
+
+.bottom-dock {
+  background: #4f86f7;
+  box-shadow: 0 18px 42px rgba(79, 134, 247, 0.38);
+}
+
+.bottom-dock a {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bottom-dock a.bg-white {
+  color: #4f86f7;
+}
+
+.sharecharge-logo-image,
+.sharecharge-logo-float,
+.sharecharge-clean-ring,
+.sharecharge-clean-ring-delayed,
+.sharecharge-spark,
+.sharecharge-orbit,
+.sharecharge-orbit-reverse,
+.sharecharge-logo-shine {
+  animation: none !important;
+}
+
 /* Admin Styles - Keep dark theme for admin */
 .admin-page {
   background: #0a0a0f;
