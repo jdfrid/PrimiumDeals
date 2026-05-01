@@ -430,6 +430,71 @@ body {
   box-shadow: 0 20px 55px rgba(15, 23, 42, 0.22);
 }
 
+.app-stage {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.2), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(56, 189, 248, 0.18), transparent 30%),
+    linear-gradient(135deg, #020617 0%, #0f172a 46%, #ecfeff 100%);
+}
+
+.app-device {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef7f4 52%, #f8fafc 100%);
+  box-shadow: 0 34px 90px rgba(2, 6, 23, 0.38);
+}
+
+.app-device::before {
+  content: '';
+  position: absolute;
+  inset: 220px -90px auto auto;
+  height: 260px;
+  width: 260px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  filter: blur(44px);
+  pointer-events: none;
+}
+
+.app-hero {
+  border-bottom-left-radius: 2.6rem;
+  border-bottom-right-radius: 2.6rem;
+  box-shadow: 0 24px 65px rgba(15, 23, 42, 0.26);
+}
+
+.premium-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.82);
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 20px 52px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.premium-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(16, 185, 129, 0.1), transparent 32%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.4), transparent);
+  pointer-events: none;
+}
+
+.premium-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.premium-card.bg-slate-950,
+.premium-card.bg-emerald-500 {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
+}
+
+.bottom-dock {
+  width: min(92vw, 390px);
+}
+
 /* Admin Styles - Keep dark theme for admin */
 .admin-page {
   background: #0a0a0f;

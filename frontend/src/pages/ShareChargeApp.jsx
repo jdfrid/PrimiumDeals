@@ -386,74 +386,91 @@ function AppFrame({ role, title, subtitle, children, actions, onExit }) {
   const theme = roleEntryConfig[role] || roleEntryConfig.driver;
 
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-950 text-slate-950">
-      <div className="relative mx-auto min-h-screen max-w-md overflow-hidden bg-slate-100 shadow-2xl shadow-slate-950/40">
-        <div className={`absolute inset-x-0 top-0 h-72 bg-gradient-to-br ${theme.gradient}`} />
-        <div className="absolute -right-20 top-20 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
-        <div className="absolute -left-24 top-36 h-64 w-64 rounded-full bg-cyan-300/20 blur-3xl" />
+    <div dir="rtl" className="app-stage min-h-screen text-slate-950">
+      <div className="app-device relative mx-auto min-h-screen max-w-md overflow-hidden">
+        <header className={`app-hero relative overflow-hidden bg-gradient-to-br ${theme.gradient} px-5 pb-14 pt-5 text-white`}>
+          <div className="absolute -right-16 top-4 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute -left-20 bottom-2 h-56 w-56 rounded-full bg-cyan-200/20 blur-3xl" />
 
-        <header className="sticky top-0 z-30 px-4 pb-5 pt-4 text-white">
-          <div className="relative rounded-[2rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
-            <div className="flex items-center justify-between gap-3">
-              <Link to="/" className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-white text-slate-950 shadow-lg" aria-label="בית">
-              <Zap size={23} />
-              </Link>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">ShareCharge</p>
-                <h1 className="truncate text-2xl font-black tracking-tight">{title}</h1>
-                <p className="truncate text-xs font-bold text-white/70">{subtitle}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {actions}
-                <button onClick={onExit} className="rounded-2xl bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20">
-                  כניסה
-                </button>
-              </div>
+          <div className="relative z-10 flex items-center justify-between gap-3">
+            <Link to="/" className="flex h-14 w-14 items-center justify-center rounded-[1.55rem] bg-white text-slate-950 shadow-xl shadow-slate-950/15" aria-label="בית">
+              <Zap size={26} />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-white/70">ShareCharge</p>
+              <h1 className="mt-1 truncate text-3xl font-black tracking-tight">{title}</h1>
+              <p className="mt-1 truncate text-sm font-bold text-white/75">{subtitle}</p>
             </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-2xl bg-white/14 p-3 text-center ring-1 ring-white/10">
-                <p className="text-lg font-black">{role === 'driver' ? 'GPS' : role === 'host' ? 'OTP' : 'BI'}</p>
-                <p className="text-[11px] font-bold text-white/65">פעיל</p>
-              </div>
-              <div className="rounded-2xl bg-white/14 p-3 text-center ring-1 ring-white/10">
-                <p className="text-lg font-black">Live</p>
-                <p className="text-[11px] font-bold text-white/65">מסונכרן</p>
-              </div>
-              <div className="rounded-2xl bg-emerald-300 p-3 text-center text-slate-950">
-                <p className="text-lg font-black">OTP</p>
-                <p className="text-[11px] font-bold text-slate-700">מאובטח</p>
-              </div>
+            <div className="flex items-center gap-2">
+              {actions}
+              <button onClick={onExit} className="rounded-2xl bg-white/16 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20 backdrop-blur">
+                כניסה
+              </button>
             </div>
+          </div>
 
-            <nav className="mt-4 grid grid-cols-3 gap-2 rounded-[1.4rem] bg-slate-950/35 p-1 ring-1 ring-white/10">
-              {nav.map((item) => {
-                const Icon = item.icon;
-                const active = item.role === role;
-                return (
-                  <Link
-                    key={item.role}
-                    to={`/app/${item.role}`}
-                    className={`flex items-center justify-center gap-1 rounded-[1.1rem] px-3 py-2 text-sm font-black transition ${
-                      active ? 'bg-white text-slate-950 shadow-lg' : 'text-white/65 hover:text-white'
-                    }`}
-                  >
-                    <Icon size={16} />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+          <div className="relative z-10 mt-7 grid grid-cols-3 gap-3">
+            <div className="rounded-[1.35rem] bg-white/16 p-3 text-center ring-1 ring-white/12 backdrop-blur">
+              <p className="text-xl font-black">{role === 'driver' ? 'GPS' : role === 'host' ? 'OTP' : 'BI'}</p>
+              <p className="text-[11px] font-bold text-white/65">פעיל</p>
+            </div>
+            <div className="rounded-[1.35rem] bg-white/16 p-3 text-center ring-1 ring-white/12 backdrop-blur">
+              <p className="text-xl font-black">Live</p>
+              <p className="text-[11px] font-bold text-white/65">מסונכרן</p>
+            </div>
+            <div className="rounded-[1.35rem] bg-white p-3 text-center text-slate-950">
+              <p className="text-xl font-black">OTP</p>
+              <p className="text-[11px] font-bold text-slate-500">מאובטח</p>
+            </div>
           </div>
         </header>
-        <main className="relative z-10 space-y-4 px-4 pb-24 pt-2">{children}</main>
+
+        <main className="relative z-10 -mt-9 space-y-4 px-4 pb-28">{children}</main>
+
+        <nav className="bottom-dock fixed inset-x-0 bottom-4 z-40 mx-auto grid max-w-sm grid-cols-3 gap-2 rounded-[1.6rem] bg-slate-950/90 p-2 shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
+          {nav.map((item) => {
+            const Icon = item.icon;
+            const active = item.role === role;
+            return (
+              <Link
+                key={item.role}
+                to={`/app/${item.role}`}
+                className={`flex flex-col items-center justify-center gap-1 rounded-[1.2rem] px-3 py-2 text-xs font-black transition ${
+                  active ? 'bg-white text-slate-950 shadow-lg' : 'text-white/55 hover:text-white'
+                }`}
+              >
+                <Icon size={18} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
 }
 
 function Card({ children, className = '' }) {
-  return <section className={`app-card rounded-[1.75rem] p-4 ${className}`}>{children}</section>;
+  return <section className={`premium-card rounded-[2rem] p-4 ${className}`}>{children}</section>;
+}
+
+function MetricCard({ icon: Icon, value, label, tone = 'emerald' }) {
+  const toneClasses = {
+    emerald: 'bg-emerald-100 text-emerald-700',
+    blue: 'bg-blue-100 text-blue-700',
+    amber: 'bg-amber-100 text-amber-700',
+    slate: 'bg-slate-900 text-white',
+  };
+
+  return (
+    <div className="rounded-[1.35rem] bg-white/85 p-3 shadow-sm ring-1 ring-slate-100">
+      <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-2xl ${toneClasses[tone] || toneClasses.emerald}`}>
+        <Icon size={19} />
+      </div>
+      <p className="text-xl font-black">{value}</p>
+      <p className="text-xs font-bold text-slate-500">{label}</p>
+    </div>
+  );
 }
 
 function StatusPill({ status }) {
