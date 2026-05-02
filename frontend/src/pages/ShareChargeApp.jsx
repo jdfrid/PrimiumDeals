@@ -518,40 +518,38 @@ function RoleEntryScreen({ role, onEnter }) {
   };
 
   return (
-    <div dir="rtl" className={`min-h-screen overflow-hidden bg-slate-100 text-white`}>
-      <div className={`sharecharge-phone-entry relative mx-auto flex min-h-screen max-w-md flex-col justify-between overflow-hidden bg-gradient-to-br ${config.gradient} p-4 py-6 shadow-2xl shadow-slate-400/60`}>
+    <div dir="rtl" className="min-h-screen overflow-hidden bg-[#eef4ff] text-slate-950">
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col justify-between overflow-hidden bg-[#f8fbff] p-4 py-6 shadow-2xl shadow-blue-200/70">
+        <div className="absolute -right-20 top-10 h-60 w-60 rounded-full bg-blue-200/45 blur-3xl" />
+        <div className="absolute -left-24 bottom-24 h-72 w-72 rounded-full bg-emerald-200/35 blur-3xl" />
         <div className="flex items-center justify-between">
-          <Link to="/" className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-black backdrop-blur">
+          <Link to="/" className="relative z-10 rounded-2xl bg-white px-4 py-2 text-sm font-black text-blue-600 shadow-md shadow-blue-100">
             ShareCharge
           </Link>
-          <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-black backdrop-blur">דמו חי</div>
+          <div className="relative z-10 rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-700">דמו חי</div>
         </div>
 
-        <section className="relative my-6 rounded-[2rem] border border-white/15 bg-slate-950/20 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
-          <div className="absolute -left-10 top-12 h-32 w-32 rounded-full bg-white/20 blur-3xl" />
-          <div className="absolute -right-12 bottom-10 h-40 w-40 rounded-full bg-emerald-300/25 blur-3xl" />
-
-          <div className="sharecharge-phone-logo-stage relative mx-auto mb-7 flex h-72 max-h-[38vh] w-full items-center justify-center overflow-hidden rounded-[1.75rem] bg-black/20">
-            <div className="sharecharge-clean-ring absolute h-56 w-56 rounded-full border border-white/25" />
-            <div className="sharecharge-clean-ring-delayed absolute h-44 w-44 rounded-full border border-emerald-200/25" />
-            <div className="sharecharge-logo-card relative z-10 flex h-64 w-64 max-w-[88%] items-center justify-center overflow-hidden">
-              <span className="sharecharge-logo-shine" />
-              <img src="/sharecharge-logo.png" alt="ShareCharge" className="sharecharge-logo-image relative z-10 h-full w-full object-contain" />
+        <section className="relative my-6 rounded-[2.2rem] bg-white p-5 shadow-2xl shadow-blue-200/60 ring-1 ring-blue-50">
+          <div className="relative mx-auto mb-7 flex h-52 w-full items-center justify-center overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-blue-50 to-emerald-50">
+            <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-cover" />
+            <div className="absolute inset-x-5 bottom-4 rounded-2xl bg-white/90 px-4 py-3 shadow-lg backdrop-blur">
+              <p className="text-sm font-black text-slate-900">מערכת טעינה שיתופית</p>
+              <p className="text-xs font-bold text-slate-500">כניסה מאובטחת לפי תפקיד</p>
             </div>
           </div>
 
-          <div className="sharecharge-entry-details relative text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-950 shadow-xl">
+          <div className="relative text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-200">
               <Icon size={30} />
             </div>
-            <p className="text-sm font-black uppercase tracking-[0.28em] text-emerald-100">Welcome</p>
-            <h1 className="mt-2 text-4xl font-black">{config.title}</h1>
-            <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-white/80">{config.subtitle}</p>
+            <p className="text-sm font-black uppercase tracking-[0.28em] text-blue-400">Welcome</p>
+            <h1 className="mt-2 text-4xl font-black text-slate-950">{config.title}</h1>
+            <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-slate-500">{config.subtitle}</p>
 
             <div className="mt-6 grid gap-2">
               {config.points.map((point) => (
-                <div key={point} className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold backdrop-blur">
-                  <CheckCircle size={17} className="text-emerald-200" />
+                <div key={point} className="flex items-center gap-2 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold text-slate-700">
+                  <CheckCircle size={17} className="text-blue-500" />
                   <span>{point}</span>
                 </div>
               ))}
@@ -559,36 +557,36 @@ function RoleEntryScreen({ role, onEnter }) {
           </div>
         </section>
 
-        <div className="sharecharge-entry-details space-y-3">
-          <div className="rounded-[2rem] border border-white/15 bg-white/10 p-4 backdrop-blur-2xl">
-            <p className="mb-3 text-sm font-black text-emerald-100">הזדהות במייל עם OTP</p>
-            <label className="text-xs font-bold text-white/70">
+        <div className="relative z-10 space-y-3">
+          <div className="rounded-[2rem] bg-white p-4 shadow-xl shadow-blue-100/70 ring-1 ring-blue-50">
+            <p className="mb-3 text-sm font-black text-blue-600">הזדהות במייל עם OTP</p>
+            <label className="text-xs font-bold text-slate-500">
               כתובת מייל
               <input
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-right text-sm font-black text-slate-950 outline-none"
+                className="mt-2 w-full rounded-2xl bg-slate-50 px-4 py-3 text-right text-sm font-black text-slate-950 outline-none ring-1 ring-slate-100"
                 inputMode="email"
                 dir="ltr"
               />
             </label>
-            <button onClick={sendEmailOtp} className="mt-3 w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg active:scale-[0.98]">
+            <button onClick={sendEmailOtp} className="mt-3 w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 active:scale-[0.98]">
               שלח קוד OTP למייל
             </button>
 
             {sentOtp && (
-              <div className="mt-3 rounded-2xl border border-emerald-200/30 bg-slate-950/45 p-3">
+              <div className="mt-3 rounded-2xl bg-blue-50 p-3 ring-1 ring-blue-100">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold text-white/55">תיבת מייל דמו</p>
-                    <p className="text-sm font-black">{email}</p>
+                    <p className="text-xs font-bold text-slate-500">תיבת מייל דמו</p>
+                    <p className="text-sm font-black text-slate-900">{email}</p>
                   </div>
-                  <span className="rounded-full bg-emerald-300 px-3 py-1 text-xs font-black text-slate-950">
+                  <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-black text-white">
                     נשלח {sentAt ? shortTime(sentAt) : ''}
                   </span>
                 </div>
-                <p className="mt-3 text-xs text-white/55">קוד הכניסה שלך ל־ShareCharge:</p>
-                <p className="mt-1 font-mono text-4xl font-black tracking-[0.32em] text-emerald-200">{sentOtp}</p>
+                <p className="mt-3 text-xs text-slate-500">קוד הכניסה שלך ל־ShareCharge:</p>
+                <p className="mt-1 font-mono text-4xl font-black tracking-[0.32em] text-blue-600">{sentOtp}</p>
               </div>
             )}
 
@@ -597,17 +595,17 @@ function RoleEntryScreen({ role, onEnter }) {
                 value={otpInput}
                 onChange={(event) => setOtpInput(event.target.value.replace(/\D/g, '').slice(0, 4))}
                 placeholder="קוד OTP"
-                className="rounded-2xl bg-white px-4 py-3 text-center font-mono text-xl font-black tracking-[0.2em] text-slate-950 outline-none"
+                className="rounded-2xl bg-slate-50 px-4 py-3 text-center font-mono text-xl font-black tracking-[0.2em] text-slate-950 outline-none ring-1 ring-slate-100"
                 inputMode="numeric"
                 maxLength={4}
                 dir="ltr"
               />
-              <button onClick={verifyEmailOtp} className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-lg active:scale-[0.98]">
+              <button onClick={verifyEmailOtp} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg active:scale-[0.98]">
                 אימות
               </button>
             </div>
 
-            {authError && <p className="mt-2 text-sm font-bold text-red-100">{authError}</p>}
+            {authError && <p className="mt-2 text-sm font-bold text-red-500">{authError}</p>}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {Object.entries(roleEntryConfig).map(([key, item]) => (
@@ -615,7 +613,7 @@ function RoleEntryScreen({ role, onEnter }) {
                 key={key}
                 to={`/app/${key}`}
                 className={`rounded-2xl px-3 py-3 text-center text-xs font-black backdrop-blur ${
-                  key === role ? 'bg-white text-slate-950' : 'bg-white/15 text-white'
+                  key === role ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white text-slate-500 shadow-sm'
                 }`}
               >
                 {item.title.replace('כניסת ', '')}
@@ -630,41 +628,78 @@ function RoleEntryScreen({ role, onEnter }) {
 
 function RoleSelectScreen() {
   return (
-    <div dir="rtl" className="app-workspace-bg min-h-screen text-slate-950">
-      <div className="relative mx-auto flex min-h-screen max-w-md flex-col justify-between overflow-hidden bg-slate-950 px-4 py-6 text-white shadow-2xl shadow-slate-400/60">
-        <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-emerald-400/25 blur-3xl" />
-        <div className="absolute -left-24 bottom-24 h-72 w-72 rounded-full bg-blue-500/25 blur-3xl" />
-        <div className="text-center">
-          <div className="relative mx-auto mb-5 h-44 overflow-hidden rounded-[2rem] border border-white/10 bg-black/30 shadow-2xl shadow-emerald-950/30">
-            <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-cover" />
-          </div>
-          <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">ShareCharge Workspace</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight">בחר סביבת עבודה</h1>
-          <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-white/65">
-            מערכת דמו עובדת: מנהל מוסיף עמדות, נהג מאתר ומזמין, ספק מאשר ומסכם טעינה לתשלום דמה.
-          </p>
-        </div>
+    <div dir="rtl" className="min-h-screen overflow-hidden bg-[#edf5ff] text-slate-950">
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col overflow-hidden bg-[#f8fbff] px-4 pb-6 pt-5 shadow-2xl shadow-blue-200/70">
+        <div className="absolute -right-28 top-0 h-72 w-72 rounded-full bg-blue-300/35 blur-3xl" />
+        <div className="absolute -left-28 top-56 h-72 w-72 rounded-full bg-emerald-200/45 blur-3xl" />
+        <div className="absolute inset-x-6 bottom-10 h-36 rounded-full bg-cyan-100/55 blur-3xl" />
 
-        <div className="relative space-y-3">
+        <header className="relative z-10 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-500">ShareCharge</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">טעינה פרטית. אפליקציה אחת.</h1>
+          </div>
+          <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-blue-600 p-3 text-white shadow-xl shadow-blue-200">
+            <Zap size={26} />
+          </div>
+        </header>
+
+        <section className="relative z-10 mt-5 overflow-hidden rounded-[2.2rem] bg-white p-4 shadow-2xl shadow-blue-200/60 ring-1 ring-blue-50">
+          <div className="relative h-48 overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-blue-50 via-white to-emerald-50">
+            <img src="/sharecharge-logo.png" alt="ShareCharge" className="h-full w-full object-cover opacity-95" />
+            <div className="absolute inset-x-4 bottom-4 rounded-3xl bg-white/92 p-4 shadow-xl backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-slate-950">דמו משקיעים עובד</p>
+                  <p className="mt-1 text-xs font-bold text-slate-500">נהג, ספק ומנהל מסונכרנים בזמן אמת</p>
+                </div>
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">Live</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-2xl bg-blue-50 p-3">
+              <Navigation className="mx-auto text-blue-600" size={20} />
+              <p className="mt-1 text-xs font-black text-slate-700">איתור</p>
+            </div>
+            <div className="rounded-2xl bg-emerald-50 p-3">
+              <ShieldCheck className="mx-auto text-emerald-600" size={20} />
+              <p className="mt-1 text-xs font-black text-slate-700">OTP</p>
+            </div>
+            <div className="rounded-2xl bg-indigo-50 p-3">
+              <Wallet className="mx-auto text-indigo-600" size={20} />
+              <p className="mt-1 text-xs font-black text-slate-700">תשלומים</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="relative z-10 mt-5 flex-1 space-y-3">
           {Object.entries(roleEntryConfig).map(([key, item]) => {
             const Icon = item.icon;
             return (
-              <Link key={key} to={`/app/${key}`} className="group flex items-center gap-4 rounded-[1.75rem] border border-white/70 bg-white/95 p-4 text-slate-950 shadow-xl shadow-slate-950/20 backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98]">
-                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-lg transition group-hover:scale-105`}>
+              <Link key={key} to={`/app/${key}`} className="group flex items-center gap-4 rounded-[1.8rem] bg-white p-4 text-slate-950 shadow-xl shadow-blue-100/80 ring-1 ring-blue-50 transition hover:-translate-y-0.5 active:scale-[0.98]">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-lg shadow-blue-100 transition group-hover:scale-105`}>
                   <Icon size={25} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-black">{item.title}</h2>
-                  <p className="mt-1 text-sm text-slate-500">{item.subtitle}</p>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">{item.subtitle}</p>
                 </div>
-                <ChevronLeft size={22} className="text-slate-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-blue-500">
+                  <ChevronLeft size={20} />
+                </div>
               </Link>
             );
           })}
         </div>
 
-        <div className="relative rounded-3xl border border-white/10 bg-white/10 p-4 text-sm leading-7 text-white/70 backdrop-blur">
-          כל כניסה דורשת OTP במייל דמו. המידע נשמר בדפדפן באמצעות localStorage, לכן אפשר להדגים תהליך מלא בלי סליקה אמיתית ובלי backend.
+        <div className="relative z-10 mt-4 rounded-[1.7rem] bg-slate-950 p-4 text-sm leading-7 text-white shadow-2xl shadow-slate-300/60">
+          <div className="mb-2 flex items-center gap-2 font-black text-emerald-300">
+            <CheckCircle size={18} />
+            כל זרימת האפליקציה פעילה בדמו
+          </div>
+          OTP במייל דמו, הזמנות, אישור ספק, התחלת טעינה, סיום וחישוב תשלום נשמרים בדפדפן ומסונכרנים בין שלושת התפקידים.
         </div>
       </div>
     </div>
