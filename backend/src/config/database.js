@@ -43,16 +43,62 @@ console.log(`📁 Database path: ${dbPath}`);
 
 let db = null;
 
+function quickCheckOk(database) {
+  try {
+    const r = database.exec('PRAGMA quick_check');
+    if (!r.length || !r[0].values?.length) return false;
+    return r[0].values[0][0] === 'ok';
+  } catch {
+    return false;
+  }
+}
+
+/** If deals.db is corrupt, move it aside and start empty so the server can boot (e.g. Render). */
+function loadDatabaseOrRecover(SQL) {
+  if (!fs.existsSync(dbPath)) {
+    return new SQL.Database();
+  }
+  const buffer = fs.readFileSync(dbPath);
+  let database;
+  try {
+    database = new SQL.Database(buffer);
+  } catch (e) {
+    console.error('❌ SQLite file unreadable (corrupt or not a database):', e.message || e);
+    return quarantineCorruptFileAndCreateFresh(SQL);
+  }
+  if (!quickCheckOk(database)) {
+    console.error('❌ SQLite quick_check failed — database image may be malformed');
+    try {
+      database.close();
+    } catch {
+      /* ignore */
+    }
+    return quarantineCorruptFileAndCreateFresh(SQL);
+  }
+  return database;
+}
+
+function quarantineCorruptFileAndCreateFresh(SQL) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const quarantinePath = `${dbPath}.corrupt.${stamp}`;
+  try {
+    fs.renameSync(dbPath, quarantinePath);
+    console.warn(`⚠️ Moved corrupt DB to ${quarantinePath}. A new empty database will be created. Restore from backup if you have one.`);
+  } catch (e) {
+    console.warn('⚠️ Could not rename corrupt DB, attempting delete:', e.message || e);
+    try {
+      fs.unlinkSync(dbPath);
+    } catch (e2) {
+      console.error('⚠️ Could not remove corrupt DB file:', e2.message || e2);
+    }
+  }
+  return new SQL.Database();
+}
+
 export async function initDatabase() {
   const SQL = await initSqlJs();
-  
-  // Load existing database or create new one
-  if (fs.existsSync(dbPath)) {
-    const buffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
+
+  db = loadDatabaseOrRecover(SQL);
 
   // Initialize tables
   db.run(`
