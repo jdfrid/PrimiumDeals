@@ -164,3 +164,18 @@ export const getPublicDeals = (req, res) => {
     seed: responseSeed
   });
 };
+
+/** Single active public deal — same safe projection as getPublicDeals list rows. */
+export const getPublicDealById = (req, res) => {
+  const minDiscount = 10;
+  const id = req.params.id;
+  const deal = prepare(`
+    SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent,
+           d.currency, d.condition, d.ebay_url, d.source, c.name AS category_name, c.icon AS category_icon
+    FROM deals d
+    LEFT JOIN categories c ON d.category_id = c.id
+    WHERE d.id = ? AND d.is_active = 1 AND d.discount_percent >= ?
+  `).get(id, minDiscount);
+  if (!deal) return res.status(404).json({ error: 'Deal not found' });
+  res.json(deal);
+};

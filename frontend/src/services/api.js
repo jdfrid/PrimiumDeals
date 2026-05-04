@@ -123,6 +123,10 @@ class ApiService {
     return this.request(`/public/deals${query ? `?${query}` : ''}`);
   }
 
+  async getPublicDealById(id) {
+    return this.request(`/public/deals/${encodeURIComponent(id)}`);
+  }
+
   async getPublicCategories() {
     return this.request('/public/categories');
   }
@@ -269,6 +273,47 @@ class ApiService {
     return this.request(`/admin/video-studio/jobs/${jobId}/retry`, { method: 'POST', body: JSON.stringify({}) });
   }
 
+  async getCreativeStudioSettings() {
+    return this.request('/admin/creative-videos/settings');
+  }
+
+  async saveCreativeStudioSettings(data) {
+    return this.request('/admin/creative-videos/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getCreativeVideoOptions() {
+    return this.request('/admin/creative-videos/options');
+  }
+
+  async getCreativeVideoStatus() {
+    return this.request('/admin/creative-videos/status');
+  }
+
+  async getCreativeVideoJobs(limit = 40) {
+    return this.request(`/admin/creative-videos/jobs?limit=${limit}`);
+  }
+
+  async getCreativeVideoJob(id) {
+    return this.request(`/admin/creative-videos/jobs/${id}`);
+  }
+
+  async createCreativeVideoJob(body) {
+    return this.request('/admin/creative-videos/jobs', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  }
+
+  async retryCreativeVideoJob(jobId) {
+    return this.request(`/admin/creative-videos/jobs/${jobId}/retry`, {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+  }
+
   async downloadTikTokVideo(jobId) {
     const headers = {
       Authorization: `Bearer ${this.getToken()}`
@@ -286,7 +331,6 @@ class ApiService {
     a.click();
     URL.revokeObjectURL(url);
   }
-
 
   async voicePlannerRequest(endpoint, options = {}) {
     const accessKey = localStorage.getItem('voicePlannerAccessKey');

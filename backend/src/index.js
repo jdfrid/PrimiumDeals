@@ -44,6 +44,7 @@ import { initDatabase, prepare, getDb, saveDatabase } from './config/database.js
 import routes from './routes/index.js';
 import scheduler from './services/scheduler.js';
 import { recoverStuckVideoJobs } from './services/tiktok/tiktokEngine.js';
+import { recoverStuckCreativeJobs } from './services/creative/creativeVideoEngine.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -198,6 +199,11 @@ async function start() {
       recoverStuckVideoJobs();
     } catch (e) {
       console.warn('recoverStuckVideoJobs skipped:', e.message || e);
+    }
+    try {
+      recoverStuckCreativeJobs(45);
+    } catch (e) {
+      console.warn('recoverStuckCreativeJobs skipped:', e.message || e);
     }
 
     app.listen(PORT, '0.0.0.0', () => {

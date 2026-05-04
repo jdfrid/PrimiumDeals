@@ -65,7 +65,7 @@ const LANDING_PAGES = {
 function DealCard({ deal }) {
   const savings = deal.original_price - deal.current_price;
   const trackingUrl = `/api/track/click/${deal.id}`;
-  
+
   const handleClick = () => {
     if (typeof window.gtag === 'function') {
       window.gtag('event', 'click_out', {
@@ -76,39 +76,50 @@ function DealCard({ deal }) {
       });
     }
   };
-  
+
   return (
-    <a
-      href={trackingUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={handleClick}
-      className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
-    >
-      <div className="relative aspect-square overflow-hidden bg-gray-50">
-        <img
-          src={deal.image_url || '/placeholder.jpg'}
-          alt={deal.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
-        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
-          -{deal.discount_percent}%
-        </div>
-      </div>
-      <div className="p-4">
-        <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-2">{deal.title}</h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-gray-400 text-sm line-through">${deal.original_price?.toFixed(0)}</span>
-            <div className="text-xl font-bold text-gray-900">${deal.current_price?.toFixed(0)}</div>
-          </div>
-          <div className="text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
-            Save ${savings?.toFixed(0)}
+    <div className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col">
+      <Link
+        to={`/deal/${deal.id}`}
+        onClick={handleClick}
+        className="block flex flex-col flex-1 min-h-0"
+      >
+        <div className="relative aspect-square overflow-hidden bg-gray-50">
+          <img
+            src={deal.image_url || '/placeholder.jpg'}
+            alt={deal.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+          <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
+            -{deal.discount_percent}%
           </div>
         </div>
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-2">{deal.title}</h3>
+          <div className="flex items-center justify-between mt-auto">
+            <div>
+              <span className="text-gray-400 text-sm line-through">${deal.original_price?.toFixed(0)}</span>
+              <div className="text-xl font-bold text-gray-900">${deal.current_price?.toFixed(0)}</div>
+            </div>
+            <div className="text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
+              Save ${savings?.toFixed(0)}
+            </div>
+          </div>
+        </div>
+      </Link>
+      <div className="px-4 pb-4">
+        <a
+          href={trackingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 text-sm font-medium hover:from-orange-600 hover:to-red-600"
+        >
+          <ShoppingBag size={16} />
+          View Deal
+        </a>
       </div>
-    </a>
+    </div>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
 import api from '../services/api';
 import NewsletterPopup from '../components/NewsletterPopup';
@@ -25,13 +26,11 @@ const SourceIcon = ({ source }) => {
 
 function DealCard({ deal }) {
   const savings = deal.original_price - deal.current_price;
-  // Use tracking URL to log clicks
   const trackingUrl = `/api/track/click/${deal.id}`;
-  
+
   // Track click in Google Analytics (using GA4 e-commerce events)
-  const handleClick = () => {
+  const handleCardNav = () => {
     if (typeof window.gtag === 'function') {
-      // GA4 select_item event (standard e-commerce event)
       window.gtag('event', 'select_item', {
         item_list_name: 'Deals',
         items: [{
@@ -44,8 +43,7 @@ function DealCard({ deal }) {
           currency: 'USD'
         }]
       });
-      
-      // Also send custom event for more details
+
       window.gtag('event', 'deal_click', {
         currency: 'USD',
         value: deal.current_price,
@@ -56,70 +54,75 @@ function DealCard({ deal }) {
           discount: deal.discount_percent
         }]
       });
-      
+
       console.log('📊 GA Event sent:', deal.title?.substring(0, 30));
     }
   };
-  
+
   return (
-    <a
-      href={trackingUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={handleClick}
-      className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col"
-    >
-      {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-gray-50">
-        <img
-          src={deal.image_url || '/placeholder.jpg'}
-          alt={deal.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
-        {/* Discount Badge */}
-        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
-          -{deal.discount_percent}%
-        </div>
-        {/* Source Icon */}
-        <div className="absolute top-2 right-2">
-          <SourceIcon source={deal.source} />
-        </div>
-        {/* Category Tag */}
-        {deal.category_name && (
-          <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow">
-            {deal.category_icon} {deal.category_name}
+    <div className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col">
+      <Link
+        to={`/deal/${deal.id}`}
+        onClick={handleCardNav}
+        className="flex flex-col flex-1 min-h-0"
+      >
+        {/* Image Container */}
+        <div className="relative aspect-square overflow-hidden bg-gray-50">
+          <img
+            src={deal.image_url || '/placeholder.jpg'}
+            alt={deal.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+          {/* Discount Badge */}
+          <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-lg">
+            -{deal.discount_percent}%
           </div>
-        )}
-      </div>
-      
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-3 leading-relaxed group-hover:text-blue-600 transition-colors">
-          {deal.title}
-        </h3>
-        
-        {/* Prices */}
-        <div className="mt-auto">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-gray-400 text-sm line-through">${deal.original_price?.toFixed(0)}</span>
+          {/* Source Icon */}
+          <div className="absolute top-2 right-2">
+            <SourceIcon source={deal.source} />
           </div>
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold text-gray-900">${deal.current_price?.toFixed(0)}</div>
-            <div className="flex items-center gap-1 text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
-              <TrendingDown size={14} />
-              <span>Save ${savings?.toFixed(0)}</span>
+          {/* Category Tag */}
+          {deal.category_name && (
+            <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow">
+              {deal.category_icon} {deal.category_name}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-3 leading-relaxed group-hover:text-blue-600 transition-colors">
+            {deal.title}
+          </h3>
+
+          {/* Prices */}
+          <div className="mt-auto">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-gray-400 text-sm line-through">${deal.original_price?.toFixed(0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-bold text-gray-900">${deal.current_price?.toFixed(0)}</div>
+              <div className="flex items-center gap-1 text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
+                <TrendingDown size={14} />
+                <span>Save ${savings?.toFixed(0)}</span>
+              </div>
             </div>
           </div>
         </div>
-        
-        {/* CTA Button */}
-        <button className="mt-3 w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-lg font-medium text-sm hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+      </Link>
+      <div className="px-4 pb-4">
+        <a
+          href={trackingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-lg font-medium text-sm hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+        >
           <ShoppingBag size={16} />
           View Deal
-        </button>
+        </a>
       </div>
-    </a>
+    </div>
   );
 }
 

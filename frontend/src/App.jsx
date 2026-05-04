@@ -1,5 +1,15 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
+import DealsSiteLayout from './layouts/DealsSiteLayout';
+import HomePage from './pages/HomePage';
+import DealLandingPage from './pages/DealLandingPage';
+import TodaysDealsPage from './pages/TodaysDealsPage';
+import CategoryPage from './pages/CategoryPage';
+import BrandPage from './pages/BrandPage';
+import LandingPage from './pages/LandingPage';
+import ContactPage from './pages/ContactPage';
+import TermsPage from './pages/TermsPage';
+import HowItWorksPage from './pages/HowItWorksPage';
 import ShareChargeApp from './pages/ShareChargeApp';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -18,6 +28,7 @@ import BannersGallery from './pages/admin/BannersGallery';
 import SocialHub from './pages/admin/SocialHub';
 import TelegramChannels from './pages/admin/TelegramChannels';
 import TikTokStudio from './pages/admin/TikTokStudio';
+import CreativeStudio from './pages/admin/CreativeStudio';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -45,7 +56,20 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<Navigate to="/app" replace />} />
+        <Route element={<DealsSiteLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/deal/:dealId" element={<DealLandingPage />} />
+          <Route path="/todays-deals" element={<TodaysDealsPage />} />
+          <Route path="/today" element={<TodaysDealsPage />} />
+          <Route path="/category/:categorySlug" element={<CategoryPage />} />
+          <Route path="/brand/:brandSlug" element={<BrandPage />} />
+          <Route path="/designer-sale" element={<LandingPage />} />
+          <Route path="/luxury-watches-sale" element={<LandingPage />} />
+          <Route path="/designer-bags-sale" element={<LandingPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+        </Route>
         <Route path="/app" element={<ShareChargeApp />} />
         <Route path="/app/:role" element={<ShareChargeApp />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -66,6 +90,7 @@ function App() {
           <Route path="telegram" element={<ProtectedRoute roles={['admin']}><TelegramChannels /></ProtectedRoute>} />
           <Route path="video-studio" element={<ProtectedRoute roles={['admin', 'editor']}><TikTokStudio /></ProtectedRoute>} />
           <Route path="tiktok" element={<ProtectedRoute roles={['admin', 'editor']}><TikTokStudio /></ProtectedRoute>} />
+          <Route path="creative-studio" element={<ProtectedRoute roles={['admin', 'editor']}><CreativeStudio /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

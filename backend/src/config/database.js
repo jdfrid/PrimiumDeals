@@ -7,6 +7,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Determine data directory - try persistent disk first, then fallback
 function getDataDir() {
+  const fromEnv = (process.env.DATA_DIR || process.env.SQLITE_DATA_DIR || '').trim();
+  if (fromEnv) {
+    try {
+      if (!fs.existsSync(fromEnv)) fs.mkdirSync(fromEnv, { recursive: true });
+      console.log(`📁 Using DATA_DIR from environment: ${fromEnv}`);
+      return fromEnv;
+    } catch (e) {
+      console.warn('⚠️ DATA_DIR not usable, falling back to default path:', e.message);
+    }
+  }
+
   const persistentPath = '/app/backend/data';
   const localPath = path.join(__dirname, '../../data');
   
@@ -318,6 +329,28 @@ export async function initDatabase() {
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_tiktok_jobs_deal ON tiktok_video_jobs(deal_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_tiktok_jobs_status_created ON tiktok_video_jobs(status, created_at)`);
+
+  // Creative short-video studio (Pexels + cloud render — Shotstack, etc.)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS creative_video_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      trigger_source TEXT DEFAULT 'manual',
+      video_description TEXT NOT NULL,
+      script_tone TEXT NOT NULL,
+      user_notes TEXT,
+      brief_json TEXT,
+      pexels_urls_json TEXT,
+      character_id TEXT,
+      render_provider TEXT DEFAULT 'shotstack',
+      external_render_id TEXT,
+      output_url TEXT,
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_creative_jobs_status ON creative_video_jobs(status, created_at)`);
   
   // Add source column to deals table if not exists
   try {
@@ -375,7 +408,17 @@ export async function initDatabase() {
     ['tiktok_cron', '0 8 * * *'],
     ['tiktok_site_base_url', ''],
     ['tiktok_min_discount', '15'],
-    ['tiktok_repeat_days', '14']
+    ['tiktok_repeat_days', '14'],
+    ['creative_llm_provider', 'template'],
+    ['creative_gemini_api_key', ''],
+    ['creative_gemini_model', 'gemini-2.0-flash'],
+    ['creative_openai_api_key', ''],
+    ['creative_openai_model', 'gpt-4o-mini'],
+    ['creative_video_provider', 'shotstack'],
+    ['creative_video_auto_enabled', 'false'],
+    ['creative_video_cron', '0 14 * * *'],
+    ['creative_auto_description', 'Short vertical video: practical tips about shopping smart and spotting real value online.'],
+    ['creative_auto_tone', 'adults']
   ];
   for (const [key, value] of defaultSettings) {
     const existing = db.exec(`SELECT key FROM settings WHERE key = '${key}'`);

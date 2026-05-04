@@ -4,8 +4,32 @@ import { prepare, saveDatabase } from '../config/database.js';
 import ebayService from './ebayService.js';
 import banggoodService from './banggoodService.js';
 import { runDailyTikTokIfEnabled, recoverStuckVideoJobs } from './tiktok/tiktokEngine.js';
+import { recoverStuckCreativeJobs } from './creative/creativeVideoEngine.js';
 
 let tiktokCronJob = null;
+let creativeVideoCronJob = null;
+
+function refreshCreativeVideoSchedule() {
+  const row = prepare(`SELECT value FROM settings WHERE key = 'creative_video_cron'`).get();
+  const expr = (row?.value || '0 14 * * *').trim();
+  if (creativeVideoCronJob) {
+    creativeVideoCronJob.stop();
+    creativeVideoCronJob = null;
+  }
+  if (!cron.validate(expr)) {
+    console.warn('⚠️ Invalid creative_video_cron expression:', expr);
+    return;
+  }
+  creativeVideoCronJob = cron.schedule(expr, async () => {
+    try {
+      const { runScheduledCreativeIfEnabled } = await import('./creative/creativeVideoEngine.js');
+      await runScheduledCreativeIfEnabled();
+    } catch (e) {
+      console.error('Creative video cron error:', e);
+    }
+  });
+  console.log(`🎬 Creative video (Pexels→Shotstack) cron: ${expr}`);
+}
 
 function refreshTikTokSchedule() {
   const row = prepare(`SELECT value FROM settings WHERE key = 'tiktok_cron'`).get();
@@ -63,12 +87,18 @@ class Scheduler {
     });
     
     refreshTikTokSchedule();
+    refreshCreativeVideoSchedule();
 
     cron.schedule('*/8 * * * *', () => {
       try {
         recoverStuckVideoJobs(30);
       } catch (e) {
         console.error('Video job stale recovery:', e);
+      }
+      try {
+        recoverStuckCreativeJobs(45);
+      } catch (e) {
+        console.error('Creative video stale recovery:', e);
       }
     });
 
@@ -78,6 +108,11 @@ class Scheduler {
   /** Call after updating `tiktok_cron` in settings. */
   rescheduleTikTok() {
     refreshTikTokSchedule();
+  }
+
+  /** Call after updating `creative_video_cron` in settings. */
+  rescheduleCreativeVideo() {
+    refreshCreativeVideoSchedule();
   }
 
   scheduleRule(rule) {

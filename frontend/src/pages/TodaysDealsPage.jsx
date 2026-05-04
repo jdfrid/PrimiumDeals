@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, TrendingDown, ShoppingBag, Share2, Copy, Check, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, TrendingDown, ShoppingBag, Share2, Copy, Check } from 'lucide-react';
 import api from '../services/api';
+import { getDealShareUrl } from '../utils/dealShareUrl';
 
 function DealCard({ deal, onShare }) {
   const savings = deal.original_price - deal.current_price;
   const trackingUrl = `/api/track/click/${deal.id}`;
-  
+
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <a
-        href={trackingUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block"
-      >
+      <Link to={`/deal/${deal.id}`} className="block">
         <div className="relative aspect-square overflow-hidden bg-gray-50">
           <img
             src={deal.image_url || '/placeholder.jpg'}
@@ -44,7 +40,7 @@ function DealCard({ deal, onShare }) {
             </div>
           </div>
         </div>
-      </a>
+      </Link>
       <div className="px-4 pb-4 flex gap-2">
         <a
           href={trackingUrl}
@@ -56,6 +52,7 @@ function DealCard({ deal, onShare }) {
           View Deal
         </a>
         <button
+          type="button"
           onClick={() => onShare(deal)}
           className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           title="Share"
@@ -69,11 +66,13 @@ function DealCard({ deal, onShare }) {
 
 function ShareModal({ deal, onClose }) {
   const [copied, setCopied] = useState(false);
-  
+
   if (!deal) return null;
-  
-  const shareUrl = `https://dealsluxy.com/api/track/click/${deal.id}`;
-  const shareText = `🔥 ${deal.discount_percent}% OFF! ${deal.title?.substring(0, 60)}...\n\n💰 Was: $${deal.original_price?.toFixed(0)} → Now: $${deal.current_price?.toFixed(0)}\n\n🛒 Get it here: ${shareUrl}\n\n#deals #luxury #sale`;
+
+  const shareUrl = getDealShareUrl(deal.id);
+  const trackUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/api/track/click/${deal.id}` : `/api/track/click/${deal.id}`;
+  const shareText = `🔥 ${deal.discount_percent}% OFF! ${deal.title?.substring(0, 60)}...\n\n💰 Was: $${deal.original_price?.toFixed(0)} → Now: $${deal.current_price?.toFixed(0)}\n\n🛒 Deal page: ${shareUrl}\n\n🔗 Quick checkout (tracked): ${trackUrl}\n\n#deals #luxury #sale`;
   
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareText);

@@ -16,6 +16,7 @@ import {
   retryTikTokJobBackground
 } from '../services/tiktok/tiktokEngine.js';
 import scheduler from '../services/scheduler.js';
+import creativeVideoRoutes from './creativeVideoRoutes.js';
 import voicePlannerRoutes from './voicePlannerRoutes.js';
 
 const router = express.Router();
@@ -106,6 +107,7 @@ router.post('/auth/reset-admin', async (req, res) => {
   }
 });
 router.get('/public/deals', dealsController.getPublicDeals);
+router.get('/public/deals/:id', dealsController.getPublicDealById);
 router.get('/public/categories', categoriesController.getPublicCategories);
 
 // Clear all deals to refresh with correct URLs
@@ -694,6 +696,7 @@ videoStudioApi.get('/jobs/:id/download', authenticateToken, requireRole('admin',
 
 router.use('/admin/tiktok', videoStudioApi);
 router.use('/admin/video-studio', videoStudioApi);
+router.use('/admin/creative-videos', creativeVideoRoutes);
 router.use('/voice-planner', voicePlannerRoutes);
 
 router.get('/admin/video-engine/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {

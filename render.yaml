@@ -33,6 +33,22 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Creative short-video studio (admin → Short videos → Creative tab): Pexels stock + Shotstack cloud render
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: SHOTSTACK_API_KEY
+        sync: false
+      # Without a Render persistent disk, SQLite is wiped on redeploy — set these so Gemini/OpenAI still work:
+      # CREATIVE_GEMINI_API_KEY, optional CREATIVE_LLM_PROVIDER=gemini, CREATIVE_GEMINI_MODEL=gemini-2.0-flash
+      # Mount a disk and set DATA_DIR to that path to keep deals.db and UI-saved settings across deploys.
+      - key: DATA_DIR
+        sync: false
+      - key: CREATIVE_GEMINI_API_KEY
+        sync: false
+      - key: CREATIVE_LLM_PROVIDER
+        sync: false
+      - key: CREATIVE_OPENAI_API_KEY
+        sync: false
       # Voice Planner (/voice-planner): Google Calendar/Tasks + OpenAI transcription/parsing
       - key: OPENAI_API_KEY
         sync: false
@@ -48,4 +64,9 @@ services:
         sync: false
       # Optional. Useful in local dev if callback should return to Vite at http://localhost:5173/voice-planner
       - key: VOICE_PLANNER_APP_URL
+        sync: false
+      # Optional: override Shotstack Edit API host/version if your dashboard says otherwise
+      - key: SHOTSTACK_HOST
+        sync: false
+      - key: SHOTSTACK_EDIT_VERSION
         sync: false

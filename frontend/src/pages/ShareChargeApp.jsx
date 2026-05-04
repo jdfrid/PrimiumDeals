@@ -393,7 +393,7 @@ function AppFrame({ role, title, subtitle, children, actions, onExit }) {
           <div className="absolute -left-20 bottom-2 h-56 w-56 rounded-full bg-cyan-200/20 blur-3xl" />
 
           <div className="relative z-10 flex items-center justify-between gap-3">
-            <Link to="/" className="flex h-14 w-14 items-center justify-center rounded-[1.55rem] bg-white text-slate-950 shadow-xl shadow-slate-950/15" aria-label="בית">
+            <Link to="/app" className="flex h-14 w-14 items-center justify-center rounded-[1.55rem] bg-white text-slate-950 shadow-xl shadow-slate-950/15" aria-label="בית">
               <Zap size={26} />
             </Link>
             <div className="min-w-0 flex-1">
@@ -523,7 +523,7 @@ function RoleEntryScreen({ role, onEnter }) {
         <div className="absolute -right-20 top-10 h-60 w-60 rounded-full bg-blue-200/45 blur-3xl" />
         <div className="absolute -left-24 bottom-24 h-72 w-72 rounded-full bg-emerald-200/35 blur-3xl" />
         <div className="flex items-center justify-between">
-          <Link to="/" className="relative z-10 rounded-2xl bg-white px-4 py-2 text-sm font-black text-blue-600 shadow-md shadow-blue-100">
+          <Link to="/app" className="relative z-10 rounded-2xl bg-white px-4 py-2 text-sm font-black text-blue-600 shadow-md shadow-blue-100">
             ShareCharge
           </Link>
           <div className="relative z-10 rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-700">דמו חי</div>
