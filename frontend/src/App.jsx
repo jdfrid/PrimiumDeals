@@ -61,6 +61,7 @@ function App() {
           <Route path="/deal/:dealId" element={<DealLandingPage />} />
           <Route path="/todays-deals" element={<TodaysDealsPage />} />
           <Route path="/today" element={<TodaysDealsPage />} />
+          <Route path="/new" element={<TodaysDealsPage />} />
           <Route path="/category/:categorySlug" element={<CategoryPage />} />
           <Route path="/brand/:brandSlug" element={<BrandPage />} />
           <Route path="/designer-sale" element={<LandingPage />} />
@@ -69,6 +70,7 @@ function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/about" element={<HowItWorksPage />} />
         </Route>
         <Route path="/app" element={<ShareChargeApp />} />
         <Route path="/app/:role" element={<ShareChargeApp />} />
