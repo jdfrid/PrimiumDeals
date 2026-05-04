@@ -64,7 +64,6 @@ const LANDING_PAGES = {
 
 function DealCard({ deal }) {
   const savings = deal.original_price - deal.current_price;
-  const trackingUrl = `/api/track/click/${deal.id}`;
 
   const handleClick = () => {
     if (typeof window.gtag === 'function') {
@@ -109,15 +108,13 @@ function DealCard({ deal }) {
         </div>
       </Link>
       <div className="px-4 pb-4">
-        <a
-          href={trackingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to={`/deal/${deal.id}`}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 text-sm font-medium hover:from-orange-600 hover:to-red-600"
         >
           <ShoppingBag size={16} />
           View Deal
-        </a>
+        </Link>
       </div>
     </div>
   );

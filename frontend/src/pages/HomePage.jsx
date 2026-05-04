@@ -26,7 +26,6 @@ const SourceIcon = ({ source }) => {
 
 function DealCard({ deal }) {
   const savings = deal.original_price - deal.current_price;
-  const trackingUrl = `/api/track/click/${deal.id}`;
 
   // Track click in Google Analytics (using GA4 e-commerce events)
   const handleCardNav = () => {
@@ -112,15 +111,14 @@ function DealCard({ deal }) {
         </div>
       </Link>
       <div className="px-4 pb-4">
-        <a
-          href={trackingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to={`/deal/${deal.id}`}
+          onClick={handleCardNav}
           className="mt-1 w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-lg font-medium text-sm hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
         >
           <ShoppingBag size={16} />
           View Deal
-        </a>
+        </Link>
       </div>
     </div>
   );

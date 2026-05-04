@@ -6,7 +6,6 @@ import { getDealShareUrl } from '../utils/dealShareUrl';
 
 function DealCard({ deal, onShare }) {
   const savings = deal.original_price - deal.current_price;
-  const trackingUrl = `/api/track/click/${deal.id}`;
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
@@ -42,15 +41,13 @@ function DealCard({ deal, onShare }) {
         </div>
       </Link>
       <div className="px-4 pb-4 flex gap-2">
-        <a
-          href={trackingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to={`/deal/${deal.id}`}
           className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 rounded-lg font-medium text-sm hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2"
         >
           <ShoppingBag size={16} />
           View Deal
-        </a>
+        </Link>
         <button
           type="button"
           onClick={() => onShare(deal)}
