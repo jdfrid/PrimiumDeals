@@ -153,6 +153,10 @@ export default function HomePage() {
   const [randomSeed, setRandomSeed] = useState(null);
 
   useEffect(() => {
+    document.title = 'Premium Deals | Dealsluxy';
+  }, []);
+
+  useEffect(() => {
     loadCategories();
     loadDeals();
   }, [selectedCategory, sortBy, page]);

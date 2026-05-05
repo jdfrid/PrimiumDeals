@@ -1448,6 +1448,10 @@ function AdminPage({ store, onExit }) {
 export default function ShareChargeApp() {
   const { role } = useParams();
   const store = useShareChargeStore();
+
+  useEffect(() => {
+    document.title = 'ShareCharge | טעינה שיתופית לרכבים חשמליים';
+  }, []);
   const normalizedRole = useMemo(() => (['driver', 'host', 'admin'].includes(role) ? role : 'driver'), [role]);
   const [authSessions, setAuthSessions] = useState(() => {
     try {
