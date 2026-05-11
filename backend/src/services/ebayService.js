@@ -267,8 +267,14 @@ class EbayService {
   }
 
   getAffiliateUrl(itemId, originalUrl) {
-    // If we have the original URL from eBay, add affiliate parameters to it
-    if (originalUrl) {
+    const looksLikeSearch =
+      !originalUrl ||
+      typeof originalUrl !== 'string' ||
+      /\/sch\//i.test(originalUrl) ||
+      /[?&]_nkw=/i.test(originalUrl);
+
+    // Never attach affiliate params to a search URL — use listing URL from item id
+    if (originalUrl && !looksLikeSearch) {
       const separator = originalUrl.includes('?') ? '&' : '?';
       return `${originalUrl}${separator}mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
     }
@@ -283,6 +289,49 @@ class EbayService {
     }
     
     return `https://www.ebay.com/itm/${legacyItemId}?mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${this.campaignId}&toolid=10001&mkevt=1`;
+  }
+
+  /**
+   * Real listing rows for empty-DB bootstrap (avoid sch/i.html placeholders).
+   * Best-effort: returns [] if API keys missing or all calls fail.
+   */
+  async getListingCandidatesForSeed({ maxTotal = 480 } = {}) {
+    const queries = [
+      'luxury mens watch chronograph',
+      'designer leather handbag women',
+      'gold jewelry necklace',
+      'polarized designer sunglasses',
+      'premium leather belt men'
+    ];
+    const out = [];
+    const seenIds = new Set();
+    const cap = typeof maxTotal === 'number' && maxTotal > 0 ? maxTotal : 480;
+
+    for (const keywords of queries) {
+      if (out.length >= cap || !this.appId) break;
+      try {
+        const batch = await this.searchItems({
+          keywords,
+          minDiscount: 10,
+          minPrice: 25,
+          maxPrice: 20000,
+          limit: Math.min(120, cap - out.length + 30),
+        });
+        for (const item of batch) {
+          const iid = item.ebayItemId || '';
+          if (!iid || seenIds.has(iid)) continue;
+          const affiliate = this.getAffiliateUrl(item.ebayItemId, item.ebayUrl);
+          if (!affiliate || /\/sch\//i.test(affiliate)) continue;
+          seenIds.add(iid);
+          out.push({ ...item, affiliateUrl: affiliate });
+          if (out.length >= cap) break;
+        }
+      } catch (e) {
+        console.warn(`⚠️ Seed pool skip "${keywords}":`, e.message || e);
+      }
+    }
+
+    return out;
   }
 
   // Check if a single item is still available

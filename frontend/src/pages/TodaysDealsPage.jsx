@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, Clock, TrendingDown, ShoppingBag, Share2, Copy, Check } from 'lucide-react';
 import api from '../services/api';
 import { getDealShareUrl } from '../utils/dealShareUrl';
+import { getTrackClickUrl } from '../utils/trackClickUrl';
 
 function DealCard({ deal, onShare }) {
   const savings = deal.original_price - deal.current_price;
@@ -67,8 +68,7 @@ function ShareModal({ deal, onClose }) {
   if (!deal) return null;
 
   const shareUrl = getDealShareUrl(deal.id);
-  const trackUrl =
-    typeof window !== 'undefined' ? `${window.location.origin}/api/track/click/${deal.id}` : `/api/track/click/${deal.id}`;
+  const trackUrl = getTrackClickUrl(deal.id);
   const shareText = `🔥 ${deal.discount_percent}% OFF! ${deal.title?.substring(0, 60)}...\n\n💰 Was: $${deal.original_price?.toFixed(0)} → Now: $${deal.current_price?.toFixed(0)}\n\n🛒 Deal page: ${shareUrl}\n\n🔗 Quick checkout (tracked): ${trackUrl}\n\n#deals #luxury #sale`;
   
   const copyToClipboard = () => {

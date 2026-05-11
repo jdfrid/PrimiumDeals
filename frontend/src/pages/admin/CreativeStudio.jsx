@@ -8,7 +8,8 @@ import {
   ExternalLink,
   Settings,
   LayoutGrid,
-  Clapperboard
+  Clapperboard,
+  Copy
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -46,6 +47,170 @@ function normalizeCreateJobId(res) {
   if (raw == null || raw === '') return null;
   const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
   return Number.isFinite(n) ? n : null;
+}
+
+function formatCleanDeliveryPlain(clean) {
+  if (!clean || typeof clean !== 'object') return '';
+  const caps = (clean.on_screen_captions || [])
+    .map(s => `• ${Number(s.start_sec) || 0}s +${Number(s.duration_sec) || 0}s — ${s.text}`)
+    .join('\n');
+  const mats = clean.material_context || {};
+  const matLines = [];
+  for (const q of mats.pexels_search_queries || []) matLines.push(`• חיפוש Pexels: ${q}`);
+  if (mats.character_image_url) matLines.push(`• תמונת דמות: ${mats.character_image_url}`);
+  if (Array.isArray(mats.timeline_stock_video_urls) && mats.timeline_stock_video_urls.length) {
+    matLines.push('• קליפי וידאו בטיימליין (מאגר מלאי):');
+    mats.timeline_stock_video_urls.forEach((u, i) => matLines.push(`  ${i + 1}. ${u}`));
+  }
+  matLines.push(`• קול TTS: ${mats.shotstack_voice || ''} / ${mats.tts_language || ''}`);
+  if (mats.production_notes) matLines.push(`• הערות הפקה (לא נכנסות לקריין): ${mats.production_notes}`);
+
+  const kling = (clean.kling_scenes || [])
+    .map(
+      s =>
+        `${s.label_he || s.role} (~${s.target_seconds_hint ?? '?'}s)\n` +
+        `  נרטיב: ${s.narrative_beat}\n` +
+        `  פרומפט ויזואלי (Kling 2.5 / Magnific / Freepik):\n  ${s.visual_prompt}`
+    )
+    .join('\n\n');
+
+  return [
+    'קריין',
+    clean.voiceover_script || '',
+    '',
+    'שורת Hook',
+    clean.hook_line || '—',
+    '',
+    'כיתובים על המסך',
+    caps || '—',
+    '',
+    'הקשר חומרים',
+    matLines.length ? matLines.join('\n') : '—',
+    '',
+    'שלוש סצנות גנרטיביות (~30 שניות סה״כ)',
+    kling || '—',
+    '',
+    clean.pipeline_hint ? `זרימה: ${clean.pipeline_hint}` : ''
+  ]
+    .join('\n')
+    .trim();
+}
+
+function CleanDeliveryBundleField({ clean, job }) {
+  const [copiedPlain, setCopiedPlain] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
+
+  const plain = formatCleanDeliveryPlain(clean);
+  const json = clean ? JSON.stringify(clean, null, 2) : '';
+
+  const placeholder =
+    !clean && job?.status === 'processing'
+      ? 'מעבד תסריט וחומרים…'
+      : !clean && job?.status === 'pending'
+        ? 'ממתין בתור…'
+        : !clean
+          ? '— יופיע אחרי שנוצר התסריט (צריך job חדש אחרי העדכון, או טען מחדש job שהושלם).'
+          : '';
+
+  const copyPlain = () => {
+    if (!plain) return;
+    navigator.clipboard.writeText(plain).then(() => {
+      setCopiedPlain(true);
+      setTimeout(() => setCopiedPlain(false), 2000);
+    });
+  };
+
+  const copyJson = () => {
+    if (!json) return;
+    navigator.clipboard.writeText(json).then(() => {
+      setCopiedJson(true);
+      setTimeout(() => setCopiedJson(false), 2000);
+    });
+  };
+
+  return (
+    <section className="space-y-1 ring-1 ring-gold-500/25 rounded-lg p-2 bg-midnight-950/40">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h4 className="text-[11px] font-semibold text-gold-400">תסריט נקי + חומרים + 3 פרומפטי Kling</h4>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {clean && plain && (
+            <button
+              type="button"
+              onClick={copyPlain}
+              className="flex items-center gap-1 text-[10px] text-gold-400 hover:text-gold-300 border border-midnight-600 rounded px-2 py-0.5"
+            >
+              <Copy size={12} />
+              {copiedPlain ? 'הועתק' : 'העתק טקסט'}
+            </button>
+          )}
+          {clean && json && (
+            <button
+              type="button"
+              onClick={copyJson}
+              className="flex items-center gap-1 text-[10px] text-midnight-300 hover:text-midnight-200 border border-midnight-600 rounded px-2 py-0.5"
+            >
+              <Copy size={12} />
+              {copiedJson ? 'הועתק' : 'העתק JSON'}
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="text-[10px] text-midnight-500 leading-snug">
+        רק תוכן לצפייה ולרינדור — ללא הוראות הבריף שנשלחו ל־LLM. כולל פרומפט ויזואלי לכל סצנה ל־Kling 2.5 (Magnific/Freepik).
+      </p>
+      <textarea
+        dir="rtl"
+        readOnly
+        className="w-full min-h-[200px] max-h-[min(52vh,460px)] overflow-y-auto rounded-md border border-midnight-700/80 bg-midnight-950/90 p-2 font-mono text-[10px] text-midnight-200 whitespace-pre-wrap"
+        value={clean ? plain : placeholder}
+      />
+    </section>
+  );
+}
+
+function RenderProviderPackageField({ pkg }) {
+  const [copied, setCopied] = useState(false);
+  const text = pkg ? JSON.stringify(pkg, null, 2) : '';
+
+  const copy = () => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <section className="space-y-1">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h4 className="text-[11px] font-semibold text-gold-400">חבילה מלאה לספק הרינדור (שדה אחד)</h4>
+        {pkg && (
+          <button
+            type="button"
+            onClick={copy}
+            className="flex items-center gap-1 text-[10px] text-gold-400 hover:text-gold-300 border border-midnight-600 rounded px-2 py-0.5"
+          >
+            <Copy size={12} />
+            {copied ? 'הועתק' : 'העתק JSON'}
+          </button>
+        )}
+      </div>
+      <p className="text-[10px] text-midnight-500 leading-snug">
+        כולל תסריט קריין מלא, כיתובים לכל סצנה, תמונת דמות (אם יש), קישורי וידאו מ־Pexels שנשלחו לטיימליין, והגוף המדויק (
+        <code className="text-midnight-400">shotstack_request_body</code>) שנשלח ל־Shotstack.
+      </p>
+      <textarea
+        dir="ltr"
+        readOnly
+        className="w-full min-h-[220px] max-h-[min(50vh,420px)] overflow-y-auto rounded-md border border-midnight-700/80 bg-midnight-950/90 p-2 font-mono text-[10px] text-midnight-200"
+        value={
+          pkg
+            ? text
+            : '— יופיע אחרי שה-job הגיע לשלב בניית חבילת הרינדור (לאחר חיפוש Pexels ולפני/עם שליחה ל־Shotstack). Jobs ישנים ללא שדה זה.'
+        }
+      />
+    </section>
+  );
 }
 
 export default function CreativeStudio() {
@@ -292,16 +457,6 @@ export default function CreativeStudio() {
                 customerPreview ||
                 '— (מלאו תיאור ולחצו ״צור סרטון״ — או לחצו למטה על ״הצג לוג של ה-job האחרון״)';
 
-              const narrationText =
-                logBrief?.narration ||
-                (!job && activeLogJobId != null
-                  ? 'טוען / ממתין לנתונים מהשרת…'
-                  : job && job.status === 'pending'
-                    ? 'ממתין בתור…'
-                    : job && job.status === 'processing'
-                      ? 'מעבד: תסריט / Pexels / Shotstack…'
-                      : '—');
-
               const timelineUrls = Array.isArray(logDebug.pexels_timeline_urls) ? logDebug.pexels_timeline_urls : [];
               const firstClipName = timelineUrls.length ? urlTailLabel(timelineUrls[0]) : '';
 
@@ -319,33 +474,40 @@ export default function CreativeStudio() {
                     </pre>
                   </section>
 
-                  <section className="space-y-1">
-                    <h4 className="text-[11px] font-semibold text-gold-400">
-                      תסריט שנכתב על ידי {providerLabel}
-                      {logDebug.llm_model ? ` · ${logDebug.llm_model}` : ''}
-                    </h4>
+                  <CleanDeliveryBundleField clean={logBrief?.clean_delivery} job={job} />
+
+                  <details className="rounded-md border border-midnight-800/90 bg-midnight-950/50 p-2 space-y-2">
+                    <summary className="text-[11px] font-semibold text-midnight-400 cursor-pointer hover:text-midnight-300">
+                      דיבוג: יצירת תסריט ({providerLabel}
+                      {logDebug.llm_model ? ` · ${logDebug.llm_model}` : ''})
+                    </summary>
                     {logDebug.fallback_from_llm && (
                       <p className="text-amber-400 text-[10px] leading-snug">
-                        שים לב: נפילה לתבנית ({String(logDebug.fallback_from_llm)}) — לא ריצת LLM מלאה.
+                        נפילה לתבנית ({String(logDebug.fallback_from_llm)})
                       </p>
                     )}
-                    <pre
-                      dir="auto"
-                      className="bg-midnight-950/90 rounded-md p-2.5 text-[11px] text-midnight-200 whitespace-pre-wrap max-h-44 overflow-y-auto border border-midnight-700/80"
-                    >
-                      {narrationText}
-                    </pre>
+                    {logBrief?.narration && (
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] text-midnight-500">שדה narration גולמי (זהה לקריין בתסריט הנקי)</span>
+                        <pre
+                          dir="auto"
+                          className="bg-midnight-950/90 rounded-md p-2 text-[10px] text-midnight-300 whitespace-pre-wrap max-h-32 overflow-y-auto border border-midnight-800/80"
+                        >
+                          {logBrief.narration}
+                        </pre>
+                      </div>
+                    )}
                     {logDebug.prompt_user_block && (
                       <details className="text-[10px] text-midnight-500">
                         <summary className="cursor-pointer text-midnight-400 hover:text-midnight-300">
-                          פרומפט מלא ל־LLM
+                          פרומפט מלא ל־LLM (כולל הוראות בריף מהלקוח)
                         </summary>
                         <pre dir="auto" className="mt-1 p-2 bg-midnight-900/60 rounded whitespace-pre-wrap max-h-32 overflow-y-auto">
                           {logDebug.prompt_user_block}
                         </pre>
                       </details>
                     )}
-                    <div className="mt-2">
+                    <div>
                       <h5 className="text-[10px] font-semibold text-gold-300 mb-1">תשובה גולמית מהמודל</h5>
                       <textarea
                         dir="ltr"
@@ -354,7 +516,7 @@ export default function CreativeStudio() {
                         value={String(logDebug.llm_raw_text || 'אין תשובה גולמית לשימוש בתצוגה זו (Template או קריאה ישנה).')}
                       />
                     </div>
-                  </section>
+                  </details>
 
                   <section className="space-y-1">
                     <h4 className="text-[11px] font-semibold text-gold-400">סרטון שנמצא במאגר (Pexels → טיימליין)</h4>
@@ -407,6 +569,8 @@ export default function CreativeStudio() {
                       </ul>
                     )}
                   </section>
+
+                  <RenderProviderPackageField pkg={logDebug.render_provider_package} />
 
                   <section className="space-y-1">
                     <h4 className="text-[11px] font-semibold text-gold-400">קובץ סופי</h4>
@@ -841,7 +1005,7 @@ export default function CreativeStudio() {
       {creativeDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setCreativeDetail(null)}>
           <div
-            className="glass rounded-xl max-w-lg w-full p-6 max-h-[85vh] overflow-y-auto"
+            className="glass rounded-xl max-w-3xl w-full p-6 max-h-[85vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-2">Creative job #{creativeDetail.id}</h3>
@@ -857,25 +1021,24 @@ export default function CreativeStudio() {
                   <span className="text-midnight-500">Error:</span> {creativeDetail.error_message}
                 </p>
               )}
-              {creativeDetail.brief?.narration && (
-                <div>
-                  <span className="text-midnight-500">Narration:</span>
-                  <pre className="mt-1 whitespace-pre-wrap text-xs bg-midnight-900/80 p-2 rounded max-h-40 overflow-y-auto">
-                    {creativeDetail.brief.narration}
-                  </pre>
-                </div>
-              )}
-              {creativeDetail.brief?.debug?.llm_raw_text && (
-                <div>
-                  <span className="text-midnight-500">LLM raw response:</span>
-                  <textarea
-                    dir="ltr"
-                    readOnly
-                    className="mt-1 w-full min-h-[120px] max-h-56 overflow-y-auto rounded bg-midnight-900/80 p-2 font-mono text-[11px] text-midnight-100"
-                    value={String(creativeDetail.brief.debug.llm_raw_text)}
-                  />
-                </div>
-              )}
+              <CleanDeliveryBundleField clean={creativeDetail.brief?.clean_delivery} job={creativeDetail} />
+              <details className="text-xs border border-midnight-700 rounded-md p-2">
+                <summary className="cursor-pointer text-midnight-400">דיבוג LLM</summary>
+                {creativeDetail.brief?.debug?.llm_raw_text && (
+                  <div className="mt-2">
+                    <span className="text-midnight-500">LLM raw:</span>
+                    <textarea
+                      dir="ltr"
+                      readOnly
+                      className="mt-1 w-full min-h-[100px] max-h-48 overflow-y-auto rounded bg-midnight-900/80 p-2 font-mono text-[11px] text-midnight-100"
+                      value={String(creativeDetail.brief.debug.llm_raw_text)}
+                    />
+                  </div>
+                )}
+              </details>
+              <div className="mt-4 pt-3 border-t border-midnight-700/80">
+                <RenderProviderPackageField pkg={creativeDetail.brief?.debug?.render_provider_package} />
+              </div>
               {creativeDetail.output_url && (
                 <a
                   href={creativeDetail.output_url}

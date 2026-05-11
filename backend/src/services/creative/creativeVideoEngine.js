@@ -140,7 +140,7 @@ export async function processCreativeVideoJob(jobId) {
     }
     const characterImageUrl = char?.image_url || null;
 
-    const totalDurationSec = 45;
+    const totalDurationSec = 30;
     const clipsCount = Math.min(5, Math.max(3, Math.ceil(totalDurationSec / 12)));
     const urlsForTimeline = pickTimelineUrls(videoUrls, id, clipsCount);
     const segmentLengthSec = totalDurationSec / urlsForTimeline.length;
@@ -157,6 +157,13 @@ export async function processCreativeVideoJob(jobId) {
       }
     };
 
+    if (briefForDb.clean_delivery?.material_context) {
+      Object.assign(briefForDb.clean_delivery.material_context, {
+        character_image_url: characterImageUrl,
+        timeline_stock_video_urls: urlsForTimeline
+      });
+    }
+
     const edit = buildVerticalEdit({
       videoUrls: urlsForTimeline,
       segmentLengthSec,
@@ -171,6 +178,28 @@ export async function processCreativeVideoJob(jobId) {
       characterImageUrl,
       totalDurationSec
     });
+
+    const narrationFull = String(brief.narration || '');
+    const narrationInTts = narrationFull.slice(0, 4500);
+    briefForDb.debug.render_provider_package = {
+      provider: 'shotstack',
+      narration_full: brief.narration || '',
+      narration_in_shotstack_tts_clip: narrationInTts,
+      narration_truncated_for_provider: narrationFull.length > narrationInTts.length,
+      voice: brief.shotstack_voice || 'Matthew',
+      tts_language: brief.tts_language || 'en-US',
+      on_screen_captions: (brief.scenes || []).map(s => ({
+        text: s.text,
+        start_sec: s.start_sec,
+        duration_sec: s.duration_sec
+      })),
+      character_image_url: characterImageUrl,
+      background_stock_video_urls: urlsForTimeline,
+      segment_length_sec: segmentLengthSec,
+      total_duration_sec: totalDurationSec,
+      shotstack_request_body: edit,
+      clean_delivery: briefForDb.clean_delivery || null
+    };
 
     prepare(
       `

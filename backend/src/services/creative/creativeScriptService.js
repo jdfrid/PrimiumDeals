@@ -39,22 +39,137 @@ function hasNonLatinScript(text) {
 const BRIEF_SCHEMA = `Return ONLY valid JSON:
 {
   "title": "short hook line for the video (English)",
-  "narration": "single voiceover paragraph: MUST be fluent English. If the client wrote in Hebrew or another language, translate the full story into natural spoken English (same plot, characters, beats). Max ~110 words, under ~55 seconds at normal pace.",
+  "narration": "ONLY the spoken voiceover script as the viewer hears it: fluent English. If the client wrote in another language, translate story/beats faithfully. NO meta lines (do not mention AI, editors, stock footage, 'the client', or how the video was made). NO bracketed stage directions. Max ~85 words (~30 seconds spoken).",
   "pexels_search_queries": ["2-4 short search phrases for stock B-roll, in English, tightly matching the story (who/where/what)"],
   "scenes": [
     { "text": "on-screen caption, max 8 words", "start_sec": 0, "duration_sec": 4 }
   ],
+  "kling_scenes": [
+    {
+      "role": "hook",
+      "narrative_beat": "English: ~first third of narration meaning (~10s spoken)",
+      "visual_prompt": "Single English prompt for generative video (e.g. Kling): subject, lighting, lens, motion, style — vertical 9:16. No JSON inside.",
+      "target_seconds_hint": 10
+    },
+    {
+      "role": "body",
+      "narrative_beat": "English: middle third — product / problem / value (~12s)",
+      "visual_prompt": "English generative video prompt for this beat.",
+      "target_seconds_hint": 12
+    },
+    {
+      "role": "cta",
+      "narrative_beat": "English: final third — close + call to action (~8s)",
+      "visual_prompt": "English generative video prompt for closing beat.",
+      "target_seconds_hint": 8
+    }
+  ],
   "shotstack_voice": "Matthew",
   "tts_language": "en-US",
-  "production_notes": "optional notes for editors (camera, pacing, brand)"
+  "production_notes": "optional notes for editors (camera, pacing, brand) — NOT spoken on camera"
 }
 Rules:
-- narration + on-screen caption text: English only (translation OK when input was not English).
-- scenes: 4–7 items; each caption must name a concrete beat from the client's idea (not generic filler like "Quick tip" or "Stay tuned").
-- start_sec non-overlapping in order; total visual coverage ~0–48s.
-- pexels_search_queries: concrete English visual search terms a stock site would return (e.g. "coffee shop couple hands", "diamond ring close up").
-- shotstack_voice: one of Matthew, Joanna, Amy, Brian, Emma, Geraint, Nicole, Russell, Raveena, Joey, Justin, Kendra, Kimberly, Salli — pick one that fits the tone.
-- tts_language: use en-US whenever narration is English (default). Omit or en-US unless Shotstack docs list another code you need.`;
+- narration + captions + kling_scenes text fields: English only when translating from non-English input.
+- scenes: 4–7 items; captions align with narration beats; start_sec non-overlapping; total on-screen coverage ~0–30s.
+- kling_scenes: MUST be exactly 3 objects in order hook → body → cta (Magnific/Freepik/Kling-style prompts). visual_prompt must stand alone for an API.
+- pexels_search_queries: concrete English stock search terms.
+- shotstack_voice: one of Matthew, Joanna, Amy, Brian, Emma, Geraint, Nicole, Russell, Raveena, Joey, Justin, Kendra, Kimberly, Salli.
+- tts_language: en-US default for English narration.`;
+
+const KLING_ROLES_ORDER = ['hook', 'body', 'cta'];
+const KLING_LABELS_HE = ['פתיחה / Hook', 'מוצר / בעיה / ערך', 'סיום / Call to Action'];
+const KLING_DEFAULT_SECONDS = [10, 12, 8];
+
+function fallbackKlingFromNarration(narration, title) {
+  const text = String(narration || '').trim();
+  const sentences = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+  let parts = ['', '', ''];
+  if (sentences.length >= 3) {
+    const t = Math.ceil(sentences.length / 3);
+    parts = [
+      sentences.slice(0, t).join(' '),
+      sentences.slice(t, 2 * t).join(' '),
+      sentences.slice(2 * t).join(' ')
+    ];
+  } else if (text.length > 24) {
+    const k = Math.ceil(text.length / 3);
+    parts = [text.slice(0, k), text.slice(k, 2 * k), text.slice(2 * k)];
+  } else {
+    parts = [
+      text || 'Opening hook — grab attention in one line.',
+      text ? `${text} — expand the middle beat.` : 'Explain the value clearly.',
+      text ? `${text} — close with a clear next step.` : 'Strong call to action.'
+    ];
+  }
+  const hookTitle = String(title || '').trim();
+  return KLING_ROLES_ORDER.map((role, i) => ({
+    role,
+    narrative_beat: parts[i],
+    visual_prompt: `${hookTitle ? `${hookTitle}. ` : ''}${parts[i]} Vertical 9:16, cinematic lighting, natural motion, sharp subject, premium commercial look, no on-screen text.`.slice(
+      0,
+      2000
+    ),
+    target_seconds_hint: KLING_DEFAULT_SECONDS[i]
+  }));
+}
+
+/** Normalize LLM kling_scenes or derive from narration (~30s → 3 prompts). */
+export function normalizeKlingScenes(brief) {
+  const raw = Array.isArray(brief.kling_scenes) ? brief.kling_scenes : [];
+  const narration = String(brief.narration || '').trim();
+  const title = String(brief.title || '').trim();
+  const fb = fallbackKlingFromNarration(narration, title);
+
+  return KLING_ROLES_ORDER.map((role, i) => {
+    const cand = raw.find(x => String(x?.role || '').toLowerCase() === role) || raw[i];
+    const beatFb = fb[i]?.narrative_beat || '';
+    const visualFb = fb[i]?.visual_prompt || '';
+    if (cand && typeof cand.visual_prompt === 'string' && cand.visual_prompt.trim().length > 12) {
+      return {
+        role,
+        label_he: KLING_LABELS_HE[i],
+        narrative_beat: String(cand.narrative_beat || beatFb).trim(),
+        visual_prompt: String(cand.visual_prompt).trim().slice(0, 2000),
+        target_seconds_hint:
+          Number.isFinite(Number(cand.target_seconds_hint)) && Number(cand.target_seconds_hint) > 0
+            ? Number(cand.target_seconds_hint)
+            : KLING_DEFAULT_SECONDS[i]
+      };
+    }
+    return {
+      role,
+      label_he: KLING_LABELS_HE[i],
+      narrative_beat: beatFb,
+      visual_prompt: visualFb,
+      target_seconds_hint: KLING_DEFAULT_SECONDS[i]
+    };
+  });
+}
+
+/**
+ * Single consumer-facing bundle: VO script + caption list + material hints + 3 Kling/Magnific prompts.
+ * Does NOT include the LLM instruction block (that stays in debug.prompt_user_block).
+ */
+export function attachCleanDelivery(brief, materialExtras = {}) {
+  const kling = normalizeKlingScenes(brief);
+  const clean_delivery = {
+    voiceover_script: String(brief.narration || '').trim(),
+    hook_line: String(brief.title || '').trim(),
+    on_screen_captions: Array.isArray(brief.scenes) ? brief.scenes : [],
+    material_context: {
+      pexels_search_queries: Array.isArray(brief.pexels_search_queries) ? brief.pexels_search_queries : [],
+      shotstack_voice: brief.shotstack_voice || 'Matthew',
+      tts_language: brief.tts_language || 'en-US',
+      production_notes: typeof brief.production_notes === 'string' ? brief.production_notes.trim() : '',
+      ...materialExtras
+    },
+    kling_scenes: kling,
+    pipeline_hint:
+      '~30s vertical: drive Magnific/Freepik Kling 2.5 with kling_scenes[].visual_prompt; use voiceover_script for TTS/VO.'
+  };
+  const { kling_scenes: _discardKling, ...rest } = brief;
+  return { ...rest, clean_delivery };
+}
 
 function isLlmQuotaOrRateLimitError(err) {
   const m = String(err?.message || err || '').toLowerCase();
@@ -250,14 +365,10 @@ export function generateBriefTemplate({ videoDescription, toneId, userNotes }) {
   const desc = videoDescription.replace(/\s+/g, ' ').trim().slice(0, 500);
   const notes = (userNotes || '').replace(/\s+/g, ' ').trim().slice(0, 400);
 
-  /** Shotstack TTS uses en-US — never feed Hebrew/non-Latin into the voiceover string or it sounds broken. */
+  /** English VO only for Shotstack TTS — spoken script without production meta. */
   const narration = hasNonLatinScript(desc)
-    ? `This is a short vertical clip built around your idea. We paired stock footage with on-screen captions — the story you typed is kept in the brief for editors, but the voiceover stays in clear English so text-to-speech sounds natural. ${tone.hint}. ${
-        notes ? 'We also kept your extra notes in mind for tone and pacing. ' : ''
-      }If you need the spoken script to follow your exact plot, switch the studio to Gemini or OpenAI in settings. Thanks for watching.`
-    : `Here's a quick take on something worth your attention: ${desc}. ${tone.hint}. ${
-        notes ? `Keep in mind: ${notes}. ` : ''
-      }If this resonates, save it for later and share it with someone who'd appreciate the tip. Stay curious — more ideas coming soon.`;
+    ? `Stop scrolling — this one's worth thirty seconds. ${tone.hint}. ${notes ? `${notes.slice(0, 160)} ` : ''}Here's the value, plain and simple — try it today and tell a friend.`
+    : `${desc} ${tone.hint}. ${notes ? `${notes} ` : ''}That's the move — save it, share it, come back for more.`;
 
   const h = hashString(`${desc}\n${notes}`);
   let pexels_search_queries;
@@ -273,16 +384,16 @@ export function generateBriefTemplate({ videoDescription, toneId, userNotes }) {
     template_query_mode = 'latin_head_plus_tail';
   }
 
-  return {
+  const core = {
     title: desc.slice(0, 72) || 'Quick idea',
     narration,
     pexels_search_queries,
     scenes: [
-      { text: 'Quick idea', start_sec: 0, duration_sec: 3 },
-      { text: 'Here is the takeaway', start_sec: 3, duration_sec: 4 },
-      { text: 'Worth remembering', start_sec: 7, duration_sec: 4 },
-      { text: 'Share if it helps', start_sec: 11, duration_sec: 4 },
-      { text: 'More soon', start_sec: 15, duration_sec: 4 }
+      { text: 'Hook — stop the scroll', start_sec: 0, duration_sec: 5 },
+      { text: 'Here is the value', start_sec: 5, duration_sec: 6 },
+      { text: 'Why it matters', start_sec: 11, duration_sec: 6 },
+      { text: 'Proof / detail', start_sec: 17, duration_sec: 5 },
+      { text: 'Do this next', start_sec: 22, duration_sec: 8 }
     ],
     shotstack_voice: 'Matthew',
     production_notes: `Template mode (no LLM). Tone=${tone.id}.`,
@@ -297,6 +408,7 @@ export function generateBriefTemplate({ videoDescription, toneId, userNotes }) {
       })
     }
   };
+  return attachCleanDelivery(core);
 }
 
 /** @param {Record<string, string>} settings — Creative studio only (see creativeStudioSettings.js). */
@@ -324,12 +436,14 @@ export async function generateCreativeBrief(settings, { videoDescription, toneId
         model: settings.creative_openai_model,
         userBlock: block
       });
-      return attachDebug(brief, {
-        provider: 'openai',
-        model: settings.creative_openai_model || 'gpt-4o-mini',
-        userPrompt: block,
-        llmRawText
-      });
+      return attachCleanDelivery(
+        attachDebug(brief, {
+          provider: 'openai',
+          model: settings.creative_openai_model || 'gpt-4o-mini',
+          userPrompt: block,
+          llmRawText
+        })
+      );
     } catch (e) {
       if (isLlmQuotaOrRateLimitError(e)) {
         console.warn('[creative-video] OpenAI quota/rate limit; using template brief.');
@@ -354,12 +468,14 @@ export async function generateCreativeBrief(settings, { videoDescription, toneId
         model: settings.creative_gemini_model,
         userBlock: block
       });
-      return attachDebug(brief, {
-        provider: 'gemini',
-        model: settings.creative_gemini_model || 'gemini-2.0-flash',
-        userPrompt: block,
-        llmRawText
-      });
+      return attachCleanDelivery(
+        attachDebug(brief, {
+          provider: 'gemini',
+          model: settings.creative_gemini_model || 'gemini-2.0-flash',
+          userPrompt: block,
+          llmRawText
+        })
+      );
     } catch (e) {
       if (isLlmQuotaOrRateLimitError(e)) {
         console.warn('[creative-video] Gemini quota/rate limit; using template brief.');

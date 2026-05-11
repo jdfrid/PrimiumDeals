@@ -1,4 +1,5 @@
 import { TrendingDown, ShoppingBag } from 'lucide-react';
+import { getTrackClickUrl } from '../utils/trackClickUrl';
 
 function SourceBadge({ source }) {
   if (source === 'banggood') {
@@ -109,7 +110,7 @@ export default function DealPreview({ deal, loading, error, className = '', foot
 
 export function DealPreviewTrackCta({ dealId, className = '' }) {
   if (dealId == null) return null;
-  const href = `/api/track/click/${dealId}`;
+  const href = getTrackClickUrl(dealId);
   return (
     <a
       href={href}
