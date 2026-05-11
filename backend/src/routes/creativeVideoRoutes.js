@@ -1,4 +1,6 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { prepare } from '../config/database.js';
 import {
@@ -9,6 +11,8 @@ import {
 import { getCharacters, SCRIPT_TONES } from '../services/creative/creativeAssets.js';
 import { isPexelsConfigured } from '../services/creative/pexelsService.js';
 import { isShotstackConfigured } from '../services/creative/shotstackRenderService.js';
+import { isMagnificConfigured } from '../services/creative/magnificRenderService.js';
+import { getMergedCreativeOutputPath } from '../services/creative/creativeVideoMerge.js';
 import {
   getCreativeStudioSettings,
   getCreativeStudioEnvOverrideFlags,
@@ -23,11 +27,14 @@ router.get('/settings', authenticateToken, requireRole('admin', 'editor'), (req,
     const raw = getCreativeStudioSettings();
     const openaiKey = (raw.creative_openai_api_key || '').trim();
     const geminiKey = (raw.creative_gemini_api_key || '').trim();
+    const magnificKey = (raw.creative_magnific_api_key || '').trim();
     const safe = { ...raw };
     delete safe.creative_openai_api_key;
     delete safe.creative_gemini_api_key;
+    delete safe.creative_magnific_api_key;
     safe.creative_openai_key_configured = openaiKey.length > 0;
     safe.creative_gemini_key_configured = geminiKey.length > 0;
+    safe.creative_magnific_key_configured = magnificKey.length > 0;
     safe.creative_env_overrides = getCreativeStudioEnvOverrideFlags();
     res.json(safe);
   } catch (e) {
@@ -42,7 +49,7 @@ router.put('/settings', authenticateToken, requireRole('admin', 'editor'), (req,
     for (const key of CREATIVE_STUDIO_SETTING_KEYS) {
       if (body[key] === undefined) continue;
 
-      if (key === 'creative_openai_api_key' || key === 'creative_gemini_api_key') {
+      if (key === 'creative_openai_api_key' || key === 'creative_gemini_api_key' || key === 'creative_magnific_api_key') {
         const v = String(body[key] || '').trim();
         if (!v) continue;
         prepare(`
@@ -81,10 +88,12 @@ router.get('/options', authenticateToken, requireRole('admin', 'editor'), (req, 
 });
 
 router.get('/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+  const studio = getCreativeStudioSettings();
   res.json({
     busy: isCreativeEngineBusy(),
     pexels_configured: isPexelsConfigured(),
-    shotstack_configured: isShotstackConfigured()
+    shotstack_configured: isShotstackConfigured(),
+    magnific_configured: isMagnificConfigured(studio)
   });
 });
 
@@ -104,6 +113,21 @@ router.get('/jobs', authenticateToken, requireRole('admin', 'editor'), (req, res
     res.json({ jobs: rows });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/jobs/:id/merged.mp4', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).send('Invalid job id');
+    const filePath = getMergedCreativeOutputPath(id);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Merged video not found (complete a Magnific job first, or file expired on server restart).');
+    }
+    res.setHeader('Content-Type', 'video/mp4');
+    res.sendFile(path.resolve(filePath));
+  } catch (e) {
+    res.status(500).send(e.message || 'Error serving video');
   }
 });
 

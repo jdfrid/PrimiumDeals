@@ -165,7 +165,7 @@ export function attachCleanDelivery(brief, materialExtras = {}) {
     },
     kling_scenes: kling,
     pipeline_hint:
-      '~30s vertical: drive Magnific/Freepik Kling 2.5 with kling_scenes[].visual_prompt; use voiceover_script for TTS/VO.'
+      '~30s vertical: Magnific API POST /v1/ai/video/kling-4k-t2v per kling_scenes[].visual_prompt (Hook/body/CTA); or Shotstack path uses voiceover_script for TTS.'
   };
   const { kling_scenes: _discardKling, ...rest } = brief;
   return { ...rest, clean_delivery };

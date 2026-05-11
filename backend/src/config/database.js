@@ -460,6 +460,7 @@ export async function initDatabase() {
     ['creative_gemini_model', 'gemini-2.0-flash'],
     ['creative_openai_api_key', ''],
     ['creative_openai_model', 'gpt-4o-mini'],
+    ['creative_magnific_api_key', ''],
     ['creative_video_provider', 'shotstack'],
     ['creative_video_auto_enabled', 'false'],
     ['creative_video_cron', '0 14 * * *'],

@@ -13,6 +13,16 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 
+const UI_API_ORIGIN = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+
+/** Absolute URL for completed creative outputs (Shotstack CDN or same-origin Magnific merged path). */
+function resolveCreativeOutputUrl(u) {
+  if (!u || typeof u !== 'string') return '';
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.startsWith('/api')) return UI_API_ORIGIN ? `${UI_API_ORIGIN}${u}` : u;
+  return u;
+}
+
 const tabs = [
   { id: 'brief', label: 'יצירת סרטון', icon: Clapperboard },
   { id: 'jobs', label: 'היסטוריית Jobs', icon: LayoutGrid },
@@ -196,8 +206,9 @@ function RenderProviderPackageField({ pkg }) {
         )}
       </div>
       <p className="text-[10px] text-midnight-500 leading-snug">
-        כולל תסריט קריין מלא, כיתובים לכל סצנה, תמונת דמות (אם יש), קישורי וידאו מ־Pexels שנשלחו לטיימליין, והגוף המדויק (
-        <code className="text-midnight-400">shotstack_request_body</code>) שנשלח ל־Shotstack.
+        Shotstack: גוף <code className="text-midnight-400">shotstack_request_body</code>. Magnific: ראה{' '}
+        <code className="text-midnight-400">magnific_segments</code> ו־
+        <code className="text-midnight-400">merged_mp4_auth_url</code>.
       </p>
       <textarea
         dir="ltr"
@@ -206,7 +217,7 @@ function RenderProviderPackageField({ pkg }) {
         value={
           pkg
             ? text
-            : '— יופיע אחרי שה-job הגיע לשלב בניית חבילת הרינדור (לאחר חיפוש Pexels ולפני/עם שליחה ל־Shotstack). Jobs ישנים ללא שדה זה.'
+            : '— יופיע אחרי שה-job הגיע לשלב הרינדור (Shotstack או Magnific).'
         }
       />
     </section>
@@ -221,7 +232,11 @@ export default function CreativeStudio() {
 
   const [creativeBusy, setCreativeBusy] = useState(false);
   const [creativeJobs, setCreativeJobs] = useState([]);
-  const [creativeCfg, setCreativeCfg] = useState({ pexels_configured: false, shotstack_configured: false });
+  const [creativeCfg, setCreativeCfg] = useState({
+    pexels_configured: false,
+    shotstack_configured: false,
+    magnific_configured: false
+  });
   const [creativeOptions, setCreativeOptions] = useState({ characters: [], tones: [] });
   const [creativeDesc, setCreativeDesc] = useState('');
   const [creativeTone, setCreativeTone] = useState('adults');
@@ -246,10 +261,12 @@ export default function CreativeStudio() {
     creative_auto_tone: 'adults',
     creative_openai_key_configured: false,
     creative_gemini_key_configured: false,
+    creative_magnific_key_configured: false,
     creative_env_overrides: {}
   });
   const [openaiKeyInput, setOpenaiKeyInput] = useState('');
   const [geminiKeyInput, setGeminiKeyInput] = useState('');
+  const [magnificKeyInput, setMagnificKeyInput] = useState('');
 
   const loadCreative = useCallback(async () => {
     const [st, jobs, opt] = await Promise.all([
@@ -260,7 +277,8 @@ export default function CreativeStudio() {
     setCreativeBusy(!!st.busy);
     setCreativeCfg({
       pexels_configured: !!st.pexels_configured,
-      shotstack_configured: !!st.shotstack_configured
+      shotstack_configured: !!st.shotstack_configured,
+      magnific_configured: !!st.magnific_configured
     });
     setCreativeJobs(jobs.jobs || []);
     setCreativeOptions({ characters: opt.characters || [], tones: opt.tones || [] });
@@ -334,6 +352,19 @@ export default function CreativeStudio() {
       }
       if (openaiKeyInput.trim()) payload.creative_openai_api_key = openaiKeyInput.trim();
       if (geminiKeyInput.trim()) payload.creative_gemini_api_key = geminiKeyInput.trim();
+      if (magnificKeyInput.trim()) payload.creative_magnific_api_key = magnificKeyInput.trim();
+      if (
+        (settings.creative_video_provider || 'shotstack') === 'magnific' &&
+        !magnificKeyInput.trim() &&
+        !settings.creative_magnific_key_configured
+      ) {
+        setMessage({
+          type: 'error',
+          text: 'נבחר Magnific — הדבק מפתח API או הגדר CREATIVE_MAGNIFIC_API_KEY בשרת.'
+        });
+        setSaving(false);
+        return;
+      }
       if (
         (settings.creative_llm_provider || 'template') === 'gemini' &&
         !geminiKeyInput.trim() &&
@@ -355,6 +386,7 @@ export default function CreativeStudio() {
       await api.saveCreativeStudioSettings(payload);
       setOpenaiKeyInput('');
       setGeminiKeyInput('');
+      setMagnificKeyInput('');
       await loadSettings();
       setMessage({ type: 'ok', text: 'הגדרות סטודיו Creative נשמרו.' });
     } catch (e) {
@@ -381,14 +413,15 @@ export default function CreativeStudio() {
             סטודיו סרטונים (Creative)
           </h1>
           <p className="text-midnight-400 text-sm" dir="rtl">
-            מערכת נפרדת מ־<strong>Short videos (MP4)</strong> שמבוססת על דילים: כאן תסריט + Pexels + Shotstack בלבד.
+            מערכת נפרדת מ־<strong>Short videos (MP4)</strong> שמבוססת על דילים: כאן תסריט + Pexels + Shotstack, או תסריט +
+            שלושת פרומפטי Kling ב־Magnific (ללא Pexels בשלב הרינדור).
             אין קישור לזרימת TikTok/מוצרים — הגדרות LLM ומפתחות נשמרים רק כאן.
           </p>
         </div>
         {creativeBusy && (
           <div className="flex items-center gap-2 text-amber-400 text-sm">
             <Loader className="animate-spin" size={18} />
-            רינדור Creative… (Shotstack עלול לקחת מספר דקות)
+            רינדור Creative… (Shotstack או Magnific — עלול לקחת מספר דקות)
           </div>
         )}
       </div>
@@ -577,7 +610,7 @@ export default function CreativeStudio() {
                     {job?.output_url ? (
                       <div className="space-y-1">
                         <a
-                          href={job.output_url}
+                          href={resolveCreativeOutputUrl(job.output_url)}
                           className="text-gold-400 hover:underline break-all text-[11px] block"
                           target="_blank"
                           rel="noreferrer"
@@ -589,7 +622,7 @@ export default function CreativeStudio() {
                     ) : job?.status === 'failed' ? (
                       <p className="text-red-400 text-[11px]">ה-job נכשל — אין קובץ סופי.</p>
                     ) : (
-                      <p className="text-midnight-500 text-[11px]">— (יופיע אחרי השלמת Shotstack)</p>
+                      <p className="text-midnight-500 text-[11px]">— (אחרי השלמת Shotstack או Magnific)</p>
                     )}
                   </section>
 
@@ -636,16 +669,19 @@ export default function CreativeStudio() {
               יצירת סרטון קצר
             </h2>
             <p className="text-sm text-midnight-400" dir="rtl">
-              בריף ייצור (תסריט, חיפושי B-roll, כיתובים), וידאו אנכי מ־
+              בריף ייצור (תסריט, כיתובים, שלושת פרומפטי Kling ב־
+              <code className="text-midnight-300 mx-0.5">clean_delivery</code>), מלאי אופציונלי מ־
               <a href="https://www.pexels.com/" className="text-gold-400 underline mx-0.5" target="_blank" rel="noreferrer">
                 Pexels
-              </a>
-              , רינדור ב־
-              <a href="https://shotstack.io/docs/api/" className="text-gold-400 underline mx-0.5" target="_blank" rel="noreferrer">
-                Shotstack
-              </a>
-              . בשרת נדרשים <code className="text-midnight-300">PEXELS_API_KEY</code>,{' '}
-              <code className="text-midnight-300">SHOTSTACK_API_KEY</code> (ב־Render בלבד).
+              </a>{' '}
+              לזרימת Shotstack, או רינדור טקסט־לווידאו ב־
+              <a href="https://docs.magnific.com/" className="text-gold-400 underline mx-0.5" target="_blank" rel="noreferrer">
+                Magnific (Kling 4K T2V)
+              </a>{' '}
+              לפי התסריט הנקי. ל־Shotstack:{' '}
+              <code className="text-midnight-300">PEXELS_API_KEY</code> +{' '}
+              <code className="text-midnight-300">SHOTSTACK_API_KEY</code>. ל־Magnific:{' '}
+              <code className="text-midnight-300">CREATIVE_MAGNIFIC_API_KEY</code> או מפתח בהגדרות.
             </p>
             <div className="flex flex-wrap gap-3 text-xs">
               <span className={creativeCfg.pexels_configured ? 'text-emerald-400' : 'text-amber-400'}>
@@ -653,6 +689,9 @@ export default function CreativeStudio() {
               </span>
               <span className={creativeCfg.shotstack_configured ? 'text-emerald-400' : 'text-amber-400'}>
                 Shotstack: {creativeCfg.shotstack_configured ? 'מוגדר' : 'חסר מפתח'}
+              </span>
+              <span className={creativeCfg.magnific_configured ? 'text-emerald-400' : 'text-amber-400'}>
+                Magnific: {creativeCfg.magnific_configured ? 'מוגדר' : 'חסר מפתח'}
               </span>
             </div>
             <div>
@@ -802,7 +841,7 @@ export default function CreativeStudio() {
                       </button>
                       {j.status === 'completed' && j.output_url && (
                         <a
-                          href={j.output_url}
+                          href={resolveCreativeOutputUrl(j.output_url)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-emerald-400 hover:underline text-xs flex items-center gap-0.5"
@@ -859,7 +898,8 @@ export default function CreativeStudio() {
             <code className="text-midnight-200">CREATIVE_GEMINI_API_KEY</code> (ואופציונלית{' '}
             <code className="text-midnight-200">CREATIVE_LLM_PROVIDER=gemini</code>,{' '}
             <code className="text-midnight-200">CREATIVE_GEMINI_MODEL</code>) ו/או דיסק שממופה ל־{' '}
-            <code className="text-midnight-200">DATA_DIR</code>. ערכים מהסביבה גוברים על מה שנשמר ב־DB.
+            <code className="text-midnight-200">DATA_DIR</code>. ערכים מהסביבה גוברים על מה שנשמר ב־DB. לרינדור Magnific
+            אפשר גם <code className="text-midnight-200">CREATIVE_MAGNIFIC_API_KEY</code>.
           </div>
 
           <div className="border border-midnight-600 rounded-lg p-4 space-y-4 bg-midnight-900/20">
@@ -943,9 +983,14 @@ export default function CreativeStudio() {
           </div>
 
           <div className="border border-midnight-600 rounded-lg p-4 space-y-4 bg-midnight-900/20">
-            <h3 className="text-sm font-semibold text-gold-300">Pexels → Shotstack</h3>
+            <h3 className="text-sm font-semibold text-gold-300">רינדור וידאו</h3>
             <p className="text-xs text-midnight-400" dir="rtl">
-              <code className="text-midnight-300">PEXELS_API_KEY</code>, <code className="text-midnight-300">SHOTSTACK_API_KEY</code> ב־Render.
+              Shotstack דורש Pexels + מפתח Shotstack בשרת. Magnific משתמש ב־
+              <strong className="text-midnight-300">שלושת פרומפטי הווידאו</strong>
+              מתוך <code className="text-midnight-300">clean_delivery.kling_scenes</code> (Hook / גוף / CTA), מפעיל{' '}
+              <code className="text-midnight-300">kling-4k-t2v</code>, וממזג MP4 אחד (זמין גם ב־{' '}
+              <code className="text-midnight-300">/api/admin/creative-videos/jobs/:id/merged.mp4</code>
+              עם אימות).
             </p>
             <div>
               <label className="block text-sm text-midnight-300 mb-1">ספק רינדור</label>
@@ -954,9 +999,33 @@ export default function CreativeStudio() {
                 value={settings.creative_video_provider || 'shotstack'}
                 onChange={e => setSettings({ ...settings, creative_video_provider: e.target.value })}
               >
-                <option value="shotstack">Shotstack</option>
+                <option value="shotstack">Shotstack (Pexels + TTS)</option>
+                <option value="magnific">Magnific — Kling 4K טקסט→ווידאו</option>
               </select>
             </div>
+            {(settings.creative_video_provider || 'shotstack') === 'magnific' && (
+              <>
+                {settings.creative_env_overrides?.magnific_api_from_env && (
+                  <p className="text-xs text-emerald-400 mb-2" dir="rtl">
+                    מפתח Magnific פעיל מ־<code className="text-midnight-200">CREATIVE_MAGNIFIC_API_KEY</code> בסביבת השרת.
+                  </p>
+                )}
+                <div>
+                  <label className="block text-sm text-midnight-300 mb-1">Magnific API key</label>
+                  <p className="text-xs text-midnight-500 mb-1">
+                    {settings.creative_magnific_key_configured ? 'מפתח שמור — הדבק רק להחלפה.' : 'לא הוגדר.'}
+                  </p>
+                  <input
+                    type="password"
+                    className="input-dark w-full font-mono text-sm"
+                    value={magnificKeyInput}
+                    onChange={e => setMagnificKeyInput(e.target.value)}
+                    placeholder="x-magnific-api-key"
+                    autoComplete="off"
+                  />
+                </div>
+              </>
+            )}
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -1041,7 +1110,7 @@ export default function CreativeStudio() {
               </div>
               {creativeDetail.output_url && (
                 <a
-                  href={creativeDetail.output_url}
+                  href={resolveCreativeOutputUrl(creativeDetail.output_url)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-gold-400 hover:underline"

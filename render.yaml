@@ -33,10 +33,12 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      # Creative short-video studio (admin → Short videos → Creative tab): Pexels stock + Shotstack cloud render
+      # Creative studio (admin → Creative videos): Pexels + Shotstack, או Magnific Kling T2V (CREATIVE_MAGNIFIC_API_KEY)
       - key: PEXELS_API_KEY
         sync: false
       - key: SHOTSTACK_API_KEY
+        sync: false
+      - key: CREATIVE_MAGNIFIC_API_KEY
         sync: false
       # Without a Render persistent disk, SQLite is wiped on redeploy — set these so Gemini/OpenAI still work:
       # CREATIVE_GEMINI_API_KEY, optional CREATIVE_LLM_PROVIDER=gemini, CREATIVE_GEMINI_MODEL=gemini-2.0-flash

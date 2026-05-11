@@ -7,6 +7,7 @@ import { prepare } from '../../config/database.js';
 const CREATIVE_ENV_OVERRIDES = [
   ['CREATIVE_GEMINI_API_KEY', 'creative_gemini_api_key'],
   ['CREATIVE_OPENAI_API_KEY', 'creative_openai_api_key'],
+  ['CREATIVE_MAGNIFIC_API_KEY', 'creative_magnific_api_key'],
   ['CREATIVE_LLM_PROVIDER', 'creative_llm_provider'],
   ['CREATIVE_GEMINI_MODEL', 'creative_gemini_model'],
   ['CREATIVE_OPENAI_MODEL', 'creative_openai_model']
@@ -19,6 +20,7 @@ export const CREATIVE_STUDIO_SETTING_KEYS = [
   'creative_gemini_model',
   'creative_openai_api_key',
   'creative_openai_model',
+  'creative_magnific_api_key',
   'creative_video_provider',
   'creative_video_auto_enabled',
   'creative_video_cron',
@@ -44,6 +46,7 @@ export function getCreativeStudioEnvOverrideFlags() {
   return {
     gemini_api_from_env: !!(process.env.CREATIVE_GEMINI_API_KEY || '').trim(),
     openai_api_from_env: !!(process.env.CREATIVE_OPENAI_API_KEY || '').trim(),
+    magnific_api_from_env: !!(process.env.CREATIVE_MAGNIFIC_API_KEY || '').trim(),
     llm_provider_from_env: !!(process.env.CREATIVE_LLM_PROVIDER || '').trim(),
     gemini_model_from_env: !!(process.env.CREATIVE_GEMINI_MODEL || '').trim(),
     openai_model_from_env: !!(process.env.CREATIVE_OPENAI_MODEL || '').trim()
