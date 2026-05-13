@@ -10,6 +10,7 @@ import { prepare, saveDatabase, getDb } from '../config/database.js';
 import voicePlannerRoutes from './voicePlannerRoutes.js';
 import { resolveDealOutboundUrl } from '../utils/dealOutboundUrl.js';
 import { adminReseedSampleDeals } from '../services/sampleDealsSeed.js';
+import ebayService from '../services/ebayService.js';
 
 const router = express.Router();
 
@@ -44,6 +45,15 @@ router.get('/health', (req, res) => {
     /** All active listings (ignored by public UI if discount too low). */
     activeDealCount,
     minPublicDiscount: minDiscount,
+    /** Query Rules → Run uses Browse API; needs Client ID + Client Secret on server */
+    ebayBrowseConfigured: ebayService.isConfigured(),
+    ...(!ebayService.isConfigured()
+      ? {
+          ebayOAuthHint: !(process.env.EBAY_APP_ID || '').trim()
+            ? 'Set EBAY_APP_ID (Application Key Client ID)'
+            : 'Set EBAY_CERT_ID or EBAY_CLIENT_SECRET (Application Key Client Secret)'
+        }
+      : {}),
     ...(dealCountDbError ? { dealCountDbError } : {})
   });
 });

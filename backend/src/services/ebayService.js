@@ -14,12 +14,22 @@ let tokenExpiry = 0;
 
 class EbayService {
   constructor() {
-    this.appId = process.env.EBAY_APP_ID;
-    this.certId = process.env.EBAY_CERT_ID || 'PRD-72dab605d287-eb19-4771-b4d0-34dd';
+    /** Application Key “App ID (Client ID)” */
+    this.appId = (process.env.EBAY_APP_ID || '').trim();
+    /** Cert ID / Client Secret — never hardcode; required for OAuth */
+    this.certId = (process.env.EBAY_CERT_ID || process.env.EBAY_CLIENT_SECRET || '').trim();
     this.campaignId = process.env.EBAY_CAMPAIGN_ID;
+    /** Browse API client-credentials scope (override only if eBay keys page differs) */
+    this.oauthScope =
+      (process.env.EBAY_OAUTH_SCOPE || 'https://api.ebay.com/oauth/api_scope').trim();
     
     // Clean expired cache entries every 10 minutes
     setInterval(() => this.cleanExpiredCache(), 10 * 60 * 1000);
+  }
+
+  /** Both Client ID + Client Secret must be set for Browse API OAuth */
+  isConfigured() {
+    return !!(this.appId && this.certId);
   }
 
   // Get OAuth token (cached)
@@ -29,24 +39,45 @@ class EbayService {
       return cachedToken;
     }
 
+    if (!this.isConfigured()) {
+      throw new Error(
+        'eBay OAuth missing credentials: set EBAY_APP_ID (Client ID) and EBAY_CERT_ID or EBAY_CLIENT_SECRET (Client Secret) from developer.ebay.com → Application Keys.'
+      );
+    }
+
     console.log('🔑 Getting new OAuth token...');
-    
+
     const credentials = Buffer.from(`${this.appId}:${this.certId}`).toString('base64');
-    
+
     const response = await fetch(OAUTH_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${credentials}`
+        Authorization: `Basic ${credentials}`
       },
-      body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
+      body: `grant_type=client_credentials&scope=${encodeURIComponent(this.oauthScope)}`
     });
 
-    const data = await response.json();
-    
+    const raw = await response.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      console.error('❌ OAuth non-JSON response:', raw.slice(0, 400));
+      throw new Error(
+        `eBay OAuth returned ${response.status}. Check EBAY_APP_ID / EBAY_CERT_ID (Client Secret). Raw: ${raw.slice(0, 120)}`
+      );
+    }
+
     if (!response.ok) {
       console.error('❌ OAuth Error:', data);
-      throw new Error(data.error_description || 'Failed to get OAuth token');
+      const msg =
+        data.error_description ||
+        data.error?.message ||
+        data.error ||
+        data.errors?.[0]?.message ||
+        `HTTP ${response.status}`;
+      throw new Error(`eBay OAuth failed: ${msg}`);
     }
 
     cachedToken = data.access_token;
@@ -132,9 +163,11 @@ class EbayService {
     console.log(`📊 Cache size: ${cache.size} entries`);
     console.log(`${'='.repeat(50)}`);
     
-    if (!this.appId) {
-      console.error('❌ EBAY_APP_ID is not configured!');
-      throw new Error('eBay API credentials not configured');
+    if (!this.isConfigured()) {
+      console.error('❌ eBay Browse API: EBAY_APP_ID and EBAY_CERT_ID (or EBAY_CLIENT_SECRET) are required');
+      throw new Error(
+        'eBay API credentials not configured — add EBAY_APP_ID and EBAY_CERT_ID (Client Secret) on the server.'
+      );
     }
 
     try {
@@ -179,15 +212,20 @@ class EbayService {
       if (!response.ok) {
         console.error('❌ eBay Browse API Error:', response.status);
         console.error('❌ Response:', responseText.substring(0, 500));
-        
-        // Parse error for better message
+
+        let errorMsg = responseText.substring(0, 300);
         try {
           const errorData = JSON.parse(responseText);
-          const errorMsg = errorData.errors?.[0]?.message || responseText.substring(0, 200);
-          throw new Error(`eBay API error: ${errorMsg}`);
-        } catch (e) {
-          throw new Error(`eBay API error: ${response.status} - ${responseText.substring(0, 200)}`);
+          errorMsg = errorData.errors?.[0]?.message || errorMsg;
+        } catch {
+          /* keep truncated body */
         }
+        let hint = '';
+        if (response.status === 403) {
+          hint +=
+            ' — Production Buy/Browse access may require eBay approval: https://developer.ebay.com/api-docs/buy/static/buy-requirements.html';
+        }
+        throw new Error(`eBay Browse API HTTP ${response.status}: ${errorMsg}${hint}`);
       }
 
       let data;
@@ -308,7 +346,7 @@ class EbayService {
     const cap = typeof maxTotal === 'number' && maxTotal > 0 ? maxTotal : 480;
 
     for (const keywords of queries) {
-      if (out.length >= cap || !this.appId) break;
+      if (out.length >= cap || !this.isConfigured()) break;
       try {
         const batch = await this.searchItems({
           keywords,

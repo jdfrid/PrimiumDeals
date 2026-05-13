@@ -30,6 +30,9 @@ services:
         sync: false
       - key: EBAY_CERT_ID
         sync: false
+      # Same value as Cert ID — either name works
+      # - key: EBAY_CLIENT_SECRET
+      #   sync: false
       - key: EBAY_CAMPAIGN_ID
         sync: false
       - key: ADMIN_EMAIL

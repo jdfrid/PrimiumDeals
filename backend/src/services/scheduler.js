@@ -69,7 +69,7 @@ class Scheduler {
       const seenIds = new Set();
 
       // Check which providers are enabled
-      const ebayEnabled = !!process.env.EBAY_APP_ID;
+      const ebayEnabled = ebayService.isConfigured();
       const banggoodProvider = prepare('SELECT enabled FROM providers WHERE id = ?').get('banggood');
       const banggoodEnabled = banggoodProvider?.enabled && process.env.BANGGOOD_APP_KEY;
 
@@ -228,7 +228,8 @@ class Scheduler {
       if (error.message.includes('500')) {
         errorMessage = 'eBay API rate limit exceeded. Please try again in a few minutes.';
       } else if (error.message.includes('credentials')) {
-        errorMessage = 'eBay API credentials not configured. Check EBAY_APP_ID.';
+        errorMessage =
+          'eBay API credentials not configured on server. Set EBAY_APP_ID (Client ID) and EBAY_CERT_ID or EBAY_CLIENT_SECRET (Client Secret).';
       }
     }
 

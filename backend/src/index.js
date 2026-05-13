@@ -116,7 +116,7 @@ async function initializeSampleDeals() {
   const result = await bootstrapEmptyDatabaseWithSamples({ prepare, getDb, saveDatabase });
   if (!result.skipped && (result.mode === 'synthetic_search' || result.mode === 'synthetic_topup')) {
     console.warn(
-      '💡 Configure eBay API (EBAY_APP_ID, EBAY_CERT_ID, EBAY_CAMPAIGN_ID) so new sample deals use real /itm/ listing URLs instead of search pages.'
+      '💡 Configure eBay API (EBAY_APP_ID + EBAY_CERT_ID or EBAY_CLIENT_SECRET, and EBAY_CAMPAIGN_ID) so new sample deals use real /itm/ listing URLs instead of search pages.'
     );
   }
 }

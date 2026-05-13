@@ -1,5 +1,6 @@
 import { prepare } from '../config/database.js';
 import scheduler from '../services/scheduler.js';
+import ebayService from '../services/ebayService.js';
 
 export const getRules = (req, res) => {
   const rules = prepare('SELECT * FROM query_rules ORDER BY created_at DESC').all();
@@ -62,7 +63,13 @@ export const executeRule = async (req, res) => {
     res.json({ message: 'Rule executed', ...result });
   } catch (error) {
     console.error('Execute rule error:', error);
-    res.status(500).json({ error: 'Failed to execute rule' });
+    res.status(500).json({
+      error: error.message || 'Failed to execute rule',
+      hint:
+        typeof ebayService.isConfigured === 'function' && !ebayService.isConfigured()
+          ? 'Configure EBAY_APP_ID + EBAY_CERT_ID (Client Secret) on the server.'
+          : undefined
+    });
   }
 };
 
