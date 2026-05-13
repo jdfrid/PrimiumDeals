@@ -54,8 +54,26 @@ app.use(cors());
 app.use(express.json());
 // Register API before static so POST /api/* never hits the SPA or a stray file under dist/.
 app.use('/api', routes);
-app.use(express.static(path.join(__dirname, '../../frontend/dist')));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../../frontend/dist/index.html')));
+
+const distDir = path.join(__dirname, '../../frontend/dist');
+
+app.use(express.static(distDir));
+
+/**
+ * Public storefront uses index.html; admin UI is a separate SPA (admin.html) so routing cannot bleed.
+ */
+app.get('*', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, private, max-age=0',
+    Pragma: 'no-cache'
+  });
+  const p = req.path;
+  const spaFile =
+    p === '/admin' || p.startsWith('/admin/')
+      ? 'admin.html'
+      : 'index.html';
+  res.sendFile(path.join(distDir, spaFile));
+});
 
 async function initializeAdmin() {
   const adminEmail = process.env.ADMIN_EMAIL || 'jdfrid@gmail.com';
@@ -98,24 +116,37 @@ function initializeDefaultRule() {
 
 async function initializeSampleDeals() {
   const result = await bootstrapEmptyDatabaseWithSamples({ prepare, getDb, saveDatabase });
-  if (!result.skipped && result.mode === 'synthetic_search') {
+  if (!result.skipped && (result.mode === 'synthetic_search' || result.mode === 'synthetic_topup')) {
     console.warn(
       '💡 Configure eBay API (EBAY_APP_ID, EBAY_CERT_ID, EBAY_CAMPAIGN_ID) so new sample deals use real /itm/ listing URLs instead of search pages.'
     );
   }
 }
 
-async function runDeferredInit() {
+/** Backfill discount_percent when NULL so public API filter does not drop rows. */
+function repairDealDiscountPercents() {
   try {
-    await initializeAdmin();
-    initializeCategories();
-    initializeDefaultRule();
-    await initializeSampleDeals();
-    scheduler.init();
-    console.log('✅ Deferred init (admin seed, scheduler) finished');
+    prepare(`
+      UPDATE deals SET discount_percent =
+        CAST(ROUND(((original_price - current_price) * 100.0) / original_price) AS REAL)
+      WHERE discount_percent IS NULL
+        AND original_price IS NOT NULL AND original_price > 0
+        AND current_price IS NOT NULL
+        AND original_price > current_price
+    `).run();
   } catch (e) {
-    console.error('❌ Deferred init failed:', e);
+    console.warn('repairDealDiscountPercents:', e.message || e);
   }
+}
+
+async function runDeferredInit() {
+  await initializeAdmin();
+  initializeCategories();
+  initializeDefaultRule();
+  repairDealDiscountPercents();
+  await initializeSampleDeals();
+  scheduler.init();
+  console.log('✅ Deferred init (admin seed, scheduler) finished');
 }
 
 async function start() {
@@ -132,12 +163,16 @@ async function start() {
       console.warn('recoverStuckCreativeJobs skipped:', e.message || e);
     }
 
+    try {
+      await runDeferredInit();
+    } catch (e) {
+      console.error('❌ Deferred init failed — deals/admin seed may be incomplete:', e);
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server listening on 0.0.0.0:${PORT}`);
       console.log(`📊 Admin: /admin  ·  Health: /api/health`);
     });
-
-    void runDeferredInit();
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

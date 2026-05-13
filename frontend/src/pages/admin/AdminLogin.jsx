@@ -28,10 +28,16 @@ export default function AdminLogin() {
   const { login, user } = useAuth();
   const codeInputRefs = useRef([]);
 
-  // Redirect if already logged in
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
+
   if (user) {
-    navigate('/admin');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-midnight-900">
+        <div className="w-12 h-12 border-4 border-gold-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   // Resend cooldown timer
@@ -102,7 +108,7 @@ export default function AdminLogin() {
       } else if (data.token) {
         // Direct login (2FA disabled)
         await login(email, password);
-        navigate('/admin');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');

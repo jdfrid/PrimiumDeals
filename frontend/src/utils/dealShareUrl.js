@@ -1,6 +1,6 @@
-/** Full URL for sharing a deal detail page (HashRouter). */
+/** Full URL for sharing a deal detail page (pathname routing; works with SPA fallback). */
 export function getDealShareUrl(dealId) {
   if (dealId == null || typeof window === 'undefined') return '';
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}#/deal/${dealId}`;
+  const { origin } = window.location;
+  return `${origin}/deal/${dealId}`;
 }

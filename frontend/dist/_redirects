@@ -1,0 +1,4 @@
+# Static hosts: admin is a separate SPA shell (admin.html). Order: most specific first.
+/admin    /admin.html   200
+/admin/*  /admin.html   200
+/*        /index.html   200

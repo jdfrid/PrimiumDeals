@@ -1,5 +1,7 @@
-/** Same convention as AdminLogin: optional full backend origin (no trailing slash). Required if the UI is hosted separately from the API. */
-const API_ORIGIN = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+import { getApiOrigin } from '../utils/apiOrigin';
+
+/** Backend origin without path; `/api` is appended here. Mirrors trackClickUrl.js. */
+const API_ORIGIN = getApiOrigin();
 const API_BASE = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 class ApiService {

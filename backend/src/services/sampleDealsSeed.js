@@ -100,7 +100,14 @@ async function seedFromListingPoolOrSynthetic({ prepare, getDb, saveDatabase, ma
 
   let listingPool = [];
   try {
-    listingPool = await ebayService.getListingCandidatesForSeed({ maxTotal: Math.min(maxRows, 560) });
+    const poolPromise = ebayService.getListingCandidatesForSeed({ maxTotal: Math.min(maxRows, 560) });
+    const timeoutMs = Number(process.env.SEED_LISTING_POOL_TIMEOUT_MS || 15000);
+    listingPool = await Promise.race([
+      poolPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`getListingCandidatesForSeed exceeded ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
   } catch (e) {
     console.warn('⚠️ eBay listing seed pool unavailable:', e.message || e);
   }
@@ -151,10 +158,48 @@ async function seedFromListingPoolOrSynthetic({ prepare, getDb, saveDatabase, ma
   return { added, mode: 'synthetic_search', searchFallback: true };
 }
 
-/** First boot when DB has zero deals. */
+function countEligiblePublicDeals(prepare) {
+  const row = prepare(
+    `SELECT COUNT(*) AS c FROM deals WHERE is_active = 1 AND COALESCE(discount_percent, 0) >= 10`
+  ).get();
+  return Number(row?.c ?? row?.count ?? 0);
+}
+
+function countTotalDeals(prepare) {
+  const row = prepare(`SELECT COUNT(*) AS c FROM deals`).get();
+  return Number(row?.c ?? row?.count ?? 0);
+}
+
+/**
+ * Persisted disk can hold old rows that fail the public API filter (inactive, low discount).
+ * If so, insert fresh synthetic rows (unique sample-* ids) so the storefront recovers without admin.
+ * Set STOREFRONT_DEAD_DB_TOPUP_COUNT=0 to only log a warning and skip.
+ */
 export async function bootstrapEmptyDatabaseWithSamples({ prepare, getDb, saveDatabase }) {
-  const existing = prepare('SELECT COUNT(*) as count FROM deals').get();
-  if (existing.count > 0) return { added: 0, skipped: true };
+  if (countEligiblePublicDeals(prepare) > 0) {
+    return { added: 0, skipped: true };
+  }
+
+  const total = countTotalDeals(prepare);
+  const topUpCount = Number(process.env.STOREFRONT_DEAD_DB_TOPUP_COUNT ?? 48);
+
+  if (total > 0) {
+    if (!Number.isFinite(topUpCount) || topUpCount <= 0) {
+      console.warn(
+        `⚠️ ${total} deal row(s) in DB but none qualify for public API (active + discount≥10). ` +
+          'Set STOREFRONT_DEAD_DB_TOPUP_COUNT>0 or fix rows in admin.'
+      );
+      return { added: 0, skipped: true, reason: 'no_eligible_deals' };
+    }
+    console.warn(
+      `⚠️ ${total} deal row(s) in DB but none public-eligible — adding ${topUpCount} synthetic demo listings (unique sample-* ids).`
+    );
+    const campaignId = process.env.EBAY_CAMPAIGN_ID || '5339122678';
+    const added = insertSyntheticDealRows(getDb(), prepare, campaignId, Math.min(topUpCount, 120));
+    saveDatabase();
+    console.log(`✅ Storefront top-up complete: +${added} synthetic deals`);
+    return { added, mode: 'synthetic_topup', searchFallback: true };
+  }
 
   console.log('📦 Adding sample deals (listing URLs preferred)...');
   return seedFromListingPoolOrSynthetic({ prepare, getDb, saveDatabase, maxRows: 1000 });

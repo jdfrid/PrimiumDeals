@@ -98,8 +98,8 @@ export const getPublicDeals = (req, res) => {
   const minDiscount = 10; // Show deals with 10%+ discount
 
   // Include source field in SELECT
-  let sql = `SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent, d.currency, d.condition, d.ebay_url, d.source, c.name as category_name, c.icon as category_icon FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?`;
-  let countSql = 'SELECT COUNT(*) as count FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND d.discount_percent >= ?';
+  let sql = `SELECT d.id, d.title, d.image_url, d.original_price, d.current_price, d.discount_percent, d.currency, d.condition, d.ebay_url, d.source, c.name as category_name, c.icon as category_icon FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND COALESCE(d.discount_percent, 0) >= ?`;
+  let countSql = 'SELECT COUNT(*) as count FROM deals d LEFT JOIN categories c ON d.category_id = c.id WHERE d.is_active = 1 AND COALESCE(d.discount_percent, 0) >= ?';
   const params = [minDiscount];
 
   // Support both category ID (number) and category name (string)
@@ -174,7 +174,7 @@ export const getPublicDealById = (req, res) => {
            d.currency, d.condition, d.ebay_url, d.source, c.name AS category_name, c.icon AS category_icon
     FROM deals d
     LEFT JOIN categories c ON d.category_id = c.id
-    WHERE d.id = ? AND d.is_active = 1 AND d.discount_percent >= ?
+    WHERE d.id = ? AND d.is_active = 1 AND COALESCE(d.discount_percent, 0) >= ?
   `).get(id, minDiscount);
   if (!deal) return res.status(404).json({ error: 'Deal not found' });
   res.json(deal);

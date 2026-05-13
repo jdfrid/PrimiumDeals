@@ -27,11 +27,34 @@ router.get('/health', (req, res) => {
   const xfProto = req.get('x-forwarded-proto');
   const proto = (xfProto || req.protocol || 'https').split(',')[0].trim();
   const host = req.get('host') || '';
+
+  /** Same eligibility as GET /api/public/deals (minDiscount 10, active rows). */
+  const minDiscount = 10;
+  let storefrontEligibleDealCount = null;
+  let activeDealCount = null;
+  let dealCountDbError = null;
+  try {
+    const eligible = prepare(
+      `SELECT COUNT(*) as c FROM deals WHERE is_active = 1 AND COALESCE(discount_percent, 0) >= ?`
+    ).get(minDiscount);
+    storefrontEligibleDealCount = typeof eligible?.c === 'number' ? eligible.c : Number(eligible?.c ?? 0);
+    const active = prepare(`SELECT COUNT(*) as c FROM deals WHERE is_active = 1`).get();
+    activeDealCount = typeof active?.c === 'number' ? active.c : Number(active?.c ?? 0);
+  } catch (e) {
+    dealCountDbError = e.message || String(e);
+  }
+
   res.json({
     ok: true,
     service: 'primium-deals-api',
-    /** Helps debug: admin fetch() must target this same origin unless VITE_API_URL is exactly this base. */
-    thisOrigin: host ? `${proto}://${host}` : null
+    /** Helps debug: browse this host; frontend must fetch this same origin unless VITE_API_URL matches this base exactly. */
+    thisOrigin: host ? `${proto}://${host}` : null,
+    /** How many deals the public storefront can list (discount >= minPublicDiscount). If 0, check DB seed / query rules / eBay credentials. */
+    storefrontEligibleDealCount,
+    /** All active listings (ignored by public UI if discount too low). */
+    activeDealCount,
+    minPublicDiscount: minDiscount,
+    ...(dealCountDbError ? { dealCountDbError } : {})
   });
 });
 

@@ -4,22 +4,22 @@ import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileTex
 import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
-  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { path: '/admin/deals', icon: ShoppingBag, label: 'Deals' },
-  { path: '/admin/categories', icon: Tags, label: 'Categories' },
-  { path: '/admin/users', icon: Users, label: 'Users', roles: ['admin'] },
-  { path: '/admin/rules', icon: Play, label: 'Query Rules', roles: ['admin'] },
-  { path: '/admin/providers', icon: Settings, label: 'Providers', roles: ['admin'] },
-  { path: '/admin/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin'] },
-  { path: '/admin/earnings', icon: DollarSign, label: 'Earnings', roles: ['admin'] },
-  { path: '/admin/banners', icon: Image, label: 'Banners', roles: ['admin'] },
-  { path: '/admin/social', icon: Share2, label: 'Social Hub', roles: ['admin'] },
-  { path: '/admin/telegram', icon: Send, label: 'Telegram', roles: ['admin'] },
-  { path: '/admin/video-studio', icon: Video, label: 'Short videos (MP4)', roles: ['admin', 'editor'] },
-  { path: '/admin/creative-studio', icon: Sparkles, label: 'Creative videos', roles: ['admin', 'editor'] },
-  { path: '/admin/messages', icon: Mail, label: 'Messages', roles: ['admin'] },
-  { path: '/admin/settings', icon: Cog, label: 'Settings', roles: ['admin'] },
-  { path: '/admin/logs', icon: FileText, label: 'Logs', roles: ['admin'] },
+  { path: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { path: '/deals', icon: ShoppingBag, label: 'Deals' },
+  { path: '/categories', icon: Tags, label: 'Categories' },
+  { path: '/users', icon: Users, label: 'Users', roles: ['admin'] },
+  { path: '/rules', icon: Play, label: 'Query Rules', roles: ['admin'] },
+  { path: '/providers', icon: Settings, label: 'Providers', roles: ['admin'] },
+  { path: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin'] },
+  { path: '/earnings', icon: DollarSign, label: 'Earnings', roles: ['admin'] },
+  { path: '/banners', icon: Image, label: 'Banners', roles: ['admin'] },
+  { path: '/social', icon: Share2, label: 'Social Hub', roles: ['admin'] },
+  { path: '/telegram', icon: Send, label: 'Telegram', roles: ['admin'] },
+  { path: '/video-studio', icon: Video, label: 'Short videos (MP4)', roles: ['admin', 'editor'] },
+  { path: '/creative-studio', icon: Sparkles, label: 'Creative videos', roles: ['admin', 'editor'] },
+  { path: '/messages', icon: Mail, label: 'Messages', roles: ['admin'] },
+  { path: '/settings', icon: Cog, label: 'Settings', roles: ['admin'] },
+  { path: '/logs', icon: FileText, label: 'Logs', roles: ['admin'] },
 ];
 
 export default function AdminLayout() {
@@ -27,7 +27,10 @@ export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => { logout(); navigate('/admin/login'); };
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role));
 
   return (
@@ -46,7 +49,7 @@ export default function AdminLayout() {
           </div>
           <nav className="flex-1 space-y-1">
             {filteredNavItems.map(item => (
-              <NavLink key={item.path} to={item.path} end={item.exact} className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+              <NavLink key={item.path} to={item.path} end={item.end} className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                 <item.icon size={20} /><span>{item.label}</span>
               </NavLink>
             ))}

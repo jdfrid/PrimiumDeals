@@ -9,16 +9,19 @@ services:
     buildCommand: "cd frontend && npm install && npx --yes vite build && cd ../backend && npm install"
     startCommand: "node backend/src/index.js"
     envVars:
-      # Leave VITE_API_URL unset when this service serves both API + static (same-origin /api). Set only if the UI
-      # is built elsewhere — use the live backend URL (e.g. https://primium-deals.onrender.com), no trailing slash.
-      # Wrong VITE_API_URL → dead host → 502 HTML from the CDN/proxy.
+      # Unified service (recommended): DO NOT define VITE_API_URL in Dashboard — frontend uses relative /api and stays
+      # correct behind custom domains. Setting VITE_API_URL to another host here often breaks storefront + admin.
+      # Separate static UI only: build with VITE_API_URL=https://your-backend-origin (no /api suffix, no trailing slash).
       - key: NODE_VERSION
         value: "18.19.0"
       - key: NODE_ENV
         value: production
       - key: PORT
         value: "10000"
-      # Secret values - set these in Render Dashboard, not here!
+      # Optional: if deals.db has "dead" rows (none pass public filter), boot adds synthetic demo deals (default 48).
+      # Set to 0 to disable auto top-up and only manage data via admin.
+      # - key: STOREFRONT_DEAD_DB_TOPUP_COUNT
+      #   value: "48"
       - key: JWT_SECRET
         sync: false
       - key: EBAY_APP_ID

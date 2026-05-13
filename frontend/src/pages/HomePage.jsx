@@ -151,6 +151,7 @@ export default function HomePage() {
   const [pagination, setPagination] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [randomSeed, setRandomSeed] = useState(null);
+  const [dealsLoadError, setDealsLoadError] = useState(null);
 
   useEffect(() => {
     document.title = 'Premium Deals | Dealsluxy';
@@ -172,6 +173,7 @@ export default function HomePage() {
 
   const loadDeals = async () => {
     setLoading(true);
+    setDealsLoadError(null);
     try {
       const params = { page, sort: sortBy };
       if (selectedCategory) params.category = selectedCategory;
@@ -203,6 +205,9 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error('Failed to load deals:', error);
+      setDealsLoadError(error.message || 'Could not reach the deals API.');
+      setDeals([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
@@ -259,6 +264,15 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {dealsLoadError && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-950 text-sm px-4 py-2 text-center">
+          <strong className="font-semibold">Unable to load deals.</strong>{' '}
+          {dealsLoadError}
+          {' '}If the storefront is on a different host than the API, set <code className="text-xs bg-amber-100 px-1 rounded">VITE_API_URL</code>{' '}
+          at build time to your backend URL (origin only, no <code className="text-xs bg-amber-100 px-1 rounded">/api</code> suffix).
+        </div>
+      )}
 
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
