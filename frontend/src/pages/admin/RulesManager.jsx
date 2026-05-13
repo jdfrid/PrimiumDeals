@@ -132,8 +132,8 @@ export default function RulesManager() {
       <div className="space-y-4">
         {loading ? [...Array(3)].map((_, i) => <div key={i} className="glass rounded-xl p-6"><div className="h-24 shimmer rounded" /></div>) : rules.length === 0 ? <div className="glass rounded-xl text-center py-12 text-midnight-400">No rules yet</div> : rules.map(rule => (
           <div key={rule.id} className="glass rounded-xl p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col gap-4">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="font-semibold text-lg">{rule.name}</h3>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${rule.is_active ? 'bg-green-500/20 text-green-400' : 'bg-midnight-700 text-midnight-400'}`}>{rule.is_active ? <CheckCircle size={12} /> : <AlertCircle size={12} />}{rule.is_active ? 'Active' : 'Inactive'}</span>
@@ -146,10 +146,26 @@ export default function RulesManager() {
                 </div>
                 {rule.last_run && <p className="text-xs text-midnight-500 mt-3 flex items-center gap-1"><Clock size={12} />Last: {new Date(rule.last_run).toLocaleString()}</p>}
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => executeRule(rule.id)} disabled={executing === rule.id} className="btn-outline flex items-center gap-2 text-sm">{executing === rule.id ? <div className="w-4 h-4 border-2 border-gold-400 border-t-transparent rounded-full animate-spin" /> : <Play size={16} />}Run</button>
-                <button onClick={() => openModal(rule)} className="p-2 rounded-lg hover:bg-midnight-700 text-midnight-400 hover:text-white transition-colors"><Edit size={18} /></button>
-                <button onClick={() => deleteRule(rule.id)} className="p-2 rounded-lg hover:bg-red-500/20 text-midnight-400 hover:text-red-400 transition-colors"><Trash2 size={18} /></button>
+              {/* Primary action — manual fetch from eBay */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-midnight-700/80">
+                <button
+                  type="button"
+                  onClick={() => executeRule(rule.id)}
+                  disabled={executing === rule.id}
+                  className="btn-gold inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold shrink-0"
+                  title="Fetch deals from eBay now"
+                >
+                  {executing === rule.id ? <div className="w-4 h-4 border-2 border-midnight-950 border-t-transparent rounded-full animate-spin" /> : <Play size={18} fill="currentColor" className="opacity-90" />}
+                  Run now
+                </button>
+                <button type="button" onClick={() => openModal(rule)} className="btn-outline inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm" title="Edit rule">
+                  <Edit size={16} />
+                  Edit
+                </button>
+                <button type="button" onClick={() => deleteRule(rule.id)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/15 border border-red-500/30" title="Delete rule">
+                  <Trash2 size={16} />
+                  Delete
+                </button>
               </div>
             </div>
           </div>
