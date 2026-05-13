@@ -336,68 +336,14 @@ export async function initDatabase() {
     )
   `);
 
-  // TikTok auto-video engine
-  db.run(`
-    CREATE TABLE IF NOT EXISTS tiktok_video_jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      deal_id INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      angle_type TEXT,
-      template_id TEXT DEFAULT 'default',
-      hook_text TEXT,
-      body_text TEXT,
-      value_text TEXT,
-      cta_text TEXT,
-      narration_text TEXT,
-      screen_texts_json TEXT,
-      caption TEXT,
-      hashtags TEXT,
-      tracking_url TEXT,
-      openai_model TEXT,
-      error_message TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (deal_id) REFERENCES deals(id)
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS tiktok_video_outputs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      job_id INTEGER NOT NULL UNIQUE,
-      file_path TEXT NOT NULL,
-      duration_sec REAL,
-      file_size_bytes INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (job_id) REFERENCES tiktok_video_jobs(id)
-    )
-  `);
-
-  db.run(`CREATE INDEX IF NOT EXISTS idx_tiktok_jobs_deal ON tiktok_video_jobs(deal_id)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_tiktok_jobs_status_created ON tiktok_video_jobs(status, created_at)`);
-
-  // Creative short-video studio (Pexels + cloud render — Shotstack, etc.)
-  db.run(`
-    CREATE TABLE IF NOT EXISTS creative_video_jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      trigger_source TEXT DEFAULT 'manual',
-      video_description TEXT NOT NULL,
-      script_tone TEXT NOT NULL,
-      user_notes TEXT,
-      brief_json TEXT,
-      pexels_urls_json TEXT,
-      character_id TEXT,
-      render_provider TEXT DEFAULT 'shotstack',
-      external_render_id TEXT,
-      output_url TEXT,
-      error_message TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_creative_jobs_status ON creative_video_jobs(status, created_at)`);
-  
+  // Legacy video engines removed — drop tables if they exist from older installs
+  try {
+    db.run('DROP TABLE IF EXISTS tiktok_video_outputs');
+    db.run('DROP TABLE IF EXISTS tiktok_video_jobs');
+    db.run('DROP TABLE IF EXISTS creative_video_jobs');
+  } catch {
+    /* ignore */
+  }
   // Add source column to deals table if not exists
   try {
     db.run(`ALTER TABLE deals ADD COLUMN source TEXT DEFAULT 'ebay'`);
@@ -439,39 +385,26 @@ export async function initDatabase() {
     ['banggood_enabled', 'false'],
     ['banggood_app_key', ''],
     ['banggood_app_secret', ''],
-    ['video_engine_auto_enabled', 'false'],
-    ['video_utm_source', 'short_video'],
-    ['video_llm_provider', 'template'],
-    ['video_tts_provider', 'edge'],
-    ['gemini_api_key', ''],
-    ['gemini_model', 'gemini-2.0-flash'],
-    ['edge_tts_voice', 'en-US-AriaNeural'],
-    ['tiktok_enabled', 'false'],
-    ['tiktok_openai_api_key', ''],
-    ['tiktok_openai_model', 'gpt-4o-mini'],
-    ['tiktok_tts_model', 'tts-1'],
-    ['tiktok_tts_voice', 'alloy'],
-    ['tiktok_cron', '0 8 * * *'],
-    ['tiktok_site_base_url', ''],
-    ['tiktok_min_discount', '15'],
-    ['tiktok_repeat_days', '14'],
-    ['creative_llm_provider', 'template'],
-    ['creative_gemini_api_key', ''],
-    ['creative_gemini_model', 'gemini-2.0-flash'],
-    ['creative_openai_api_key', ''],
-    ['creative_openai_model', 'gpt-4o-mini'],
-    ['creative_magnific_api_key', ''],
-    ['creative_video_provider', 'shotstack'],
-    ['creative_video_auto_enabled', 'false'],
-    ['creative_video_cron', '0 14 * * *'],
-    ['creative_auto_description', 'Short vertical video: practical tips about shopping smart and spotting real value online.'],
-    ['creative_auto_tone', 'adults']
   ];
   for (const [key, value] of defaultSettings) {
     const existing = db.exec(`SELECT key FROM settings WHERE key = '${key}'`);
     if (existing.length === 0 || existing[0].values.length === 0) {
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('${key}', '${value}')`);
     }
+  }
+
+  try {
+    db.run(`DELETE FROM settings WHERE key IN (
+      'video_engine_auto_enabled','video_utm_source','video_llm_provider','video_tts_provider',
+      'gemini_api_key','gemini_model','edge_tts_voice',
+      'tiktok_enabled','tiktok_openai_api_key','tiktok_openai_model','tiktok_tts_model','tiktok_tts_voice',
+      'tiktok_cron','tiktok_site_base_url','tiktok_min_discount','tiktok_repeat_days',
+      'creative_llm_provider','creative_gemini_api_key','creative_gemini_model','creative_openai_api_key',
+      'creative_openai_model','creative_magnific_api_key','creative_video_provider','creative_video_auto_enabled',
+      'creative_video_cron','creative_auto_description','creative_auto_tone'
+    )`);
+  } catch {
+    /* ignore */
   }
 
   // Initialize default providers
@@ -539,7 +472,7 @@ export function prepare(sql) {
   };
 }
 
-/** Resolved data directory (SQLite file lives here; also used for TikTok MP4 output). */
+/** Resolved SQLite data directory. */
 export function getDataRoot() {
   return dataDir;
 }

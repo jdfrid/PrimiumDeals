@@ -16,8 +16,6 @@ import EarningsPage from './pages/admin/EarningsPage';
 import BannersGallery from './pages/admin/BannersGallery';
 import SocialHub from './pages/admin/SocialHub';
 import TelegramChannels from './pages/admin/TelegramChannels';
-import TikTokStudio from './pages/admin/TikTokStudio';
-import CreativeStudio from './pages/admin/CreativeStudio';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -60,9 +58,6 @@ export default function AppAdmin() {
         <Route path="banners" element={<ProtectedRoute roles={['admin']}><BannersGallery /></ProtectedRoute>} />
         <Route path="social" element={<ProtectedRoute roles={['admin']}><SocialHub /></ProtectedRoute>} />
         <Route path="telegram" element={<ProtectedRoute roles={['admin']}><TelegramChannels /></ProtectedRoute>} />
-        <Route path="video-studio" element={<ProtectedRoute roles={['admin', 'editor']}><TikTokStudio /></ProtectedRoute>} />
-        <Route path="tiktok" element={<ProtectedRoute roles={['admin', 'editor']}><TikTokStudio /></ProtectedRoute>} />
-        <Route path="creative-studio" element={<ProtectedRoute roles={['admin', 'editor']}><CreativeStudio /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

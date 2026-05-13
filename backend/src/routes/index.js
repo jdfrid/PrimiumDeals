@@ -1,5 +1,4 @@
 import express from 'express';
-import fs from 'fs';
 import path from 'path';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import * as authController from '../controllers/authController.js';
@@ -7,16 +6,7 @@ import * as usersController from '../controllers/usersController.js';
 import * as dealsController from '../controllers/dealsController.js';
 import * as categoriesController from '../controllers/categoriesController.js';
 import * as rulesController from '../controllers/rulesController.js';
-import { prepare, saveDatabase, getDataRoot, getDb } from '../config/database.js';
-import { getTikTokSettings } from '../services/tiktok/tiktokSettings.js';
-import {
-  enqueueVideoJob,
-  isTikTokEngineBusy,
-  isVideoEngineBusy,
-  retryTikTokJobBackground
-} from '../services/tiktok/tiktokEngine.js';
-import scheduler from '../services/scheduler.js';
-import creativeVideoRoutes from './creativeVideoRoutes.js';
+import { prepare, saveDatabase, getDb } from '../config/database.js';
 import voicePlannerRoutes from './voicePlannerRoutes.js';
 import { resolveDealOutboundUrl } from '../utils/dealOutboundUrl.js';
 import { adminReseedSampleDeals } from '../services/sampleDealsSeed.js';
@@ -559,177 +549,7 @@ router.put('/admin/settings', authenticateToken, requireRole('admin'), (req, res
   }
 });
 
-const TIKTOK_SETTING_KEYS = [
-  'video_engine_auto_enabled',
-  'video_utm_source',
-  'video_llm_provider',
-  'video_tts_provider',
-  'gemini_api_key',
-  'gemini_model',
-  'edge_tts_voice',
-  'tiktok_enabled',
-  'tiktok_openai_api_key',
-  'tiktok_openai_model',
-  'tiktok_tts_model',
-  'tiktok_tts_voice',
-  'tiktok_cron',
-  'tiktok_site_base_url',
-  'tiktok_min_discount',
-  'tiktok_repeat_days'
-];
-
-const runVideoEngineHandler = async (req, res) => {
-  try {
-    const raw = req.body?.dealId;
-    const dealId =
-      raw != null && raw !== '' ? parseInt(String(raw), 10) : null;
-    if (dealId !== null && Number.isNaN(dealId)) {
-      return res.status(400).json({ error: 'Invalid dealId' });
-    }
-    const { jobId } = await enqueueVideoJob(dealId);
-    res.json({ jobId, status: 'started', mode: 'video_only' });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-};
-
-/** Short-form video admin JSON API. Mounted at /admin/tiktok (legacy) and /admin/video-studio (avoids some WAF/CDN blocks on "tiktok" in the path). */
-const videoStudioApi = express.Router();
-
-videoStudioApi.get('/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  try {
-    const raw = getTikTokSettings();
-    const openaiKey = (raw.tiktok_openai_api_key || '').trim();
-    const geminiKey = (raw.gemini_api_key || '').trim();
-    const safe = { ...raw };
-    delete safe.tiktok_openai_api_key;
-    delete safe.gemini_api_key;
-    safe.tiktok_openai_key_configured = openaiKey.length > 0;
-    safe.gemini_key_configured = geminiKey.length > 0;
-    res.json(safe);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-videoStudioApi.put('/settings', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  try {
-    const body = req.body || {};
-    let cronChanged = false;
-    for (const key of TIKTOK_SETTING_KEYS) {
-      if (body[key] === undefined) continue;
-
-      if (key === 'tiktok_openai_api_key' || key === 'gemini_api_key') {
-        const v = String(body[key] || '').trim();
-        if (!v) continue;
-        prepare(`
-          INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
-        `).run(key, v);
-        continue;
-      }
-
-      const value = String(body[key]);
-      prepare(`
-        INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
-      `).run(key, value);
-      if (key === 'tiktok_cron') cronChanged = true;
-    }
-
-    if (cronChanged) scheduler.rescheduleTikTok();
-
-    res.json({ success: true });
-  } catch (e) {
-    console.error('TikTok settings:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-videoStudioApi.get('/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  res.json({ busy: isTikTokEngineBusy() });
-});
-
-videoStudioApi.get('/jobs', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  try {
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '40', 10)));
-    const rows = prepare(
-      `
-      SELECT j.id, j.deal_id, j.status, j.angle_type, j.caption, j.tracking_url,
-             j.error_message, j.created_at, j.updated_at,
-             d.title as deal_title, d.image_url,
-             o.file_path, o.duration_sec, o.file_size_bytes
-      FROM tiktok_video_jobs j
-      JOIN deals d ON d.id = j.deal_id
-      LEFT JOIN tiktok_video_outputs o ON o.job_id = j.id
-      ORDER BY j.id DESC
-      LIMIT ?
-    `
-    ).all(limit);
-    res.json({ jobs: rows });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-videoStudioApi.get('/jobs/:id', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const row = prepare(
-      `
-      SELECT j.*, d.title as deal_title, d.image_url as deal_image,
-             o.file_path, o.duration_sec, o.file_size_bytes
-      FROM tiktok_video_jobs j
-      JOIN deals d ON d.id = j.deal_id
-      LEFT JOIN tiktok_video_outputs o ON o.job_id = j.id
-      WHERE j.id = ?
-    `
-    ).get(id);
-    if (!row) return res.status(404).json({ error: 'Not found' });
-    const safe = { ...row };
-    delete safe.tiktok_openai_api_key;
-    res.json({ job: safe });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-videoStudioApi.post('/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
-
-videoStudioApi.post('/jobs/:id/retry', authenticateToken, requireRole('admin', 'editor'), async (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const { jobId } = await retryTikTokJobBackground(id);
-    res.json({ jobId, status: 'started' });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-videoStudioApi.get('/jobs/:id/download', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const row = prepare(`SELECT file_path FROM tiktok_video_outputs WHERE job_id = ?`).get(id);
-    if (!row?.file_path) return res.status(404).json({ error: 'No video file' });
-    const abs = path.join(getDataRoot(), ...row.file_path.split('/'));
-    if (!fs.existsSync(abs)) return res.status(404).json({ error: 'File missing on disk' });
-    res.download(abs, `tiktok-job-${id}.mp4`);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-router.use('/admin/tiktok', videoStudioApi);
-router.use('/admin/video-studio', videoStudioApi);
-router.use('/admin/creative-videos', creativeVideoRoutes);
 router.use('/voice-planner', voicePlannerRoutes);
-
-router.get('/admin/video-engine/status', authenticateToken, requireRole('admin', 'editor'), (req, res) => {
-  res.json({ busy: isVideoEngineBusy() });
-});
-
-/** Generate MP4 + script only — no TikTok upload. */
-router.post('/admin/video-engine/run', authenticateToken, requireRole('admin', 'editor'), runVideoEngineHandler);
 
 // Admin: View click analytics
 router.get('/analytics/clicks', authenticateToken, (req, res) => {

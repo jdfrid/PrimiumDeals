@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3, Mail, Cog, DollarSign, Image, Share2, Send, Video, Sparkles } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3, Mail, Cog, DollarSign, Image, Share2, Send } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
@@ -15,8 +15,6 @@ const navItems = [
   { path: '/banners', icon: Image, label: 'Banners', roles: ['admin'] },
   { path: '/social', icon: Share2, label: 'Social Hub', roles: ['admin'] },
   { path: '/telegram', icon: Send, label: 'Telegram', roles: ['admin'] },
-  { path: '/video-studio', icon: Video, label: 'Short videos (MP4)', roles: ['admin', 'editor'] },
-  { path: '/creative-studio', icon: Sparkles, label: 'Creative videos', roles: ['admin', 'editor'] },
   { path: '/messages', icon: Mail, label: 'Messages', roles: ['admin'] },
   { path: '/settings', icon: Cog, label: 'Settings', roles: ['admin'] },
   { path: '/logs', icon: FileText, label: 'Logs', roles: ['admin'] },
