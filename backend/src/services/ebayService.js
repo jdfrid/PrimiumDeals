@@ -251,30 +251,34 @@ class EbayService {
 
   parseBrowseResults(data, minDiscount) {
     const results = [];
+    const minDisc = Math.max(0, Number(minDiscount) || 0);
     try {
       const items = data.itemSummaries || [];
       console.log(`📦 Browse API returned ${items.length} items`);
-      
+
       for (const item of items) {
         const currentPrice = parseFloat(item.price?.value || 0);
-        
-        // Check for original/strikethrough price
+        if (!currentPrice || currentPrice <= 0) continue;
+
         const originalPriceData = item.marketingPrice?.originalPrice?.value;
         const discountPercentData = item.marketingPrice?.discountPercentage;
-        
-        let originalPrice, discountPercent;
-        
+
+        let originalPrice;
+        let discountPercent;
+
         if (originalPriceData) {
           originalPrice = parseFloat(originalPriceData);
-          discountPercent = discountPercentData || ((originalPrice - currentPrice) / originalPrice * 100);
+          discountPercent =
+            discountPercentData != null
+              ? Number(discountPercentData)
+              : ((originalPrice - currentPrice) / originalPrice) * 100;
         } else {
-          // Estimate discount for items without explicit discount info
-          originalPrice = currentPrice * 1.4;
-          discountPercent = 28; // Default estimate
+          // No published strikethrough — assume at least minDisc so rule import can filter consistently
+          discountPercent = Math.max(minDisc, 10);
+          originalPrice = currentPrice / (1 - discountPercent / 100);
         }
-        
-        // Apply minimum discount filter
-        if (discountPercent >= minDiscount || !originalPriceData) {
+
+        if (discountPercent >= minDisc) {
           const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl || '';
           
           // Get category info from categories array (Browse API structure)

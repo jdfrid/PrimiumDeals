@@ -8,6 +8,10 @@ function RuleModal({ rule, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!String(form.keywords || '').trim()) {
+      alert('Add at least one search keyword (comma-separated).');
+      return;
+    }
     setLoading(true);
     try {
       if (rule) await api.updateRule(rule.id, form);
@@ -98,25 +102,35 @@ export default function RulesManager() {
   const [editingRule, setEditingRule] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [executing, setExecuting] = useState(null);
+  const [ebayHealth, setEbayHealth] = useState(null);
 
-  useEffect(() => { loadRules(); }, []);
+  useEffect(() => {
+    loadRules();
+    api.getHealth().then(setEbayHealth).catch(() => setEbayHealth(null));
+  }, []);
 
   const loadRules = async () => { try { setRules(await api.getRules()); } catch (e) { console.error(e); } finally { setLoading(false); } };
-  const executeRule = async (id) => { 
-    setExecuting(id); 
-    try { 
-      const r = await api.executeRule(id); 
+  const executeRule = async (id) => {
+    setExecuting(id);
+    try {
+      const r = await api.executeRule(id);
       if (r.error) {
-        alert(`❌ Error: ${r.error}`);
+        alert(`❌ Error:\n${r.error}`);
       } else {
-        alert(`✅ Found: ${r.itemsFound}, Added: ${r.itemsAdded}`); 
+        const lines = [
+          `Found on eBay: ${r.itemsFound}`,
+          `New deals added: ${r.itemsAdded}`,
+          `Updated: ${r.itemsUpdated ?? 0}`,
+          r.warning ? `\n⚠️ ${r.warning}` : ''
+        ].filter(Boolean);
+        alert(`✅ Run finished\n\n${lines.join('\n')}`);
       }
-      loadRules(); 
-    } catch (e) { 
-      alert(`❌ Error: ${e.message}`); 
-    } finally { 
-      setExecuting(null); 
-    } 
+      loadRules();
+    } catch (e) {
+      alert(`❌ Error: ${e.message}`);
+    } finally {
+      setExecuting(null);
+    }
   };
   const deleteRule = async (id) => { if (confirm('Delete this rule?')) { await api.deleteRule(id); loadRules(); } };
   const openModal = (rule = null) => { setEditingRule(rule); setShowModal(true); };
@@ -129,6 +143,13 @@ export default function RulesManager() {
         <div><h1 className="text-2xl font-bold mb-1">Query Rules</h1><p className="text-midnight-400">Configure automatic eBay API searches</p></div>
         <button onClick={() => openModal()} className="btn-gold flex items-center gap-2"><Plus size={18} />Add Rule</button>
       </div>
+      {ebayHealth && ebayHealth.ebayBrowseConfigured === false && (
+        <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <strong className="text-amber-300">eBay API not configured on server.</strong>{' '}
+          {ebayHealth.ebayOAuthHint || 'Set EBAY_APP_ID and EBAY_CERT_ID (Client Secret) in Render → Environment, then redeploy.'}
+          {' '}Until then, <strong>Run now</strong> cannot fetch new listings.
+        </div>
+      )}
       <div className="space-y-4">
         {loading ? [...Array(3)].map((_, i) => <div key={i} className="glass rounded-xl p-6"><div className="h-24 shimmer rounded" /></div>) : rules.length === 0 ? <div className="glass rounded-xl text-center py-12 text-midnight-400">No rules yet</div> : rules.map(rule => (
           <div key={rule.id} className="glass rounded-xl p-6">
@@ -139,9 +160,9 @@ export default function RulesManager() {
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${rule.is_active ? 'bg-green-500/20 text-green-400' : 'bg-midnight-700 text-midnight-400'}`}>{rule.is_active ? <CheckCircle size={12} /> : <AlertCircle size={12} />}{rule.is_active ? 'Active' : 'Inactive'}</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><span className="text-midnight-500">Keywords:</span><p className="truncate">{rule.keywords || 'None'}</p></div>
-                  <div><span className="text-midnight-500">Price:</span><p>${rule.min_price} - ${rule.max_price}</p></div>
-                  <div><span className="text-midnight-500">Discount:</span><p>{rule.min_discount}%+</p></div>
+                  <div><span className="text-midnight-500">Keywords:</span><p className="truncate">{rule.keywords?.trim() || '(default: luxury watch)'}</p></div>
+                  <div><span className="text-midnight-500">Price:</span><p>${rule.min_price ?? 0} - ${rule.max_price ?? 10000}</p></div>
+                  <div><span className="text-midnight-500">Discount:</span><p>{rule.min_discount ?? 10}%+</p></div>
                   <div><span className="text-midnight-500">Schedule:</span><p className="font-mono text-xs">{rule.schedule_cron}</p></div>
                 </div>
                 {rule.last_run && <p className="text-xs text-midnight-500 mt-3 flex items-center gap-1"><Clock size={12} />Last: {new Date(rule.last_run).toLocaleString()}</p>}

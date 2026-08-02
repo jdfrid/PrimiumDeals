@@ -222,6 +222,11 @@ class ApiService {
     return this.request('/stats');
   }
 
+  /** Public — no auth required */
+  async getHealth() {
+    return this.request('/health');
+  }
+
   async getLogs() {
     return this.request('/logs');
   }

@@ -4,6 +4,15 @@ import { prepare, saveDatabase } from '../config/database.js';
 import ebayService from './ebayService.js';
 import banggoodService from './banggoodService.js';
 
+/** Comma-separated keywords; falls back when empty so Run never silently skips eBay. */
+function parseRuleKeywords(raw) {
+  const parsed = String(raw || '')
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean);
+  return parsed.length > 0 ? parsed : ['luxury watch'];
+}
+
 class Scheduler {
   constructor() {
     this.jobs = new Map();
@@ -62,9 +71,16 @@ class Scheduler {
       itemsUpdated = 0,
       itemsRemoved = 0,
       errorMessage = null;
+    const searchErrors = [];
+    const ruleMinDiscount = rule.min_discount ?? 10;
+    const ruleMinPrice = rule.min_price ?? 0;
+    const ruleMaxPrice = rule.max_price ?? 10000;
 
     try {
-      const keywords = rule.keywords ? rule.keywords.split(',').map((k) => k.trim()).filter((k) => k) : ['luxury watch'];
+      const keywords = parseRuleKeywords(rule.keywords);
+      if (!String(rule.keywords || '').trim()) {
+        console.warn(`⚠️ Rule "${rule.name}" has no keywords — using default: "${keywords[0]}"`);
+      }
       const allItems = [];
       const seenIds = new Set();
 
@@ -94,9 +110,9 @@ class Scheduler {
             const items = await ebayService.searchItems({
               keywords: keyword,
               categoryIds: categoryIds,
-              minPrice: rule.min_price || 0,
-              maxPrice: rule.max_price || 10000,
-              minDiscount: rule.min_discount || 10,
+              minPrice: ruleMinPrice,
+              maxPrice: ruleMaxPrice,
+              minDiscount: ruleMinDiscount,
               limit: 100 // Increased from 50 to 100
             });
 
@@ -112,6 +128,7 @@ class Scheduler {
             await new Promise((resolve) => setTimeout(resolve, 500));
           } catch (err) {
             console.error(`  ✗ eBay error "${keyword}":`, err.message);
+            searchErrors.push(`"${keyword}": ${err.message}`);
           }
         }
       }
@@ -125,9 +142,9 @@ class Scheduler {
             console.log(`  → Banggood: "${keyword}"`);
             const items = await banggoodService.searchProducts({
               keywords: keyword,
-              minPrice: rule.min_price || 0,
-              maxPrice: rule.max_price || 10000,
-              minDiscount: rule.min_discount || 10,
+              minPrice: ruleMinPrice,
+              maxPrice: ruleMaxPrice,
+              minDiscount: ruleMinDiscount,
               limit: 50
             });
 
@@ -154,11 +171,19 @@ class Scheduler {
       console.log(`📦 Total unique items from all sources: ${allItems.length}`);
       itemsFound = allItems.length;
 
+      if (ebayEnabled && itemsFound === 0 && searchErrors.length > 0) {
+        errorMessage = `eBay search failed (${searchErrors.length} keyword(s)): ${searchErrors.slice(0, 2).join('; ')}`;
+      }
+
       // Process items from all sources
       for (const item of allItems) {
+        const source = item.source || 'ebay';
+        const itemId = source === 'ebay' ? item.ebayItemId : item.sourceItemId;
         try {
-          const source = item.source || 'ebay';
-          const itemId = source === 'ebay' ? item.ebayItemId : item.sourceItemId;
+          if (!itemId) {
+            console.warn('Skipping item without id:', item.title?.slice(0, 60));
+            continue;
+          }
           const itemUrl =
             source === 'ebay' ? ebayService.getAffiliateUrl(item.ebayItemId, item.ebayUrl) : banggoodService.getAffiliateUrl(item.productUrl);
 
@@ -176,9 +201,9 @@ class Scheduler {
           const existingDeal = prepare('SELECT id, current_price, discount_percent FROM deals WHERE ebay_item_id = ? OR source_item_id = ?').get(itemId, itemId);
 
           if (existingDeal) {
-            const meetsMinDiscount = item.discountPercent >= (rule.min_discount || 0);
-            const meetsMinPrice = item.currentPrice >= (rule.min_price || 0);
-            const meetsMaxPrice = item.currentPrice <= (rule.max_price || 999999);
+            const meetsMinDiscount = item.discountPercent >= ruleMinDiscount;
+            const meetsMinPrice = item.currentPrice >= ruleMinPrice;
+            const meetsMaxPrice = item.currentPrice <= ruleMaxPrice;
 
             if (meetsMinDiscount && meetsMinPrice && meetsMaxPrice) {
               prepare(
@@ -193,9 +218,9 @@ class Scheduler {
               itemsRemoved++;
             }
           } else {
-            const meetsMinDiscount = item.discountPercent >= (rule.min_discount || 0);
-            const meetsMinPrice = item.currentPrice >= (rule.min_price || 0);
-            const meetsMaxPrice = item.currentPrice <= (rule.max_price || 999999);
+            const meetsMinDiscount = item.discountPercent >= ruleMinDiscount;
+            const meetsMinPrice = item.currentPrice >= ruleMinPrice;
+            const meetsMaxPrice = item.currentPrice <= ruleMaxPrice;
 
             if (meetsMinDiscount && meetsMinPrice && meetsMaxPrice) {
               // Double-check for duplicates before inserting (by source_item_id)
@@ -215,8 +240,14 @@ class Scheduler {
             }
           }
         } catch (err) {
-          console.error('Error saving deal:', err.message);
+          console.error('Error saving deal:', err.message, itemId || item.title?.slice(0, 40));
         }
+      }
+
+      if (!errorMessage && itemsFound === 0 && ebayEnabled) {
+        console.warn(
+          `⚠️ Rule "${rule.name}": 0 items from eBay. Widen price range or lower min discount (currently ${ruleMinDiscount}%).`
+        );
       }
 
       prepare('UPDATE query_rules SET last_run = CURRENT_TIMESTAMP WHERE id = ?').run(ruleId);
@@ -242,7 +273,20 @@ class Scheduler {
       console.log(`✅ Rule "${rule.name}" completed: ${itemsFound} found, ${itemsAdded} added, ${itemsUpdated} updated, ${itemsRemoved} removed`);
     }
 
-    return { success: !errorMessage, itemsFound, itemsAdded, itemsUpdated, itemsRemoved, error: errorMessage };
+    return {
+      success: !errorMessage,
+      itemsFound,
+      itemsAdded,
+      itemsUpdated,
+      itemsRemoved,
+      error: errorMessage,
+      warning:
+        !errorMessage && itemsAdded === 0 && itemsFound > 0
+          ? `Found ${itemsFound} listings but all already exist in DB (0 new). Updated prices if changed.`
+          : !errorMessage && itemsFound === 0
+            ? 'No listings matched this rule on eBay. Try Edit → lower Min Discount or widen Price range, and add Keywords.'
+            : null
+    };
   }
 
   cleanupOldDeals() {
