@@ -72,6 +72,7 @@ class Scheduler {
       itemsRemoved = 0,
       errorMessage = null;
     const searchErrors = [];
+    const newDealIds = [];
     const ruleMinDiscount = rule.min_discount ?? 10;
     const ruleMinPrice = rule.min_price ?? 0;
     const ruleMaxPrice = rule.max_price ?? 10000;
@@ -232,10 +233,13 @@ class Scheduler {
                 ).run(item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition || 'New', itemUrl, dbCategoryId, source, duplicateCheck.id);
               } else {
                 // Insert new item
-                prepare(
+                const insertResult = prepare(
                   'INSERT INTO deals (ebay_item_id, source_item_id, source, title, image_url, original_price, current_price, discount_percent, currency, condition, ebay_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
                 ).run(source === 'ebay' ? itemId : '', itemId, source, item.title, item.imageUrl, item.originalPrice, item.currentPrice, item.discountPercent, item.currency, item.condition || 'New', itemUrl, dbCategoryId);
                 itemsAdded++;
+                if (insertResult.lastInsertRowid) {
+                  newDealIds.push(Number(insertResult.lastInsertRowid));
+                }
               }
             }
           }
@@ -267,6 +271,19 @@ class Scheduler {
     prepare('INSERT INTO query_logs (rule_id, status, items_found, items_added, error_message) VALUES (?, ?, ?, ?, ?)').run(ruleId, errorMessage ? 'error' : 'success', itemsFound, itemsAdded, errorMessage);
     saveDatabase();
 
+    let telegramPosted = 0;
+    if (!errorMessage && newDealIds.length > 0) {
+      try {
+        const tgResult = await socialAutomation.postNewDeals(newDealIds, 5);
+        telegramPosted = tgResult?.total ?? 0;
+        if (telegramPosted > 0) {
+          console.log(`📱 Telegram: posted ${telegramPosted} new deal(s) from rule "${rule.name}"`);
+        }
+      } catch (tgErr) {
+        console.error('Telegram post after rule run:', tgErr.message);
+      }
+    }
+
     if (errorMessage) {
       console.log(`❌ Rule "${rule.name}" failed: ${errorMessage}`);
     } else {
@@ -279,6 +296,7 @@ class Scheduler {
       itemsAdded,
       itemsUpdated,
       itemsRemoved,
+      telegramPosted,
       error: errorMessage,
       warning:
         !errorMessage && itemsAdded === 0 && itemsFound > 0

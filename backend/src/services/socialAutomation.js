@@ -7,6 +7,7 @@ import { prepare, saveDatabase } from '../config/database.js';
 
 class SocialAutomationService {
   constructor() {
+    this.minDiscount = Number(process.env.TELEGRAM_MIN_DISCOUNT) || 15;
     this.platforms = {
       telegram: {
         enabled: false,
@@ -23,31 +24,134 @@ class SocialAutomationService {
     };
   }
 
+  /** Bot token + at least one channel (DB or env). */
+  isTelegramConfigured() {
+    const botToken = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+    if (!botToken) return false;
+    const dbChannels = this.getActiveChannels();
+    const mainChannel = (process.env.TELEGRAM_CHANNEL_ID || '').trim();
+    return dbChannels.length > 0 || !!mainChannel;
+  }
+
+  getChannelIds() {
+    const dbChannels = this.getActiveChannels();
+    const mainChannel = (process.env.TELEGRAM_CHANNEL_ID || '').trim();
+    const channelIds = dbChannels.map((c) => c.channel_id);
+    if (mainChannel && !channelIds.includes(mainChannel)) {
+      channelIds.push(mainChannel);
+    }
+    return channelIds;
+  }
+
   /**
-   * Get deals that haven't been posted yet
+   * Deals eligible for auto-post (never posted, active, has image, meets min discount).
+   * Includes recently created OR recently updated listings (Query Rules often update existing rows).
    */
-  getUnpostedDeals(limit = 5) {
+  getUnpostedDeals(limit = 5, { dealIds = null, skipRecencyFilter = false } = {}) {
     try {
-      return prepare(`
+      const minDiscount = this.minDiscount;
+      const recencyClause = skipRecencyFilter
+        ? ''
+        : `AND (
+            d.created_at > datetime('now', '-14 days')
+            OR d.updated_at > datetime('now', '-3 days')
+          )`;
+
+      const idClause =
+        Array.isArray(dealIds) && dealIds.length > 0
+          ? `AND d.id IN (${dealIds.map(() => '?').join(',')})`
+          : '';
+
+      const sql = `
         SELECT 
           d.id, d.title, d.image_url, d.original_price, d.current_price, 
           d.discount_percent, d.ebay_url, d.source,
           c.name as category_name
         FROM deals d
         LEFT JOIN categories c ON d.category_id = c.id
-        LEFT JOIN social_posts sp ON d.id = sp.deal_id
+        LEFT JOIN social_posts sp ON d.id = sp.deal_id AND sp.platform = 'telegram'
         WHERE d.is_active = 1 
-          AND d.discount_percent >= 30
-          AND d.image_url IS NOT NULL
+          AND COALESCE(d.discount_percent, 0) >= ?
+          AND d.image_url IS NOT NULL AND TRIM(d.image_url) != ''
           AND sp.id IS NULL
-          AND d.created_at > datetime('now', '-2 days')
-        ORDER BY d.discount_percent DESC
+          ${recencyClause}
+          ${idClause}
+        ORDER BY d.discount_percent DESC, d.updated_at DESC
         LIMIT ?
-      `).all(limit);
+      `;
+
+      const params =
+        Array.isArray(dealIds) && dealIds.length > 0
+          ? [minDiscount, ...dealIds, limit]
+          : [minDiscount, limit];
+
+      return prepare(sql).all(...params);
     } catch (error) {
       console.error('Error getting unposted deals:', error);
       return [];
     }
+  }
+
+  /** Health / admin diagnostics */
+  getTelegramStatus() {
+    const botTokenConfigured = !!(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+    const channelIds = this.getChannelIds();
+    let unpostedEligible = 0;
+    try {
+      const row = prepare(`
+        SELECT COUNT(*) as c
+        FROM deals d
+        LEFT JOIN social_posts sp ON d.id = sp.deal_id AND sp.platform = 'telegram'
+        WHERE d.is_active = 1
+          AND COALESCE(d.discount_percent, 0) >= ?
+          AND d.image_url IS NOT NULL AND TRIM(d.image_url) != ''
+          AND sp.id IS NULL
+          AND (
+            d.created_at > datetime('now', '-14 days')
+            OR d.updated_at > datetime('now', '-3 days')
+          )
+      `).get(this.minDiscount);
+      unpostedEligible = Number(row?.c ?? 0);
+    } catch (e) {
+      /* ignore */
+    }
+    return {
+      botTokenConfigured,
+      channelCount: channelIds.length,
+      configured: botTokenConfigured && channelIds.length > 0,
+      minDiscount: this.minDiscount,
+      unpostedEligible
+    };
+  }
+
+  /**
+   * Post specific deals right after Query Rules add/update them (skips recency filter).
+   */
+  async postNewDeals(dealIds, limit = 5) {
+    if (!this.isTelegramConfigured()) {
+      console.log('⚠️ Telegram not configured — skip posting new deals');
+      return { total: 0, skipped: 'not_configured' };
+    }
+    const ids = [...new Set((dealIds || []).map(Number).filter(Boolean))];
+    if (ids.length === 0) return { total: 0 };
+
+    const deals = this.getUnpostedDeals(Math.min(limit, ids.length), {
+      dealIds: ids,
+      skipRecencyFilter: true
+    });
+    if (deals.length === 0) {
+      console.log(`📱 No eligible new deals to post (${ids.length} id(s) checked)`);
+      return { total: 0, checked: ids.length };
+    }
+
+    console.log(`📱 Posting ${deals.length} new deal(s) to Telegram after rule run...`);
+    let total = 0;
+    for (const deal of deals) {
+      const result = await this.postToTelegram(deal);
+      if (result?.ok) total++;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    return { total, dealIds: deals.map((d) => d.id) };
   }
 
   /**
@@ -113,14 +217,7 @@ class SocialAutomationService {
       return null;
     }
 
-    // Get all channels
-    const dbChannels = this.getActiveChannels();
-    const mainChannel = process.env.TELEGRAM_CHANNEL_ID;
-    
-    const channelIds = dbChannels.map(c => c.channel_id);
-    if (mainChannel && !channelIds.includes(mainChannel)) {
-      channelIds.push(mainChannel);
-    }
+    const channelIds = this.getChannelIds();
 
     if (channelIds.length === 0) {
       console.log('⚠️ No Telegram channels configured');
@@ -195,11 +292,18 @@ class SocialAutomationService {
           })
         }
       );
-      return await response.json();
+      const data = await response.json();
+      this.logTelegramApiFailure(channelId, data);
+      return data;
     } catch (error) {
       console.error(`Error posting to ${channelId}:`, error.message);
       return null;
     }
+  }
+
+  logTelegramApiFailure(channelId, result) {
+    if (!result || result.ok) return;
+    console.error(`❌ Telegram API ${channelId}: ${result.error_code || '?'} — ${result.description || JSON.stringify(result)}`);
   }
 
   /**
@@ -213,14 +317,7 @@ class SocialAutomationService {
     const deals = this.getUnpostedDeals(limit);
     console.log(`📦 Found ${deals.length} unposted deals`);
 
-    // Get all channels: from DB + from env
-    const dbChannels = this.getActiveChannels();
-    const mainChannel = process.env.TELEGRAM_CHANNEL_ID;
-    
-    const channelIds = dbChannels.map(c => c.channel_id);
-    if (mainChannel && !channelIds.includes(mainChannel)) {
-      channelIds.push(mainChannel);
-    }
+    const channelIds = this.getChannelIds();
 
     console.log(`📢 Broadcasting to ${channelIds.length} channel(s)`);
 

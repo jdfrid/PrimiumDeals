@@ -42,6 +42,14 @@ services:
       # Mount a persistent disk and set DATA_DIR so deals.db survives redeploys (optional).
       - key: DATA_DIR
         sync: false
+      # Telegram auto-post (Query Rules + cron every 4h). Add channel in Admin → Telegram or set TELEGRAM_CHANNEL_ID.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+      # Optional; default 15. Deals below this discount are not auto-posted.
+      # - key: TELEGRAM_MIN_DISCOUNT
+      #   value: "15"
       # Voice Planner (/voice-planner): Google Calendar/Tasks + OpenAI transcription/parsing
       - key: OPENAI_API_KEY
         sync: false

@@ -11,6 +11,7 @@ import voicePlannerRoutes from './voicePlannerRoutes.js';
 import { resolveDealOutboundUrl } from '../utils/dealOutboundUrl.js';
 import { adminReseedSampleDeals } from '../services/sampleDealsSeed.js';
 import ebayService from '../services/ebayService.js';
+import socialAutomation from '../services/socialAutomation.js';
 
 const router = express.Router();
 
@@ -54,7 +55,8 @@ router.get('/health', (req, res) => {
             : 'Set EBAY_CERT_ID or EBAY_CLIENT_SECRET (Application Key Client Secret)'
         }
       : {}),
-    ...(dealCountDbError ? { dealCountDbError } : {})
+    ...(dealCountDbError ? { dealCountDbError } : {}),
+    telegram: socialAutomation.getTelegramStatus()
   });
 });
 
@@ -138,7 +140,9 @@ router.get('/public/categories', categoriesController.getPublicCategories);
 // Clear all deals to refresh with correct URLs
 router.get('/debug/clear-deals', authenticateToken, (req, res) => {
   try {
+    prepare('DELETE FROM social_posts').run();
     const result = prepare('DELETE FROM deals').run();
+    saveDatabase();
     res.json({ 
       success: true, 
       message: `Deleted ${result.changes} deals. Now run Query Rule to fetch fresh deals.`,
