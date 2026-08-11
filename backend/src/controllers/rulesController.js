@@ -26,19 +26,35 @@ export const createRule = (req, res) => {
   }
 };
 
+const RULE_FIELDS = [
+  'name',
+  'keywords',
+  'ebay_category_ids',
+  'min_price',
+  'max_price',
+  'min_discount',
+  'schedule_cron',
+  'is_active'
+];
+
 export const updateRule = (req, res) => {
   try {
     const ruleId = req.params.id;
     const rule = prepare('SELECT * FROM query_rules WHERE id = ?').get(ruleId);
     if (!rule) return res.status(404).json({ error: 'Rule not found' });
 
-    const updates = req.body;
-    const fields = Object.keys(updates).filter(k => k !== 'id');
-    const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const values = fields.map(f => updates[f]);
+    const updates = req.body || {};
+    const fields = Object.keys(updates).filter((k) => k !== 'id' && RULE_FIELDS.includes(k));
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    const setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = fields.map((f) => updates[f]);
     prepare(`UPDATE query_rules SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values, ruleId);
-    scheduler.refreshRule(parseInt(ruleId));
-    res.json({ message: 'Rule updated successfully' });
+    scheduler.refreshRule(parseInt(ruleId, 10));
+    const updated = prepare('SELECT * FROM query_rules WHERE id = ?').get(ruleId);
+    res.json(updated);
   } catch (error) {
     console.error('Update rule error:', error);
     res.status(500).json({ error: 'Failed to update rule' });
