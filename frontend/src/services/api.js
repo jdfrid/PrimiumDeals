@@ -24,9 +24,12 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
-    /** Render free cold starts often return 502 until Node is up; safe to retry read-only calls. */
+    /** Render free cold starts often return 502 until Node is up; retry GET/HEAD and gateway errors on POST. */
     const allowGatewayRetry = method === 'GET' || method === 'HEAD';
-    const maxAttempts = allowGatewayRetry ? 3 : 1;
+    const postGatewayRetry =
+      method === 'POST' &&
+      (endpoint.includes('/admin/social/post') || endpoint.includes('/rules/') && endpoint.endsWith('/execute'));
+    const maxAttempts = allowGatewayRetry ? 3 : postGatewayRetry ? 2 : 1;
 
     const headers = {
       'Content-Type': 'application/json',
@@ -41,7 +44,7 @@ class ApiService {
     let response;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        await new Promise(r => setTimeout(r, 1300 * attempt));
+        await new Promise(r => setTimeout(r, postGatewayRetry ? 2000 * attempt : 1300 * attempt));
       }
       try {
         response = await fetch(url, {
@@ -62,7 +65,7 @@ class ApiService {
       }
 
       const gateway = response.status === 502 || response.status === 503 || response.status === 504;
-      if (allowGatewayRetry && gateway && attempt < maxAttempts - 1) {
+      if ((allowGatewayRetry || postGatewayRetry) && gateway && attempt < maxAttempts - 1) {
         continue;
       }
       break;

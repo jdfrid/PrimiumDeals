@@ -10,13 +10,24 @@ function TelegramAutoPost() {
     setPosting(true);
     setResult(null);
     try {
+      // Wake Render free tier before a long POST (cold start returns 502 otherwise).
+      try {
+        await api.request('/health');
+      } catch {
+        /* ignore — post may still succeed */
+      }
       const res = await api.request('/admin/social/post', {
         method: 'POST',
         body: JSON.stringify({ limit: 3 })
       });
       setResult({ success: true, message: `Posted ${res.results?.total || 0} deals to Telegram!` });
     } catch (error) {
-      setResult({ success: false, message: error.message || 'Failed to post' });
+      const msg = error.message || 'Failed to post';
+      const waking =
+        msg.includes('502') || msg.includes('503') || msg.includes('504')
+          ? ' Server may be waking up — wait ~30s and try again.'
+          : '';
+      setResult({ success: false, message: msg + waking });
     } finally {
       setPosting(false);
     }
