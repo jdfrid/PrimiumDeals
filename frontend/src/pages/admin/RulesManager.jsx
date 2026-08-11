@@ -45,6 +45,7 @@ function RuleModal({ rule, onClose, onSave }) {
               placeholder="luxury watch, designer bag, jewelry, handbag, rolex, gucci"
             />
             <p className="text-xs text-midnight-500 mt-2">Separate multiple keywords with commas. Each keyword will be searched separately.</p>
+            <p className="text-xs text-midnight-500 mt-1">Multiple eBay category IDs are OK — each is searched separately (eBay allows 1 per API call).</p>
           </div>
           
           {/* Price & Discount Section */}

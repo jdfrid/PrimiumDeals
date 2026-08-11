@@ -139,22 +139,65 @@ class EbayService {
   }
 
   async searchItems(params) {
-    const { keywords = '', categoryIds = [], minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
-
-    // Check cache first
     const cacheKey = this.getCacheKey(params);
     const cachedResult = this.getCachedResult(cacheKey);
-    
     if (cachedResult) {
       console.log(`\n${'='.repeat(50)}`);
       console.log(`💾 CACHE HIT at ${new Date().toISOString()}`);
-      console.log(`💾 Keywords: "${keywords}", Returning ${cachedResult.length} cached items`);
+      console.log(`💾 Keywords: "${params.keywords || ''}", Returning ${cachedResult.length} cached items`);
       console.log(`${'='.repeat(50)}`);
       return cachedResult;
     }
 
-    // Normalize categoryIds to array
-    const catArray = Array.isArray(categoryIds) ? categoryIds : (categoryIds ? [categoryIds] : []);
+    const catArray = Array.isArray(params.categoryIds)
+      ? params.categoryIds.map(String).filter(Boolean)
+      : params.categoryIds
+        ? [String(params.categoryIds)]
+        : [];
+
+    let results;
+    if (catArray.length > 1) {
+      // Browse API allows at most one category_id per request
+      console.log(`📂 Splitting search across ${catArray.length} categories (eBay limit: 1 per call)`);
+      const seen = new Set();
+      results = [];
+      const errors = [];
+      for (const catId of catArray) {
+        try {
+          const batch = await this.searchItemsOnce({ ...params, categoryIds: [catId] });
+          for (const item of batch) {
+            const key = item.ebayItemId || '';
+            if (key && !seen.has(key)) {
+              seen.add(key);
+              results.push(item);
+            }
+          }
+        } catch (e) {
+          errors.push(`category ${catId}: ${e.message}`);
+          console.warn(`⚠️ Category ${catId} search failed:`, e.message);
+        }
+      }
+      if (results.length === 0 && errors.length > 0) {
+        throw new Error(errors.slice(0, 2).join('; '));
+      }
+    } else {
+      results = await this.searchItemsOnce(params);
+    }
+
+    this.setCachedResult(cacheKey, results);
+    console.log(`💾 Cached ${results.length} items for "${params.keywords || ''}"`);
+    return results;
+  }
+
+  /** Single Browse API call — at most one category_id. */
+  async searchItemsOnce(params) {
+    const { keywords = '', categoryIds = [], minPrice = 0, maxPrice = 10000, minDiscount = 30, limit = 100 } = params;
+
+    const catArray = Array.isArray(categoryIds)
+      ? categoryIds.map(String).filter(Boolean).slice(0, 1)
+      : categoryIds
+        ? [String(categoryIds)]
+        : [];
 
     console.log(`\n${'='.repeat(50)}`);
     console.log(`🔍 eBay Browse API CALL at ${new Date().toISOString()}`);
@@ -162,7 +205,7 @@ class EbayService {
     console.log(`📂 Categories: ${catArray.length > 0 ? catArray.join(', ') : 'All'}`);
     console.log(`📊 Cache size: ${cache.size} entries`);
     console.log(`${'='.repeat(50)}`);
-    
+
     if (!this.isConfigured()) {
       console.error('❌ eBay Browse API: EBAY_APP_ID and EBAY_CERT_ID (or EBAY_CLIENT_SECRET) are required');
       throw new Error(
@@ -170,83 +213,68 @@ class EbayService {
       );
     }
 
-    try {
-      // Get OAuth token
-      const token = await this.getAccessToken();
+    const token = await this.getAccessToken();
 
-      // Build query parameters for Browse API
-      const searchParams = new URLSearchParams();
-      searchParams.set('q', keywords || 'luxury watch');
-      searchParams.set('limit', Math.min(limit, 200).toString()); // Browse API max is 200
-      
-      // Add category filter if specified
-      if (catArray.length > 0) {
-        searchParams.set('category_ids', catArray.join(','));
-        console.log(`📂 Filtering by categories: ${catArray.join(',')}`);
-      }
-      
-      // Build filter string
-      const filters = [];
-      if (minPrice > 0 || maxPrice < 10000) {
-        filters.push(`price:[${minPrice}..${maxPrice}]`);
-        filters.push('priceCurrency:USD');
-      }
-      if (filters.length > 0) {
-        searchParams.set('filter', filters.join(','));
-      }
+    const searchParams = new URLSearchParams();
+    searchParams.set('q', keywords || 'luxury watch');
+    searchParams.set('limit', Math.min(limit, 200).toString());
 
-      const url = `${BROWSE_API_BASE}?${searchParams.toString()}`;
-      console.log(`🌐 Browse API URL: ${url.substring(0, 200)}...`);
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
-        }
-      });
-
-      const responseText = await response.text();
-      console.log(`📡 eBay Response Status: ${response.status}`);
-
-      if (!response.ok) {
-        console.error('❌ eBay Browse API Error:', response.status);
-        console.error('❌ Response:', responseText.substring(0, 500));
-
-        let errorMsg = responseText.substring(0, 300);
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMsg = errorData.errors?.[0]?.message || errorMsg;
-        } catch {
-          /* keep truncated body */
-        }
-        let hint = '';
-        if (response.status === 403) {
-          hint +=
-            ' — Production Buy/Browse access may require eBay approval: https://developer.ebay.com/api-docs/buy/static/buy-requirements.html';
-        }
-        throw new Error(`eBay Browse API HTTP ${response.status}: ${errorMsg}${hint}`);
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
-        console.error('❌ Failed to parse eBay response:', responseText.substring(0, 500));
-        throw new Error('Invalid response from eBay API');
-      }
-
-      const results = this.parseBrowseResults(data, minDiscount);
-      
-      // Cache the results
-      this.setCachedResult(cacheKey, results);
-      console.log(`💾 Cached ${results.length} items for "${keywords}"`);
-      
-      return results;
-    } catch (error) {
-      console.error('eBay search error:', error.message);
-      throw error;
+    if (catArray.length > 0) {
+      searchParams.set('category_ids', catArray[0]);
+      console.log(`📂 Filtering by category: ${catArray[0]}`);
     }
+
+    const filters = [];
+    if (minPrice > 0 || maxPrice < 10000) {
+      filters.push(`price:[${minPrice}..${maxPrice}]`);
+      filters.push('priceCurrency:USD');
+    }
+    if (filters.length > 0) {
+      searchParams.set('filter', filters.join(','));
+    }
+
+    const url = `${BROWSE_API_BASE}?${searchParams.toString()}`;
+    console.log(`🌐 Browse API URL: ${url.substring(0, 200)}...`);
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
+      }
+    });
+
+    const responseText = await response.text();
+    console.log(`📡 eBay Response Status: ${response.status}`);
+
+    if (!response.ok) {
+      console.error('❌ eBay Browse API Error:', response.status);
+      console.error('❌ Response:', responseText.substring(0, 500));
+
+      let errorMsg = responseText.substring(0, 300);
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMsg = errorData.errors?.[0]?.message || errorMsg;
+      } catch {
+        /* keep truncated body */
+      }
+      let hint = '';
+      if (response.status === 403) {
+        hint +=
+          ' — Production Buy/Browse access may require eBay approval: https://developer.ebay.com/api-docs/buy/static/buy-requirements.html';
+      }
+      throw new Error(`eBay Browse API HTTP ${response.status}: ${errorMsg}${hint}`);
+    }
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('❌ Failed to parse eBay response:', responseText.substring(0, 500));
+      throw new Error('Invalid response from eBay API');
+    }
+
+    return this.parseBrowseResults(data, minDiscount);
   }
 
   parseBrowseResults(data, minDiscount) {

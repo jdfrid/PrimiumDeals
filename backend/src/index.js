@@ -107,7 +107,7 @@ function initializeCategories() {
 function initializeDefaultRule() {
   const existing = prepare('SELECT id FROM query_rules LIMIT 1').get();
   if (!existing) {
-    prepare('INSERT INTO query_rules (name, keywords, ebay_category_ids, min_price, max_price, min_discount, schedule_cron, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('Luxury Items $500-$1000', 'luxury watch, designer handbag, gold jewelry, premium sunglasses', '31387,169291,281,79720', 500, 1000, 30, '0 0 * * *', 1);
+    prepare('INSERT INTO query_rules (name, keywords, ebay_category_ids, min_price, max_price, min_discount, schedule_cron, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('Luxury deals (broad)', 'luxury watch, designer handbag, gold jewelry, premium sunglasses, rolex, gucci', '31387,169291,281,79720', 100, 5000, 15, '0 0 * * *', 1);
     console.log('✅ Default query rule created');
   }
 }
