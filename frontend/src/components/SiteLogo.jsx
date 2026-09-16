@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 
-export const LOGO_SRC = '/dealsluxy-logo.png';
+/** Original PNG — black matte; use on dark surfaces inside a light chip. */
+export const LOGO_DARK_SURFACE = '/dealsluxy-logo.png';
+/** Transparent PNG — use directly on white/light headers. */
+export const LOGO_LIGHT_SURFACE = '/dealsluxy-logo-light.png';
 
 const SIZES = {
   sm: 'h-8 max-w-[180px]',
@@ -9,27 +12,24 @@ const SIZES = {
 };
 
 /**
- * DealsLuxy logo — the PNG has a black matte, so we frame it per surface:
- * light pages → dark chip; dark pages → white chip.
+ * @param {'light' | 'dark'} variant
+ *   light — transparent logo on white/light pages (no box)
+ *   dark  — original logo on white chip for dark footer/admin
  */
 export default function SiteLogo({
   className = '',
   imgClassName = '',
   linkTo = '/',
   showLink = true,
-  /** @type {'light' | 'dark'} */
   variant = 'light',
-  /** @type {'sm' | 'md' | 'lg'} */
   size = 'md'
 }) {
-  const chipClass =
-    variant === 'dark'
-      ? 'rounded-xl bg-white px-3 py-1.5 shadow-sm ring-1 ring-white/20'
-      : 'rounded-xl bg-neutral-950 px-3 py-1.5 shadow-md ring-1 ring-black/10';
+  const onDarkSurface = variant === 'dark';
+  const src = onDarkSurface ? LOGO_DARK_SURFACE : LOGO_LIGHT_SURFACE;
 
   const img = (
     <img
-      src={LOGO_SRC}
+      src={src}
       alt="DealsLuxy"
       className={[SIZES[size] || SIZES.md, 'w-auto object-contain block', imgClassName].filter(Boolean).join(' ')}
       width={220}
@@ -38,7 +38,11 @@ export default function SiteLogo({
     />
   );
 
-  const content = <span className={`inline-flex items-center ${chipClass}`}>{img}</span>;
+  const content = onDarkSurface ? (
+    <span className="inline-flex items-center rounded-xl bg-white px-3 py-1.5 shadow-sm ring-1 ring-white/20">{img}</span>
+  ) : (
+    img
+  );
 
   if (!showLink) {
     return <div className={`inline-flex items-center ${className}`}>{content}</div>;
