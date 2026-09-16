@@ -279,7 +279,7 @@ export default function HomePage() {
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
-            <SiteLogo imgClassName="h-11 w-auto max-w-[220px] object-contain" />
+            <SiteLogo variant="light" size="lg" />
 
             {/* Search Bar */}
             <div className="flex-1 max-w-xl mx-8 hidden md:block">
@@ -508,7 +508,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* About */}
             <div>
-              <SiteLogo showLink={false} imgClassName="h-9 w-auto max-w-[180px] object-contain mb-4" />
+              <SiteLogo showLink={false} variant="dark" size="md" className="mb-4" />
               <p className="text-gray-400 text-sm leading-relaxed">
                 We bring you the best deals on luxury brands from eBay. 
                 All products are verified and ship worldwide.

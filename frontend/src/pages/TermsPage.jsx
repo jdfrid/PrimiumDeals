@@ -8,7 +8,7 @@ export default function TermsPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <SiteLogo imgClassName="h-9 w-auto max-w-[180px] object-contain" />
+          <SiteLogo variant="light" size="md" />
           <Link to="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm">
             <ArrowLeft size={18} />
             <span>Back to Deals</span>

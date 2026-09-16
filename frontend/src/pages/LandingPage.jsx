@@ -310,7 +310,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <SiteLogo showLink={false} imgClassName="h-10 w-auto max-w-[200px] object-contain mb-4" />
+              <SiteLogo showLink={false} variant="dark" size="md" className="mb-4" />
               <p className="text-gray-400 text-sm">
                 Your destination for luxury deals. We find the best discounts on designer brands daily.
               </p>

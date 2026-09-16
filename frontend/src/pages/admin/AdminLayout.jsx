@@ -38,7 +38,7 @@ export default function AdminLayout() {
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 admin-sidebar transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="h-full flex flex-col p-4">
           <div className="px-2 py-4 mb-6">
-            <SiteLogo linkTo="/" imgClassName="h-9 w-auto max-w-[180px] object-contain" />
+            <SiteLogo linkTo="/" variant="dark" size="md" />
             <div className="text-xs text-midnight-500 mt-2">Admin Panel</div>
           </div>
           <nav className="flex-1 space-y-1">

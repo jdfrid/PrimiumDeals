@@ -212,7 +212,7 @@ export default function AdminLogin() {
         {/* Header */}
         <div className="text-center mb-8">
           {step === 'credentials' ? (
-            <SiteLogo showLink={false} className="justify-center mb-4" imgClassName="h-14 w-auto max-w-[240px] object-contain" />
+            <SiteLogo showLink={false} variant="dark" size="lg" className="justify-center mb-4" />
           ) : (
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 mb-4 shadow-lg shadow-orange-500/30">
               <Shield size={32} className="text-white" />
