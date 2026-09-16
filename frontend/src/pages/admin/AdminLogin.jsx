@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Lock, Mail, AlertCircle, Eye, EyeOff, Shield, RefreshCw } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Eye, EyeOff, Shield, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import SiteLogo from '../../components/SiteLogo';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -210,9 +211,13 @@ export default function AdminLogin() {
       <div className="w-full max-w-md relative">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 mb-4 shadow-lg shadow-orange-500/30">
-            {step === 'credentials' ? <Crown size={32} className="text-white" /> : <Shield size={32} className="text-white" />}
-          </div>
+          {step === 'credentials' ? (
+            <SiteLogo showLink={false} className="justify-center mb-4" imgClassName="h-14 w-auto max-w-[240px] object-contain" />
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 mb-4 shadow-lg shadow-orange-500/30">
+              <Shield size={32} className="text-white" />
+            </div>
+          )}
           <h1 className="text-3xl font-bold text-white">
             {step === 'credentials' ? 'Admin Panel' : 'Verify Your Identity'}
           </h1>

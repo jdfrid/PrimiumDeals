@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Tag, Clock, Shield, Truck, Star, TrendingDown, ShoppingBag } from 'lucide-react';
 import api from '../services/api';
+import SiteLogo from '../components/SiteLogo';
 
 // Popular brands for designer-sale page
 const POPULAR_BRANDS = [
@@ -309,7 +310,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">Dealsluxy</h3>
+              <SiteLogo showLink={false} imgClassName="h-10 w-auto max-w-[200px] object-contain mb-4" />
               <p className="text-gray-400 text-sm">
                 Your destination for luxury deals. We find the best discounts on designer brands daily.
               </p>
@@ -326,7 +327,6 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-4">About</h4>
               <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link to="/how-it-works" className="hover:text-white">How It Works</Link></li>
                 <li><Link to="/about" className="hover:text-white">About Us</Link></li>
               </ul>
             </div>

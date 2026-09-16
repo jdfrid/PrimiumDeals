@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, Percent, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
+import { ChevronDown, ExternalLink, Tag, Search, Heart, ShoppingBag, TrendingDown, Filter, ChevronLeft, ChevronRight, Flame, Star } from 'lucide-react';
+import SiteLogo from '../components/SiteLogo';
 import api from '../services/api';
 import NewsletterPopup from '../components/NewsletterPopup';
 import NewsletterFooter from '../components/NewsletterFooter';
@@ -154,7 +155,7 @@ export default function HomePage() {
   const [dealsLoadError, setDealsLoadError] = useState(null);
 
   useEffect(() => {
-    document.title = 'Premium Deals | Dealsluxy';
+    document.title = 'DealsLuxy | Luxury Deals';
   }, []);
 
   useEffect(() => {
@@ -278,16 +279,7 @@ export default function HomePage() {
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Percent size={24} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">Premium Deals</h1>
-                <p className="text-xs text-gray-500">Luxury brands at best prices</p>
-              </div>
-            </div>
+            <SiteLogo imgClassName="h-11 w-auto max-w-[220px] object-contain" />
 
             {/* Search Bar */}
             <div className="flex-1 max-w-xl mx-8 hidden md:block">
@@ -516,12 +508,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* About */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <Percent size={16} className="text-white" />
-                </div>
-                <span className="font-bold">Premium Deals</span>
-              </div>
+              <SiteLogo showLink={false} imgClassName="h-9 w-auto max-w-[180px] object-contain mb-4" />
               <p className="text-gray-400 text-sm leading-relaxed">
                 We bring you the best deals on luxury brands from eBay. 
                 All products are verified and ship worldwide.
@@ -532,8 +519,6 @@ export default function HomePage() {
             <div>
               <h3 className="font-bold mb-4">Links</h3>
               <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="/how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
-                <li><a href="/designer-sale" className="hover:text-white transition-colors">Designer Sale</a></li>
                 <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
                 <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
               </ul>
@@ -553,7 +538,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Premium Deals. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} DealsLuxy. All rights reserved.</p>
             <p className="text-gray-500 text-sm">Participant in the eBay Partner Network affiliate program</p>
           </div>
         </div>

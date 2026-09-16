@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, Crown, FileText, Play, Settings, BarChart3, Mail, Cog, DollarSign, Image, Share2, Send } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Tags, Users, LogOut, Menu, FileText, Play, Settings, BarChart3, Mail, Cog, DollarSign, Image, Share2, Send } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import SiteLogo from '../../components/SiteLogo';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -36,14 +37,9 @@ export default function AdminLayout() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 admin-sidebar transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="h-full flex flex-col p-4">
-          <div className="flex items-center gap-3 px-2 py-4 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
-              <Crown size={20} className="text-midnight-950" />
-            </div>
-            <div>
-              <div className="font-display font-semibold text-lg text-gradient">Premium Deals</div>
-              <div className="text-xs text-midnight-500">Admin Panel</div>
-            </div>
+          <div className="px-2 py-4 mb-6">
+            <SiteLogo linkTo="/" imgClassName="h-9 w-auto max-w-[180px] object-contain" />
+            <div className="text-xs text-midnight-500 mt-2">Admin Panel</div>
           </div>
           <nav className="flex-1 space-y-1">
             {filteredNavItems.map(item => (

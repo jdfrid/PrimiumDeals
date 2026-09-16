@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SiteLogo from '../components/SiteLogo';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
@@ -38,9 +39,10 @@ export default function ContactPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <Link to="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <ArrowLeft size={20} />
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <SiteLogo imgClassName="h-9 w-auto max-w-[180px] object-contain" />
+          <Link to="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm">
+            <ArrowLeft size={18} />
             <span>Back to Deals</span>
           </Link>
         </div>

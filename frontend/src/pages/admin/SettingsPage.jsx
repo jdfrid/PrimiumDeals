@@ -122,7 +122,7 @@ export default function SettingsPage() {
                 value={settings.site_name}
                 onChange={(e) => setSettings({ ...settings, site_name: e.target.value })}
                 className="input-dark w-full max-w-md"
-                placeholder="Premium Deals"
+                placeholder="DealsLuxy"
               />
             </div>
           </div>

@@ -1,14 +1,16 @@
 import { ArrowLeft, Shield, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SiteLogo from '../components/SiteLogo';
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <Link to="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <ArrowLeft size={20} />
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <SiteLogo imgClassName="h-9 w-auto max-w-[180px] object-contain" />
+          <Link to="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm">
+            <ArrowLeft size={18} />
             <span>Back to Deals</span>
           </Link>
         </div>
@@ -44,7 +46,7 @@ export default function TermsPage() {
           <div className="prose prose-gray max-w-none">
             <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">1. About This Website</h2>
             <p className="text-gray-600 mb-4">
-              Premium Deals ("we", "our", or "us") operates as an affiliate marketing website. We aggregate and display deals from third-party 
+              DealsLuxy ("we", "our", or "us") operates as an affiliate marketing website. We aggregate and display deals from third-party 
               retailers including but not limited to eBay, Amazon, and AliExpress. When you click on a deal and make a purchase, we may earn 
               a commission from the retailer at no additional cost to you.
             </p>
