@@ -1,48 +1,82 @@
 import { Link } from 'react-router-dom';
 
-/** Original PNG — black matte; use on dark surfaces inside a light chip. */
 export const LOGO_DARK_SURFACE = '/dealsluxy-logo.png';
-/** Transparent PNG — use directly on white/light headers. */
 export const LOGO_LIGHT_SURFACE = '/dealsluxy-logo-light.png';
+export const LOGO_ICON = '/dealsluxy-icon.png';
 
 const SIZES = {
-  sm: 'h-8 max-w-[180px]',
-  md: 'h-9 max-w-[200px]',
-  lg: 'h-11 max-w-[240px]'
+  sm: { icon: 'h-8 w-8', text: 'text-lg' },
+  md: { icon: 'h-9 w-9', text: 'text-xl' },
+  lg: { icon: 'h-10 w-10 md:h-11 md:w-11', text: 'text-xl md:text-2xl' }
 };
 
+function LogoWordmark({ textClass = '' }) {
+  return (
+    <span className={`font-bold tracking-tight leading-none ${textClass}`}>
+      <span className="text-slate-800">Deals</span>
+      <span className="bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 bg-clip-text text-transparent">
+        Luxy
+      </span>
+    </span>
+  );
+}
+
 /**
- * @param {'light' | 'dark'} variant
- *   light — transparent logo on white/light pages (no box)
- *   dark  — original logo on white chip for dark footer/admin
+ * @param {'light' | 'dark' | 'full'} variant
+ *   light — crisp icon + HTML wordmark (storefront headers)
+ *   dark  — full PNG on white chip (dark footer/admin)
+ *   full  — transparent full PNG fallback
  */
 export default function SiteLogo({
   className = '',
-  imgClassName = '',
   linkTo = '/',
   showLink = true,
   variant = 'light',
   size = 'md'
 }) {
-  const onDarkSurface = variant === 'dark';
-  const src = onDarkSurface ? LOGO_DARK_SURFACE : LOGO_LIGHT_SURFACE;
+  const sz = SIZES[size] || SIZES.md;
 
-  const img = (
-    <img
-      src={src}
-      alt="DealsLuxy"
-      className={[SIZES[size] || SIZES.md, 'w-auto object-contain block', imgClassName].filter(Boolean).join(' ')}
-      width={220}
-      height={44}
-      decoding="async"
-    />
-  );
-
-  const content = onDarkSurface ? (
-    <span className="inline-flex items-center rounded-xl bg-white px-3 py-1.5 shadow-sm ring-1 ring-white/20">{img}</span>
-  ) : (
-    img
-  );
+  let content;
+  if (variant === 'light') {
+    content = (
+      <span className="inline-flex items-center gap-2.5 select-none">
+        <img
+          src={LOGO_ICON}
+          alt=""
+          aria-hidden
+          className={`${sz.icon} object-contain shrink-0 drop-shadow-sm`}
+          width={44}
+          height={44}
+          decoding="async"
+        />
+        <LogoWordmark textClass={sz.text} />
+      </span>
+    );
+  } else if (variant === 'dark') {
+    content = (
+      <span className="inline-flex items-center rounded-xl bg-white px-3 py-1.5 shadow-sm ring-1 ring-white/20">
+        <img
+          src={LOGO_DARK_SURFACE}
+          alt="DealsLuxy"
+          className="h-8 w-auto max-w-[180px] object-contain block"
+          width={180}
+          height={32}
+          decoding="async"
+        />
+      </span>
+    );
+  } else {
+    content = (
+      <img
+        src={LOGO_LIGHT_SURFACE}
+        alt="DealsLuxy"
+        className="h-9 w-auto max-w-[200px] object-contain block"
+        width={200}
+        height={44}
+        decoding="async"
+      />
+    );
+  }
 
   if (!showLink) {
     return <div className={`inline-flex items-center ${className}`}>{content}</div>;

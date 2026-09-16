@@ -1,11 +1,11 @@
 from collections import deque
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 root = Path(__file__).resolve().parents[1]
-src = root / "public" / "dealsluxy-logo.png"
-out = root / "public" / "dealsluxy-logo-light.png"
+public = root / "public"
+src = public / "dealsluxy-logo.png"
 
 
 def is_bg(r: int, g: int, b: int, threshold: int = 22) -> bool:
@@ -39,14 +39,47 @@ def remove_edge_background(img: Image.Image, threshold: int = 22) -> Image.Image
         px[x, y] = (r, g, b, 0)
         q.extend([(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)])
 
-    bbox = img.getbbox()
-    if bbox:
-        img = img.crop(bbox)
     return img
 
 
+def clean_dark_specks(img: Image.Image) -> Image.Image:
+    px = img.load()
+    w, h = img.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a and max(r, g, b) < 18:
+                px[x, y] = (0, 0, 0, 0)
+    return img
+
+
+def crop_icon(img: Image.Image) -> Image.Image:
+    """Icon mark only — wordmark is rendered as HTML text in the UI."""
+    w, h = img.size
+    cut = min(int(w * 0.27), 290)
+    icon = img.crop((0, 0, cut, h))
+    bbox = icon.getbbox()
+    if not bbox:
+        return icon
+    icon = icon.crop(bbox)
+    side = max(icon.size)
+    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    ox = (side - icon.size[0]) // 2
+    oy = (side - icon.size[1]) // 2
+    canvas.paste(icon, (ox, oy), icon)
+    return canvas
+
+
 if __name__ == "__main__":
-    img = Image.open(src)
-    transparent = remove_edge_background(img)
-    transparent.save(out)
-    print(f"Wrote {out} ({transparent.size[0]}x{transparent.size[1]})")
+    base = remove_edge_background(Image.open(src))
+    base = clean_dark_specks(base)
+    bbox = base.getbbox()
+    if bbox:
+        base = base.crop(bbox)
+    base.filter(ImageFilter.UnsharpMask(radius=1.2, percent=90, threshold=2)).save(public / "dealsluxy-logo-light.png")
+
+    icon_src = remove_edge_background(Image.open(src))
+    icon = crop_icon(icon_src)
+    icon.filter(ImageFilter.UnsharpMask(radius=1, percent=80, threshold=2)).save(public / "dealsluxy-icon.png")
+
+    print(f"icon size {icon.size}")
